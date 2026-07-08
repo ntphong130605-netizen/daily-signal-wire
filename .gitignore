@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.local
+dev.db
+dev.db-journal
+prisma/dev.db
+prisma/dev.db-journal
+public/generated/*
+public/uploads/*
+!public/generated/.gitkeep
+!public/uploads/.gitkeep
+*.log
+.DS_Store

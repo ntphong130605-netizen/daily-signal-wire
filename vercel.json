@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/feeds",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/trends",
+      "schedule": "0 */3 * * *"
+    }
+  ]
+}
