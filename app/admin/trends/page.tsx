@@ -1,15 +1,20 @@
 import Link from "next/link";
 import GenerateDraftButton from "@/components/GenerateDraftButton";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 import { parseStringArray } from "@/lib/json";
 
 export default async function AdminTrendsPage() {
   const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
-  const trends = await prisma.trend.findMany({
-    include: { post: { select: { id: true, status: true, title: true } } },
-    orderBy: { discoveredAt: "desc" },
-    take: 200
-  });
+  const trends = await safeDbQuery(
+    "admin_trends_query_failed",
+    [],
+    () =>
+      prisma.trend.findMany({
+        include: { post: { select: { id: true, status: true, title: true } } },
+        orderBy: { discoveredAt: "desc" },
+        take: 200
+      })
+  );
 
   return (
     <>

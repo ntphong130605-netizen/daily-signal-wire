@@ -1,5 +1,5 @@
 import AdminPostActions from "@/components/AdminPostActions";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 export default async function AdminPostsPage({
   searchParams
@@ -7,27 +7,35 @@ export default async function AdminPostsPage({
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { status = "all", q = "" } = await searchParams;
-  const posts = await prisma.post.findMany({
-    where: {
-      ...(status !== "all" ? { status } : {}),
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q } },
-              { excerpt: { contains: q } },
-              { slug: { contains: q } }
-            ]
-          }
-        : {})
-    },
-    include: { trend: { select: { category: true } } },
-    orderBy: { updatedAt: "desc" },
-    take: 200
-  });
-  const [draftCount, publishedCount] = await Promise.all([
-    prisma.post.count({ where: { status: "draft" } }),
-    prisma.post.count({ where: { status: "published" } })
-  ]);
+  const { posts, draftCount, publishedCount } = await safeDbQuery(
+    "admin_posts_query_failed",
+    { posts: [], draftCount: 0, publishedCount: 0 },
+    async () => {
+      const posts = await prisma.post.findMany({
+        where: {
+          ...(status !== "all" ? { status } : {}),
+          ...(q
+            ? {
+                OR: [
+                  { title: { contains: q } },
+                  { excerpt: { contains: q } },
+                  { slug: { contains: q } }
+                ]
+              }
+            : {})
+        },
+        include: { trend: { select: { category: true } } },
+        orderBy: { updatedAt: "desc" },
+        take: 200
+      });
+      const [draftCount, publishedCount] = await Promise.all([
+        prisma.post.count({ where: { status: "draft" } }),
+        prisma.post.count({ where: { status: "published" } })
+      ]);
+
+      return { posts, draftCount, publishedCount };
+    }
+  );
 
   return (
     <>

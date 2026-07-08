@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 import { parseStringArray } from "@/lib/json";
 import TrendEditor from "@/components/TrendEditor";
 
@@ -10,10 +10,15 @@ export default async function TrendDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const trend = await prisma.trend.findUnique({
-    where: { id },
-    include: { post: true }
-  });
+  const trend = await safeDbQuery(
+    "admin_trend_detail_query_failed",
+    null,
+    () =>
+      prisma.trend.findUnique({
+        where: { id },
+        include: { post: true }
+      })
+  );
   if (!trend) notFound();
   const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
 

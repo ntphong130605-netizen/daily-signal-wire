@@ -1,5 +1,6 @@
 import { refreshDueFeeds } from "@/lib/rss";
 import { logError, logInfo } from "@/lib/logger";
+import { databaseUnavailableResponse, isDatabaseConfigured } from "@/lib/prisma";
 
 export const maxDuration = 300;
 
@@ -8,6 +9,9 @@ export async function GET(request: Request) {
   const authorization = request.headers.get("authorization");
   if (!configuredSecret || authorization !== `Bearer ${configuredSecret}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!isDatabaseConfigured()) {
+    return databaseUnavailableResponse();
   }
 
   try {

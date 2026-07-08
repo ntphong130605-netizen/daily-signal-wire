@@ -7,7 +7,7 @@ import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
 import { isAdmin } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -17,18 +17,23 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await prisma.post.findUnique({
-    where: { slug },
-    select: {
-      status: true,
-      seoTitle: true,
-      seoDescription: true,
-      imageUrl: true,
-      featuredImage: true,
-      openGraphImage: true,
-      twitterImage: true
-    }
-  });
+  const post = await safeDbQuery(
+    "article_metadata_query_failed",
+    null,
+    () =>
+      prisma.post.findUnique({
+        where: { slug },
+        select: {
+          status: true,
+          seoTitle: true,
+          seoDescription: true,
+          imageUrl: true,
+          featuredImage: true,
+          openGraphImage: true,
+          twitterImage: true
+        }
+      })
+  );
   if (!post || post.status !== "published") return {};
   const ogImage = post.openGraphImage || post.featuredImage || post.imageUrl;
   const twitterImage = post.twitterImage || post.openGraphImage || post.imageUrl;
@@ -59,28 +64,38 @@ export default async function NewsArticlePage({
 }) {
   const { slug } = await params;
   const { preview } = await searchParams;
-  const post = await prisma.post.findUnique({
-    where: { slug },
-    include: { trend: { select: { category: true } } }
-  });
+  const post = await safeDbQuery(
+    "article_query_failed",
+    null,
+    () =>
+      prisma.post.findUnique({
+        where: { slug },
+        include: { trend: { select: { category: true } } }
+      })
+  );
   if (!post) notFound();
 
   const previewAllowed =
     post.status !== "published" && preview === "1" && (await isAdmin());
   if (post.status !== "published" && !previewAllowed) notFound();
 
-  const related = await prisma.post.findMany({
-    where: {
-      status: "published",
-      id: { not: post.id },
-      ...(post.trend?.category
-        ? { trend: { category: post.trend.category } }
-        : {})
-    },
-    include: { trend: { select: { category: true } } },
-    orderBy: { publishedAt: "desc" },
-    take: 4
-  });
+  const related = await safeDbQuery(
+    "article_related_query_failed",
+    [],
+    () =>
+      prisma.post.findMany({
+        where: {
+          status: "published",
+          id: { not: post.id },
+          ...(post.trend?.category
+            ? { trend: { category: post.trend.category } }
+            : {})
+        },
+        include: { trend: { select: { category: true } } },
+        orderBy: { publishedAt: "desc" },
+        take: 4
+      })
+  );
   const relatedPosts: ReaderPost[] = related.map((item) => ({
     id: item.id,
     slug: item.slug,

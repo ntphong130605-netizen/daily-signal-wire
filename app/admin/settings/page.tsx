@@ -1,18 +1,26 @@
-import { prisma } from "@/lib/prisma";
+import { isDatabaseConfigured, prisma, safeDbQuery } from "@/lib/prisma";
 
 function flag(value: string | undefined) {
   return value ? "Configured" : "Not configured";
 }
 
 export default async function AdminSettingsPage() {
-  const [adSlots, feedCount, storyCount] = await Promise.all([
-    prisma.adSlot.findMany({ orderBy: { placement: "asc" } }),
-    prisma.feed.count(),
-    prisma.feedStory.count()
-  ]);
+  const { adSlots, feedCount, storyCount } = await safeDbQuery(
+    "admin_settings_query_failed",
+    { adSlots: [], feedCount: 0, storyCount: 0 },
+    async () => {
+      const [adSlots, feedCount, storyCount] = await Promise.all([
+        prisma.adSlot.findMany({ orderBy: { placement: "asc" } }),
+        prisma.feed.count(),
+        prisma.feedStory.count()
+      ]);
+
+      return { adSlots, feedCount, storyCount };
+    }
+  );
 
   const settings = [
-    ["Database", process.env.DATABASE_URL ? "SQLite local / env configured" : "Missing"],
+    ["Database", isDatabaseConfigured() ? "Configured" : "Missing DATABASE_URL"],
     ["OpenAI", flag(process.env.OPENAI_API_KEY)],
     ["AI model", process.env.AI_MODEL || "Default model fallback"],
     ["AdSense client", flag(process.env.NEXT_PUBLIC_ADSENSE_CLIENT)],

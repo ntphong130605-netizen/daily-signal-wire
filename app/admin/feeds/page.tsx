@@ -1,7 +1,7 @@
 import AddFeedPanel from "@/components/AddFeedPanel";
 import AdminFeedActions from "@/components/AdminFeedActions";
 import OpmlImportForm from "@/components/OpmlImportForm";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 function dateLabel(date: Date | null) {
   if (!date) return "Never";
@@ -14,19 +14,27 @@ function dateLabel(date: Date | null) {
 }
 
 export default async function AdminFeedsPage() {
-  const [folders, feeds, storyCount, unreadCount] = await Promise.all([
-    prisma.feedFolder.findMany({ orderBy: { name: "asc" } }),
-    prisma.feed.findMany({
-      include: {
-        folder: true,
-        category: true,
-        _count: { select: { stories: true } }
-      },
-      orderBy: { updatedAt: "desc" }
-    }),
-    prisma.feedStory.count(),
-    prisma.feedStory.count({ where: { isRead: false } })
-  ]);
+  const { folders, feeds, storyCount, unreadCount } = await safeDbQuery(
+    "admin_feeds_query_failed",
+    { folders: [], feeds: [], storyCount: 0, unreadCount: 0 },
+    async () => {
+      const [folders, feeds, storyCount, unreadCount] = await Promise.all([
+        prisma.feedFolder.findMany({ orderBy: { name: "asc" } }),
+        prisma.feed.findMany({
+          include: {
+            folder: true,
+            category: true,
+            _count: { select: { stories: true } }
+          },
+          orderBy: { updatedAt: "desc" }
+        }),
+        prisma.feedStory.count(),
+        prisma.feedStory.count({ where: { isRead: false } })
+      ]);
+
+      return { folders, feeds, storyCount, unreadCount };
+    }
+  );
 
   return (
     <>

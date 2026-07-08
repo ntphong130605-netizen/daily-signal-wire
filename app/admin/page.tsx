@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 const statusLabels: Record<string, string> = {
   idle: "Ready",
@@ -9,15 +9,23 @@ const statusLabels: Record<string, string> = {
 };
 
 export default async function AdminDashboard() {
-  const [trends, publishedCount, subscriberCount] = await Promise.all([
-    prisma.trend.findMany({
-      include: { post: { select: { status: true, title: true } } },
-      orderBy: { discoveredAt: "desc" },
-      take: 100
-    }),
-    prisma.post.count({ where: { status: "published" } }),
-    prisma.newsletterSubscriber.count()
-  ]);
+  const { trends, publishedCount, subscriberCount } = await safeDbQuery(
+    "admin_dashboard_query_failed",
+    { trends: [], publishedCount: 0, subscriberCount: 0 },
+    async () => {
+      const [trends, publishedCount, subscriberCount] = await Promise.all([
+        prisma.trend.findMany({
+          include: { post: { select: { status: true, title: true } } },
+          orderBy: { discoveredAt: "desc" },
+          take: 100
+        }),
+        prisma.post.count({ where: { status: "published" } }),
+        prisma.newsletterSubscriber.count()
+      ]);
+
+      return { trends, publishedCount, subscriberCount };
+    }
+  );
   const draftCount = trends.filter((trend) => trend.post?.status === "draft").length;
   const dateLabel = new Intl.DateTimeFormat("en-US", {
     weekday: "long",

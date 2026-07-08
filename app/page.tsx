@@ -3,7 +3,7 @@ import NewsReaderLayout, {
   type ReaderFolder,
   type ReaderStory
 } from "@/components/NewsReaderLayout";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +77,7 @@ export default async function HomePage({
       : {})
   };
 
-  const [
+  const {
     folders,
     unreadByFeed,
     stories,
@@ -87,41 +87,99 @@ export default async function HomePage({
     savedCount,
     trendingCount,
     draftCount
-  ] = await Promise.all([
-    prisma.feedFolder.findMany({
-      include: {
-        feeds: {
-          include: { _count: { select: { stories: true } } },
-          orderBy: { title: "asc" }
-        }
-      },
-      orderBy: { name: "asc" }
-    }),
-    prisma.feedStory.groupBy({
-      by: ["feedId"],
-      where: { isRead: false },
-      _count: { _all: true }
-    }),
-    prisma.feedStory.findMany({
-      where: filteredWhere,
-      include: { feed: true, savedBy: true, tags: true },
-      orderBy: [{ publishedAt: "desc" }, { fetchedAt: "desc" }],
-      take: 80
-    }),
-    params.story
-      ? prisma.feedStory.findUnique({
-          where: { id: params.story },
-          include: { feed: true, savedBy: true, tags: true }
-        })
-      : Promise.resolve(null),
-    prisma.feedStory.count(),
-    prisma.feedStory.count({ where: { isRead: false } }),
-    prisma.feedStory.count({ where: { savedBy: { some: {} } } }),
-    prisma.feedStory.count({
-      where: { publishedAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) } }
-    }),
-    prisma.post.count({ where: { status: "draft" } })
-  ]);
+  } = await safeDbQuery(
+    "home_reader_query_failed",
+    {
+      folders: [],
+      unreadByFeed: [],
+      stories: [],
+      selected: null,
+      allCount: 0,
+      unreadCount: 0,
+      savedCount: 0,
+      trendingCount: 0,
+      draftCount: 0
+    } as {
+      folders: Array<{
+        id: string;
+        name: string;
+        color: string | null;
+        feeds: Array<{
+          id: string;
+          title: string;
+          fetchStatus: string;
+          _count: { stories: number };
+        }>;
+      }>;
+      unreadByFeed: Array<{ feedId: string; _count: { _all: number } }>;
+      stories: StoryRecord[];
+      selected: StoryRecord | null;
+      allCount: number;
+      unreadCount: number;
+      savedCount: number;
+      trendingCount: number;
+      draftCount: number;
+    },
+    async () => {
+      const [
+        folders,
+        unreadByFeed,
+        stories,
+        selected,
+        allCount,
+        unreadCount,
+        savedCount,
+        trendingCount,
+        draftCount
+      ] = await Promise.all([
+        prisma.feedFolder.findMany({
+          include: {
+            feeds: {
+              include: { _count: { select: { stories: true } } },
+              orderBy: { title: "asc" }
+            }
+          },
+          orderBy: { name: "asc" }
+        }),
+        prisma.feedStory.groupBy({
+          by: ["feedId"],
+          where: { isRead: false },
+          _count: { _all: true }
+        }),
+        prisma.feedStory.findMany({
+          where: filteredWhere,
+          include: { feed: true, savedBy: true, tags: true },
+          orderBy: [{ publishedAt: "desc" }, { fetchedAt: "desc" }],
+          take: 80
+        }),
+        params.story
+          ? prisma.feedStory.findUnique({
+              where: { id: params.story },
+              include: { feed: true, savedBy: true, tags: true }
+            })
+          : Promise.resolve(null),
+        prisma.feedStory.count(),
+        prisma.feedStory.count({ where: { isRead: false } }),
+        prisma.feedStory.count({ where: { savedBy: { some: {} } } }),
+        prisma.feedStory.count({
+          where: { publishedAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) } }
+        }),
+        prisma.post.count({ where: { status: "draft" } })
+      ]);
+
+      return {
+        folders,
+        unreadByFeed,
+        stories,
+        selected,
+        allCount,
+        unreadCount,
+        savedCount,
+        trendingCount,
+        draftCount
+      };
+    }
+  );
 
   return (
     <NewsReaderLayout

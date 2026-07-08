@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import Link from "next/link";
 import AdminStoryActions from "@/components/AdminStoryActions";
-import { prisma } from "@/lib/prisma";
+import { prisma, safeDbQuery } from "@/lib/prisma";
 
 function formatDate(date: Date | null) {
   if (!date) return "No date";
@@ -33,24 +33,32 @@ export default async function AdminStoriesPage({
         }
       : {})
   };
-  const [stories, counts] = await Promise.all([
-    prisma.feedStory.findMany({
-      where,
-      include: {
-        feed: true,
-        savedBy: true,
-        tags: true,
-        posts: { select: { id: true, slug: true, status: true } }
-      },
-      orderBy: [{ publishedAt: "desc" }, { fetchedAt: "desc" }],
-      take: 200
-    }),
-    Promise.all([
-      prisma.feedStory.count(),
-      prisma.feedStory.count({ where: { isRead: false } }),
-      prisma.feedStory.count({ where: { savedBy: { some: {} } } })
-    ])
-  ]);
+  const { stories, counts } = await safeDbQuery(
+    "admin_stories_query_failed",
+    { stories: [], counts: [0, 0, 0] as [number, number, number] },
+    async () => {
+      const [stories, counts] = await Promise.all([
+        prisma.feedStory.findMany({
+          where,
+          include: {
+            feed: true,
+            savedBy: true,
+            tags: true,
+            posts: { select: { id: true, slug: true, status: true } }
+          },
+          orderBy: [{ publishedAt: "desc" }, { fetchedAt: "desc" }],
+          take: 200
+        }),
+        Promise.all([
+          prisma.feedStory.count(),
+          prisma.feedStory.count({ where: { isRead: false } }),
+          prisma.feedStory.count({ where: { savedBy: { some: {} } } })
+        ]) as Promise<[number, number, number]>
+      ]);
+
+      return { stories, counts };
+    }
+  );
 
   const [allCount, unreadCount, savedCount] = counts;
 

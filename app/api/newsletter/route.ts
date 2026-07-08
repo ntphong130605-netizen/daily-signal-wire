@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { prisma } from "@/lib/prisma";
+import { databaseUnavailableResponse, isDatabaseConfigured, prisma } from "@/lib/prisma";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 import { logError } from "@/lib/logger";
 
@@ -8,6 +8,10 @@ const NewsletterSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  if (!isDatabaseConfigured()) {
+    return databaseUnavailableResponse();
+  }
+
   const limited = rateLimit(requestKey(request, "newsletter"), {
     limit: 5,
     windowMs: 60 * 60_000

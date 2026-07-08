@@ -17,5 +17,17 @@ export function apiError(error: unknown) {
   if (message === "INVALID_ORIGIN") {
     return Response.json({ error: "Invalid request origin" }, { status: 403 });
   }
+  if (
+    message.includes("DATABASE_URL") ||
+    message.includes("Environment variable not found")
+  ) {
+    return Response.json(
+      {
+        error:
+          "DATABASE_URL is not configured. Add a production database URL in Vercel Project Settings."
+      },
+      { status: 503 }
+    );
+  }
   return Response.json({ error: message || "Request failed" }, { status: 500 });
 }
