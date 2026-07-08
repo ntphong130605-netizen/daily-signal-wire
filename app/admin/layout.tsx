@@ -18,7 +18,7 @@ export default async function AdminLayout({
         <AdminNav />
         <div className="sidebar-note">
           <span className="live-dot" />
-          Feeds refresh every 30 minutes
+          Cron-ready newsroom
         </div>
         <LogoutButton />
       </aside>

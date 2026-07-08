@@ -5,9 +5,13 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:vercel": "prisma generate --schema prisma/schema.postgres.prisma && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "prisma db push",
+    "db:push:prod": "prisma db push --schema prisma/schema.postgres.prisma",
+    "db:generate:prod": "prisma generate --schema prisma/schema.postgres.prisma",
+    "db:seed:prod": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "seed": "tsx prisma/seed.ts"
   },

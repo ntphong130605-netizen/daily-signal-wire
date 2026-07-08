@@ -2776,6 +2776,40 @@ textarea:focus {
   font-size: 8px;
 }
 
+.admin-editor-panel {
+  overflow: hidden;
+}
+
+.admin-editor-image {
+  display: block;
+  width: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--line);
+}
+
+.sticky-action-bar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 20;
+  border: 1px solid rgba(22, 138, 150, 0.18);
+  box-shadow: var(--shadow);
+}
+
+.compact-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.compact-confirm input {
+  width: auto;
+  accent-color: var(--green);
+}
+
 @media (max-width: 1120px) {
   .home-content-grid {
     grid-template-columns: minmax(0, 1fr) 280px;
@@ -3682,6 +3716,49 @@ html[data-theme="light"],
   color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.system-state-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(34, 166, 179, 0.14), transparent 32%),
+    #f7faf9;
+}
+
+.system-state-card {
+  display: grid;
+  width: min(560px, 100%);
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 30px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.system-state-card h1 {
+  margin: 0;
+  font-family: "Newsreader", Georgia, serif;
+  font-size: clamp(34px, 7vw, 56px);
+}
+
+.system-state-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.system-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.loading-card {
+  text-align: center;
 }
 
 .status-fetching {

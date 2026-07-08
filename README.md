@@ -52,6 +52,7 @@ Copy `.env.example` to `.env`.
 
 ```env
 DATABASE_URL="file:./dev.db"
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 OPENAI_API_KEY=
 AI_MODEL=gpt-5.4-mini
@@ -60,7 +61,10 @@ IMAGE_MODEL=gpt-image-2
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=replace-with-a-nextauth-secret-before-production
 
+GOOGLE_ANALYTICS_ID=
+GOOGLE_SITE_VERIFICATION=
 NEXT_PUBLIC_ADSENSE_CLIENT=
+NEXT_PUBLIC_ADSENSE_CLIENT_ID=
 NEXT_PUBLIC_ADSENSE_SLOT_TOP=
 NEXT_PUBLIC_ADSENSE_SLOT_MIDDLE=
 NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
@@ -99,8 +103,45 @@ It creates:
 - one AI draft sample
 - admin demo user metadata
 
-For production, switch `DATABASE_URL` to PostgreSQL and change the Prisma
-datasource provider in `prisma/schema.prisma` before deploying.
+Production uses a separate PostgreSQL schema file:
+
+```text
+prisma/schema.postgres.prisma
+```
+
+Vercel runs `npm run build:vercel`, which generates Prisma Client from that
+PostgreSQL schema. Local development keeps `prisma/schema.prisma` on SQLite.
+
+### Neon or Supabase production database
+
+1. Create a PostgreSQL project in Neon or Supabase.
+2. Copy the pooled connection string.
+3. Add it in Vercel Project Settings → Environment Variables:
+
+```env
+DATABASE_URL="postgresql://..."
+NEXT_PUBLIC_SITE_URL=https://daily-signal-wire.vercel.app
+NEXTAUTH_URL=https://daily-signal-wire.vercel.app
+NEXTAUTH_SECRET=generate-a-long-random-secret
+ADMIN_PASSWORD=choose-a-strong-password
+ADMIN_SESSION_SECRET=generate-another-long-random-secret
+CRON_SECRET=generate-a-long-random-secret
+```
+
+4. From a production-capable shell with the same `DATABASE_URL`, run:
+
+```bash
+npm run db:generate:prod
+npm run db:push:prod
+npm run db:seed:prod
+```
+
+`db:push:prod` applies the Prisma data model to the PostgreSQL database. Use a
+managed migration workflow before large schema changes on a live production
+database.
+
+If `DATABASE_URL` is missing, public pages, admin pages and `/api/health` do not
+crash. They render empty/degraded states until a production database is attached.
 
 ## RSS reader
 
@@ -242,6 +283,8 @@ Post actions include:
 - Copy URL
 - Preview
 - Edit
+- Generate Image
+- Regenerate Image
 - Publish
 
 Story actions include:
@@ -267,7 +310,23 @@ Story actions include:
 When AdSense variables are empty, the site shows development placeholders
 labeled `Ad Slot`.
 
-The AdSense script is only loaded when `NEXT_PUBLIC_ADSENSE_CLIENT` is set.
+The AdSense script is only loaded when `NEXT_PUBLIC_ADSENSE_CLIENT_ID` or the
+legacy `NEXT_PUBLIC_ADSENSE_CLIENT` is set.
+
+## SEO and monitoring
+
+Production includes:
+
+- `/api/health`
+- `/sitemap.xml`
+- `/robots.txt`
+- `/rss.xml`
+- canonical URLs
+- Open Graph metadata
+- Twitter Card metadata
+- NewsArticle JSON-LD on article pages
+- Google Search Console verification placeholder
+- Google Analytics integration through `GOOGLE_ANALYTICS_ID`
 
 ## Useful commands
 
@@ -278,5 +337,6 @@ npx prisma migrate dev
 npm run seed
 npm run dev
 npm run build
+npm run build:vercel
 npm run start
 ```

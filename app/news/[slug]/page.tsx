@@ -8,6 +8,7 @@ import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
 import { isAdmin } from "@/lib/auth";
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { absoluteUrl, siteName } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -37,20 +38,26 @@ export async function generateMetadata({
   if (!post || post.status !== "published") return {};
   const ogImage = post.openGraphImage || post.featuredImage || post.imageUrl;
   const twitterImage = post.twitterImage || post.openGraphImage || post.imageUrl;
+  const canonical = absoluteUrl(`/news/${slug}`);
   return {
     title: post.seoTitle,
     description: post.seoDescription,
+    alternates: {
+      canonical
+    },
     openGraph: {
       title: post.seoTitle,
       description: post.seoDescription,
+      url: canonical,
+      siteName,
       type: "article",
-      images: ogImage ? [ogImage] : []
+      images: ogImage ? [absoluteUrl(ogImage)] : []
     },
     twitter: {
       card: "summary_large_image",
       title: post.seoTitle,
       description: post.seoDescription,
-      images: twitterImage ? [twitterImage] : []
+      images: twitterImage ? [absoluteUrl(twitterImage)] : []
     }
   };
 }
@@ -113,6 +120,31 @@ export default async function NewsArticlePage({
     hour: "numeric",
     minute: "2-digit"
   }).format(post.publishedAt || post.updatedAt);
+  const coverImage = post.featuredImage || post.imageUrl || post.thumbnailImage;
+  const articleUrl = absoluteUrl(`/news/${post.slug}`);
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: post.title,
+    description: post.excerpt,
+    datePublished: (post.publishedAt || post.createdAt).toISOString(),
+    dateModified: post.updatedAt.toISOString(),
+    mainEntityOfPage: articleUrl,
+    url: articleUrl,
+    image: coverImage ? [absoluteUrl(coverImage)] : undefined,
+    author: {
+      "@type": "Organization",
+      name: siteName,
+      url: absoluteUrl("/")
+    },
+    publisher: {
+      "@type": "Organization",
+      name: siteName,
+      url: absoluteUrl("/")
+    },
+    articleSection: post.trend?.category || "Latest",
+    isAccessibleForFree: true
+  };
 
   return (
     <ReaderShell>
@@ -149,9 +181,9 @@ export default async function NewsArticlePage({
             </header>
 
             <figure className="article-cover">
-              {post.featuredImage || post.imageUrl ? (
+              {coverImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={post.featuredImage || post.imageUrl || ""} alt="" />
+                <img src={coverImage} alt="" />
               ) : (
                 <div className="article-cover-fallback">
                   <svg viewBox="0 0 100 60" aria-hidden="true">
@@ -177,6 +209,10 @@ export default async function NewsArticlePage({
 
             <ArticleBody content={post.content} />
             <AdSlot position="bottom" />
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+            />
             <div className="article-end-note">
               <strong>Daily Signal Wire editorial standards</strong>
               <p>

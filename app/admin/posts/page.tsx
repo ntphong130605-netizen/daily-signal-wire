@@ -7,6 +7,7 @@ export default async function AdminPostsPage({
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { status = "all", q = "" } = await searchParams;
+  const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
   const { posts, draftCount, publishedCount } = await safeDbQuery(
     "admin_posts_query_failed",
     { posts: [], draftCount: 0, publishedCount: 0 },
@@ -115,7 +116,15 @@ export default async function AdminPostsPage({
                     title={post.title}
                     hook={post.facebookCaption || post.excerpt}
                     status={post.status}
-                    trendId={post.trendId}
+                    aiConfigured={aiConfigured}
+                    imageStatus={post.imageStatus}
+                    hasImage={Boolean(
+                      post.imageUrl ||
+                        post.featuredImage ||
+                        post.thumbnailImage ||
+                        post.openGraphImage ||
+                        post.twitterImage
+                    )}
                   />
                 </article>
               ))}

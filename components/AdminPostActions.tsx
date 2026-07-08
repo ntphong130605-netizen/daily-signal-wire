@@ -27,14 +27,18 @@ export default function AdminPostActions({
   title,
   hook,
   status,
-  trendId
+  aiConfigured,
+  imageStatus,
+  hasImage
 }: {
   id: string;
   slug: string;
   title: string;
   hook: string;
   status: string;
-  trendId: string | null;
+  aiConfigured: boolean;
+  imageStatus: string;
+  hasImage: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -83,6 +87,24 @@ export default function AdminPostActions({
     router.refresh();
   }
 
+  async function imageAction(mode: "generate" | "regenerate") {
+    setBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/admin/posts/${id}/image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode })
+    });
+    const body = await response.json().catch(() => ({}));
+    setBusy(false);
+    if (!response.ok) {
+      setMessage(body.error || "Image generation failed");
+      return;
+    }
+    setMessage(mode === "generate" ? "Image generated" : "Image regenerated");
+    router.refresh();
+  }
+
   return (
     <div className="admin-post-actions">
       <button onClick={copyFacebook}>Copy Facebook Post</button>
@@ -93,7 +115,21 @@ export default function AdminPostActions({
       >
         Preview
       </Link>
-      {trendId ? <Link href={`/admin/trends/${trendId}`}>Edit</Link> : null}
+      <Link href={`/admin/posts/${id}`}>Edit</Link>
+      <button
+        onClick={() => imageAction("generate")}
+        disabled={busy || !aiConfigured || imageStatus === "generating"}
+        title={!aiConfigured ? "OPENAI_API_KEY is not configured" : undefined}
+      >
+        {imageStatus === "generating" ? "Generating image…" : "Generate Image"}
+      </button>
+      <button
+        onClick={() => imageAction("regenerate")}
+        disabled={busy || !aiConfigured || !hasImage || imageStatus === "generating"}
+        title={!aiConfigured ? "OPENAI_API_KEY is not configured" : undefined}
+      >
+        Regenerate Image
+      </button>
       {status !== "published" && (
         <button className="publish-action" onClick={publish} disabled={busy}>
           {busy ? "Publishing…" : "Publish"}

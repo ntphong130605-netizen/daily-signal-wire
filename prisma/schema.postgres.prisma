@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Trend {
+  id                String    @id @default(cuid())
+  keyword           String
+  normalizedKeyword String    @unique
+  traffic           String?
+  relatedQueries    String    @default("[]")
+  sourceUrls        String    @default("[]")
+  sourceContext     String    @default("[]")
+  category          String?
+  generationStatus  String    @default("idle")
+  generationError   String?
+  discoveredAt      DateTime  @default(now())
+  generatedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  post              Post?
+
+  @@index([generationStatus])
+  @@index([discoveredAt])
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  emailVerified  DateTime?
+  name           String?
+  image          String?
+  role           String          @default("admin")
+  passwordHash   String?
+  accounts       Account[]
+  sessions       Session[]
+  authenticators Authenticator[]
+  savedStories   SavedStory[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([role])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  posts       Post[]
+  feeds       Feed[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FeedFolder {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  color       String?
+  feeds       Feed[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+}
+
+model Feed {
+  id            String      @id @default(cuid())
+  folderId      String?
+  folder        FeedFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  categoryId    String?
+  category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title         String
+  slug          String      @unique
+  siteUrl       String?
+  feedUrl       String      @unique
+  description   String?
+  imageUrl      String?
+  active        Boolean     @default(true)
+  fetchStatus   String      @default("idle")
+  lastFetchedAt DateTime?
+  lastError     String?
+  stories       FeedStory[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([folderId])
+  @@index([categoryId])
+  @@index([active])
+  @@index([lastFetchedAt])
+}
+
+model FeedStory {
+  id          String       @id @default(cuid())
+  feedId      String
+  feed        Feed         @relation(fields: [feedId], references: [id], onDelete: Cascade)
+  externalId  String       @unique
+  title       String
+  slug        String
+  excerpt     String?
+  content     String?
+  sourceUrl   String
+  author      String?
+  imageUrl    String?
+  publishedAt DateTime?
+  fetchedAt   DateTime     @default(now())
+  isRead      Boolean      @default(false)
+  savedBy     SavedStory[]
+  tags        StoryTag[]
+  posts       Post[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([feedId])
+  @@index([publishedAt])
+  @@index([isRead])
+  @@index([sourceUrl])
+}
+
+model SavedStory {
+  id        String    @id @default(cuid())
+  storyId   String
+  story     FeedStory @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  note      String?
+  createdAt DateTime  @default(now())
+
+  @@unique([storyId, userId])
+  @@index([userId])
+}
+
+model StoryTag {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  slug      String      @unique
+  stories   FeedStory[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Post {
+  id               String     @id @default(cuid())
+  trendId          String?    @unique
+  trend            Trend?     @relation(fields: [trendId], references: [id], onDelete: SetNull)
+  sourceStoryId    String?
+  sourceStory      FeedStory? @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
+  categoryId       String?
+  category         Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title            String
+  slug             String     @unique
+  excerpt          String
+  content          String
+  seoTitle         String
+  seoDescription   String
+  facebookCaption  String
+  imagePrompt      String?
+  imageModel       String?
+  imageGeneratedAt DateTime?
+  imageStatus      String     @default("idle")
+  imageError       String?
+  imageUrl         String?
+  featuredImage    String?
+  thumbnailImage   String?
+  openGraphImage   String?
+  twitterImage     String?
+  imageLicense     String?
+  imageCredit      String?
+  aiGenerated      Boolean    @default(false)
+  factCheckNotes   String     @default("[]")
+  sourceUrls       String     @default("[]")
+  status           String     @default("draft")
+  publishedAt      DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  @@index([status])
+  @@index([publishedAt])
+  @@index([imageStatus])
+  @@index([sourceStoryId])
+  @@index([categoryId])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AdSlot {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  placement String
+  enabled   Boolean  @default(true)
+  clientId  String?
+  slotId    String?
+  format    String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([placement])
+  @@index([enabled])
+}

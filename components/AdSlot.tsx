@@ -7,7 +7,9 @@ export default function AdSlot({
   position: "top" | "middle" | "bottom" | "sidebar";
   className?: string;
 }) {
-  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
+  const client =
+    process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
+    process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
   const slotByPosition = {
     top: process.env.NEXT_PUBLIC_ADSENSE_SLOT_TOP,
     middle: process.env.NEXT_PUBLIC_ADSENSE_SLOT_MIDDLE,

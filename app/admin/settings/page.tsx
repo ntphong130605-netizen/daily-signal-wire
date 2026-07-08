@@ -23,7 +23,15 @@ export default async function AdminSettingsPage() {
     ["Database", isDatabaseConfigured() ? "Configured" : "Missing DATABASE_URL"],
     ["OpenAI", flag(process.env.OPENAI_API_KEY)],
     ["AI model", process.env.AI_MODEL || "Default model fallback"],
-    ["AdSense client", flag(process.env.NEXT_PUBLIC_ADSENSE_CLIENT)],
+    ["Site URL", process.env.NEXT_PUBLIC_SITE_URL || "Default Vercel URL fallback"],
+    [
+      "AdSense client",
+      flag(
+        process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
+          process.env.NEXT_PUBLIC_ADSENSE_CLIENT
+      )
+    ],
+    ["Google Analytics", flag(process.env.GOOGLE_ANALYTICS_ID)],
     ["Cron secret", flag(process.env.CRON_SECRET)],
     ["NextAuth secret", flag(process.env.NEXTAUTH_SECRET)]
   ];
