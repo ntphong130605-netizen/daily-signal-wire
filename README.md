@@ -129,7 +129,9 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
   http://localhost:3000/api/cron/feeds
 ```
 
-`vercel.json` schedules RSS refresh every 30 minutes.
+`vercel.json` uses a once-per-day RSS cron schedule so Hobby deployments pass
+Vercel's cron limits. If the project is on Vercel Pro, you can change the
+schedule back to `*/30 * * * *`.
 
 ## Google Trends and AI drafts
 
@@ -140,7 +142,9 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
   http://localhost:3000/api/cron/trends
 ```
 
-`vercel.json` schedules Google Trends US refresh every 3 hours.
+`vercel.json` uses a once-per-day Google Trends cron schedule so Hobby
+deployments pass Vercel's cron limits. If the project is on Vercel Pro, you can
+change the schedule back to `0 */3 * * *`.
 
 If Google Trends, Google News or any RSS source fails, the app logs the error
 and keeps running. Missing API keys never crash the site.
