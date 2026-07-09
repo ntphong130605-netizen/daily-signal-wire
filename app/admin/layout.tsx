@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (!(await isAdmin())) redirect("/login");
+  if (!(await isAdmin())) redirect("/admin/login");
 
   return (
     <div className="admin-shell">

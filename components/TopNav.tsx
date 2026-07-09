@@ -4,13 +4,13 @@ import SearchBar from "@/components/SearchBar";
 const links = [
   { label: "Trending", href: "/?sort=trending" },
   { label: "Latest", href: "/?sort=latest" },
-  { label: "Video", href: "/?topic=video" },
+  { label: "Video", href: "/category/video" },
   { label: "Topics", href: "/?topic=topics" },
-  { label: "US News", href: "/?topic=US%20News" },
-  { label: "Sports", href: "/?topic=Sports" },
-  { label: "Tech", href: "/?topic=Technology" },
-  { label: "Money", href: "/?topic=Money" },
-  { label: "Entertainment", href: "/?topic=Entertainment" }
+  { label: "US News", href: "/category/us-news" },
+  { label: "Sports", href: "/category/sports" },
+  { label: "Tech", href: "/category/technology" },
+  { label: "Money", href: "/category/money" },
+  { label: "Entertainment", href: "/category/entertainment" }
 ];
 
 export default function TopNav({

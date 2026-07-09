@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AdminPostActions from "@/components/AdminPostActions";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 
@@ -50,18 +51,18 @@ export default async function AdminPostsPage({
       </header>
       <main className="admin-content">
         <section className="admin-post-stats">
-          <a href="/admin/posts?status=all">
+          <Link href="/admin/posts?status=all">
             <span>All posts</span>
             <strong>{draftCount + publishedCount}</strong>
-          </a>
-          <a href="/admin/posts?status=draft">
+          </Link>
+          <Link href="/admin/posts?status=draft">
             <span>Drafts</span>
             <strong>{draftCount}</strong>
-          </a>
-          <a href="/admin/posts?status=published">
+          </Link>
+          <Link href="/admin/posts?status=published">
             <span>Published</span>
             <strong>{publishedCount}</strong>
-          </a>
+          </Link>
           <form action="/admin/posts">
             <input type="search" name="q" defaultValue={q} placeholder="Search posts…" />
             <button>Search</button>

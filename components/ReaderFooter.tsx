@@ -8,9 +8,10 @@ export default function ReaderFooter() {
         <Logo inverse />
         <p>Original reporting signals. Human-reviewed publishing.</p>
         <nav aria-label="Footer navigation">
-          <Link href="/">About</Link>
-          <Link href="/">Standards</Link>
-          <Link href="/">Privacy</Link>
+          <Link href="/about">About</Link>
+          <Link href="/contact">Contact</Link>
+          <Link href="/privacy-policy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
           <Link href="/admin">Newsroom</Link>
         </nav>
       </div>

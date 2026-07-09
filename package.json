@@ -7,7 +7,8 @@
     "build": "prisma generate && next build",
     "build:vercel": "prisma generate --schema prisma/schema.postgres.prisma && next build",
     "start": "next start",
-    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
     "db:push": "prisma db push",
     "db:push:prod": "prisma db push --schema prisma/schema.postgres.prisma",
     "db:generate:prod": "prisma generate --schema prisma/schema.postgres.prisma",
@@ -26,15 +27,21 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.19",
     "prisma": "6.19.3",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   },
   "packageManager": "npm@11.8.0"
 }
