@@ -1,9 +1,6 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { z } from "zod";
 import { apiError, protectMutation } from "@/lib/apiSecurity";
-import { generateImageForPost } from "@/lib/aiImage";
+import { generateImageForPost, storePostImageVariants } from "@/lib/aiImage";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 import { logError } from "@/lib/logger";
@@ -27,12 +24,6 @@ const ImageActionSchema = z.object({
   imageCredit: z.string().optional()
 });
 
-async function imageDirectory(kind: "generated" | "uploads") {
-  const directory = path.join(process.cwd(), "public", kind);
-  await mkdir(directory, { recursive: true });
-  return directory;
-}
-
 function imagePayload(post: {
   imageUrl: string | null;
   featuredImage: string | null;
@@ -44,6 +35,7 @@ function imagePayload(post: {
   imageGeneratedAt: Date | null;
   imageStatus: string;
   imageError: string | null;
+  imageStorage: string;
   imageLicense: string | null;
   imageCredit: string | null;
 }) {
@@ -58,6 +50,7 @@ function imagePayload(post: {
     imageGeneratedAt: post.imageGeneratedAt,
     imageStatus: post.imageStatus,
     imageError: post.imageError,
+    imageStorage: post.imageStorage,
     imageLicense: post.imageLicense,
     imageCredit: post.imageCredit
   };
@@ -87,22 +80,23 @@ export async function POST(
       if (file.size > 5 * 1024 * 1024) {
         return Response.json({ error: "Image must be 5 MB or smaller." }, { status: 400 });
       }
-      const extension =
-        file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-      const filename = `${randomUUID()}.${extension}`;
-      await writeFile(
-        path.join(await imageDirectory("uploads"), filename),
-        Buffer.from(await file.arrayBuffer())
-      );
-      const imageUrl = `/uploads/${filename}`;
+      const sourceBytes = Buffer.from(await file.arrayBuffer());
+      const stored = await storePostImageVariants(id, sourceBytes);
+      const imageUrl = stored.thumbnailImage;
+      const featuredImage = stored.featuredImage;
+      const thumbnailImage = stored.thumbnailImage;
+
       const updated = await prisma.post.update({
         where: { id },
         data: {
           imageUrl,
-          featuredImage: imageUrl,
-          thumbnailImage: imageUrl,
-          openGraphImage: imageUrl,
-          twitterImage: imageUrl,
+          featuredImage,
+          thumbnailImage,
+          openGraphImage: featuredImage,
+          twitterImage: thumbnailImage,
+          imageStorage: stored.imageStorage,
+          featuredImageData: stored.featuredImageData,
+          thumbnailImageData: stored.thumbnailImageData,
           imageStatus: "accepted",
           imageError: null,
           imageLicense: String(form.get("license") || "Owned/uploaded by publisher"),
@@ -161,6 +155,9 @@ export async function POST(
           thumbnailImage: url,
           openGraphImage: url,
           twitterImage: url,
+          imageStorage: "url",
+          featuredImageData: null,
+          thumbnailImageData: null,
           imageStatus: "accepted",
           imageError: null,
           imageLicense: body.imageLicense.trim(),
@@ -197,6 +194,9 @@ export async function POST(
           thumbnailImage: null,
           openGraphImage: null,
           twitterImage: null,
+          imageStorage: "url",
+          featuredImageData: null,
+          thumbnailImageData: null,
           imageLicense: null,
           imageCredit: null
         }

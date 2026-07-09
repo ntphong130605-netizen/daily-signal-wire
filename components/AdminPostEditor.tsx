@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 
 type EditablePost = {
   id: string;
@@ -57,6 +57,11 @@ export default function AdminPostEditor({
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [urlFields, setUrlFields] = useState({
+    imageUrl: "",
+    imageLicense: "",
+    imageCredit: ""
+  });
 
   function previewImageUrl() {
     return post.featuredImage || post.imageUrl || post.thumbnailImage || "";
@@ -134,6 +139,63 @@ export default function AdminPostEditor({
         imageCredit: result.imageCredit ?? ""
       }));
       setMessage(`${mode} complete.`);
+      router.refresh();
+    }
+  }
+
+  async function uploadImage(event: ChangeEvent<HTMLInputElement>) {
+    if (!event.target.files?.[0]) return;
+    const form = new FormData();
+    form.append("file", event.target.files[0]);
+    form.append("license", "Owned/uploaded by publisher");
+    form.append("credit", "Daily Signal Wire");
+    const result = await call(
+      `/api/admin/posts/${post.id}/image`,
+      { method: "POST", body: form },
+      "upload"
+    );
+    if (result) {
+      setPost((current) => ({
+        ...current,
+        imageStatus: result.imageStatus ?? current.imageStatus,
+        imageError: result.imageError ?? "",
+        imageUrl: result.imageUrl ?? "",
+        featuredImage: result.featuredImage ?? "",
+        thumbnailImage: result.thumbnailImage ?? "",
+        openGraphImage: result.openGraphImage ?? "",
+        twitterImage: result.twitterImage ?? "",
+        imageLicense: result.imageLicense ?? "",
+        imageCredit: result.imageCredit ?? ""
+      }));
+      setMessage("Image uploaded and resized.");
+      router.refresh();
+    }
+  }
+
+  async function pasteImageUrl() {
+    const result = await call(
+      `/api/admin/posts/${post.id}/image`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "url", ...urlFields })
+      },
+      "url"
+    );
+    if (result) {
+      setPost((current) => ({
+        ...current,
+        imageStatus: result.imageStatus ?? current.imageStatus,
+        imageError: result.imageError ?? "",
+        imageUrl: result.imageUrl ?? "",
+        featuredImage: result.featuredImage ?? "",
+        thumbnailImage: result.thumbnailImage ?? "",
+        openGraphImage: result.openGraphImage ?? "",
+        twitterImage: result.twitterImage ?? "",
+        imageLicense: result.imageLicense ?? "",
+        imageCredit: result.imageCredit ?? ""
+      }));
+      setMessage("Licensed image URL saved.");
       router.refresh();
     }
   }
@@ -300,6 +362,57 @@ export default function AdminPostEditor({
           </div>
         )}
         {post.imageError && <div className="error-banner">{post.imageError}</div>}
+        {(post.featuredImage || post.thumbnailImage) && (
+          <div className="image-asset-list">
+            <span>1200×675: {post.thumbnailImage || "pending"}</span>
+            <span>1920×1080: {post.featuredImage || "pending"}</span>
+            <span>OpenGraph: {post.openGraphImage || "pending"}</span>
+            <span>Twitter: {post.twitterImage || "pending"}</span>
+          </div>
+        )}
+        <p className="license-line">
+          {post.imageLicense || "License not set"}
+          {post.imageCredit ? ` · ${post.imageCredit}` : ""}
+        </p>
+        <label className="upload-button">
+          Upload image
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={uploadImage}
+          />
+        </label>
+        <details className="url-details">
+          <summary>Paste licensed image URL</summary>
+          <input
+            placeholder="https://images.unsplash.com/…"
+            value={urlFields.imageUrl}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageUrl: event.target.value })
+            }
+          />
+          <input
+            placeholder="License"
+            value={urlFields.imageLicense}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageLicense: event.target.value })
+            }
+          />
+          <input
+            placeholder="Photographer / source credit"
+            value={urlFields.imageCredit}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageCredit: event.target.value })
+            }
+          />
+          <button
+            className="button button-secondary button-full"
+            onClick={pasteImageUrl}
+            disabled={Boolean(busy)}
+          >
+            Save image URL
+          </button>
+        </details>
       </section>
 
       <section className="action-bar sticky-action-bar">
@@ -326,6 +439,13 @@ export default function AdminPostEditor({
           disabled={Boolean(busy) || !previewImageUrl()}
         >
           Accept Image
+        </button>
+        <button
+          className="button button-secondary"
+          onClick={() => image("reject")}
+          disabled={Boolean(busy) || !previewImageUrl()}
+        >
+          Reject Image
         </button>
         <button
           className="button button-secondary"

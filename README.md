@@ -57,6 +57,7 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 OPENAI_API_KEY=
 AI_MODEL=gpt-5.4-mini
 IMAGE_MODEL=gpt-image-2
+IMAGE_STORAGE=local
 
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=replace-with-a-nextauth-secret-before-production
@@ -187,6 +188,16 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 deployments pass Vercel's cron limits. If the project is on Vercel Pro, you can
 change the schedule back to `0 */3 * * *`.
 
+Admins can also import the latest US trend signals manually from:
+
+```text
+/admin/trends
+```
+
+The `Refresh Google Trends` action fetches Google Trends US, falls back to
+mock-safe signals if the upstream feed fails, and saves new trends as idle
+signals. It does not generate, publish or overwrite stories automatically.
+
 If Google Trends, Google News or any RSS source fails, the app logs the error
 and keeps running. Missing API keys never crash the site.
 
@@ -219,11 +230,26 @@ After an AI article draft is created from Google Trends or an RSS story, the app
 attempts to generate an editorial image automatically when `OPENAI_API_KEY` is
 configured.
 
-Generated images are saved locally under `public/generated` in two landscape
-16:9 sizes:
+Generated images are resized into two landscape 16:9 assets:
 
 - `1200x675` for thumbnail/Twitter image
 - `1920x1080` for featured/OpenGraph image
+
+Local development defaults to filesystem storage under `public/generated`.
+Production on Vercel defaults to database-backed media routes so serverless
+filesystem limits do not break image generation.
+
+```env
+IMAGE_STORAGE=database
+```
+
+Use `IMAGE_STORAGE=local` only when the runtime has a persistent writable
+filesystem. Database-backed generated images are served from:
+
+```text
+/api/images/posts/[id]/featured
+/api/images/posts/[id]/thumbnail
+```
 
 Each post stores:
 
@@ -236,6 +262,7 @@ Each post stores:
 - `thumbnailImage`
 - `openGraphImage`
 - `twitterImage`
+- `imageStorage`
 
 The admin visual desk supports:
 

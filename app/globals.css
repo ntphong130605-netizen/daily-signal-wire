@@ -370,6 +370,23 @@ textarea:focus {
   font-weight: 700;
 }
 
+.admin-header-actions,
+.refresh-trends-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.refresh-trends-action small {
+  max-width: 240px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .admin-content {
   padding: 28px 4.5vw 60px;
 }
@@ -1023,7 +1040,14 @@ textarea:focus {
   .admin-header {
     min-height: 145px;
     align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
     padding: 27px 20px 22px;
+  }
+
+  .admin-header-actions,
+  .refresh-trends-action {
+    justify-content: flex-start;
   }
 
   .admin-header h1 {

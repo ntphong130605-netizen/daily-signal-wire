@@ -8,11 +8,16 @@ export async function GET() {
     databaseConfigured: isDatabaseConfigured(),
     databaseReachable: false,
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+    imageStorage: process.env.IMAGE_STORAGE || (process.env.VERCEL ? "database" : "local"),
     adsenseConfigured: Boolean(
       process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
         process.env.NEXT_PUBLIC_ADSENSE_CLIENT
     ),
-    siteUrlConfigured: Boolean(process.env.NEXT_PUBLIC_SITE_URL)
+    siteUrlConfigured: Boolean(
+      process.env.NEXT_PUBLIC_SITE_URL ||
+        process.env.NEXTAUTH_URL ||
+        process.env.VERCEL_URL
+    )
   };
 
   if (checks.databaseConfigured) {

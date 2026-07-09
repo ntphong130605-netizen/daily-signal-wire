@@ -1,5 +1,6 @@
 import Link from "next/link";
 import GenerateDraftButton from "@/components/GenerateDraftButton";
+import RefreshTrendsButton from "@/components/RefreshTrendsButton";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { parseStringArray } from "@/lib/json";
 
@@ -24,7 +25,10 @@ export default async function AdminTrendsPage() {
           <h1>Trend queue</h1>
           <p>Use demand as an idea signal, then verify every reported claim.</p>
         </div>
-        <div className="header-badge">{trends.length} signals</div>
+        <div className="admin-header-actions">
+          <RefreshTrendsButton />
+          <div className="header-badge">{trends.length} signals</div>
+        </div>
       </header>
       <main className="admin-content">
         {!aiConfigured && (
@@ -51,7 +55,7 @@ export default async function AdminTrendsPage() {
               <p className="eyebrow">Fresh signals</p>
               <h2>US trend keywords</h2>
             </div>
-            <span className="source-pill">Refreshes every 3 hours</span>
+              <span className="source-pill">Manual refresh + protected cron</span>
           </div>
           {trends.length === 0 ? (
             <div className="empty-state">

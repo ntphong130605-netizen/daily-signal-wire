@@ -197,39 +197,42 @@ model StoryTag {
 }
 
 model Post {
-  id               String     @id @default(cuid())
-  trendId          String?    @unique
-  trend            Trend?     @relation(fields: [trendId], references: [id], onDelete: SetNull)
-  sourceStoryId    String?
-  sourceStory      FeedStory? @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
-  categoryId       String?
-  category         Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  title            String
-  slug             String     @unique
-  excerpt          String
-  content          String
-  seoTitle         String
-  seoDescription   String
-  facebookCaption  String
-  imagePrompt      String?
-  imageModel       String?
-  imageGeneratedAt DateTime?
-  imageStatus      String     @default("idle")
-  imageError       String?
-  imageUrl         String?
-  featuredImage    String?
-  thumbnailImage   String?
-  openGraphImage   String?
-  twitterImage     String?
-  imageLicense     String?
-  imageCredit      String?
-  aiGenerated      Boolean    @default(false)
-  factCheckNotes   String     @default("[]")
-  sourceUrls       String     @default("[]")
-  status           String     @default("draft")
-  publishedAt      DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id                 String     @id @default(cuid())
+  trendId            String?    @unique
+  trend              Trend?     @relation(fields: [trendId], references: [id], onDelete: SetNull)
+  sourceStoryId      String?
+  sourceStory        FeedStory? @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
+  categoryId         String?
+  category           Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title              String
+  slug               String     @unique
+  excerpt            String
+  content            String
+  seoTitle           String
+  seoDescription     String
+  facebookCaption    String
+  imagePrompt        String?
+  imageModel         String?
+  imageGeneratedAt   DateTime?
+  imageStatus        String     @default("idle")
+  imageError         String?
+  imageUrl           String?
+  featuredImage      String?
+  thumbnailImage     String?
+  openGraphImage     String?
+  twitterImage       String?
+  imageStorage       String     @default("url")
+  featuredImageData  String?
+  thumbnailImageData String?
+  imageLicense       String?
+  imageCredit        String?
+  aiGenerated        Boolean    @default(false)
+  factCheckNotes     String     @default("[]")
+  sourceUrls         String     @default("[]")
+  status             String     @default("draft")
+  publishedAt        DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   @@index([status])
   @@index([publishedAt])

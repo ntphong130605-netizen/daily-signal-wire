@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import OpenAI from "openai";
 import sharp from "sharp";
@@ -31,6 +31,7 @@ export type StoredImageAssets = {
   imageStatus: string;
   imageLicense: string;
   imageCredit: string;
+  imageStorage: string;
 };
 
 function imageModel() {
@@ -39,6 +40,14 @@ function imageModel() {
 
 function imageDirectory() {
   return path.join(process.cwd(), "public", "generated");
+}
+
+function imageStorageMode() {
+  const configured = process.env.IMAGE_STORAGE?.trim().toLowerCase();
+  if (configured === "local" || configured === "database") return configured;
+  return process.env.VERCEL || process.env.NODE_ENV === "production"
+    ? "database"
+    : "local";
 }
 
 function articleCategory(post: ImageContext) {
@@ -128,35 +137,67 @@ export async function generateEditorialImage(prompt: string) {
   throw new Error("Image API returned no image data.");
 }
 
-async function writeImageVariants(postId: string, sourceBytes: Buffer) {
-  const directory = imageDirectory();
-  await mkdir(directory, { recursive: true });
-  const stamp = `${postId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const featuredName = `${stamp}-1920x1080.jpg`;
-  const thumbnailName = `${stamp}-1200x675.jpg`;
-  const featuredPath = path.join(directory, featuredName);
-  const thumbnailPath = path.join(directory, thumbnailName);
-
-  await sharp(sourceBytes)
+async function renderImageVariants(sourceBytes: Buffer) {
+  const featuredBuffer = await sharp(sourceBytes)
     .resize(FEATURED_SIZE.width, FEATURED_SIZE.height, {
       fit: "cover",
       position: "attention"
     })
     .jpeg({ quality: 92, mozjpeg: true })
-    .toFile(featuredPath);
+    .toBuffer();
 
-  await sharp(sourceBytes)
+  const thumbnailBuffer = await sharp(sourceBytes)
     .resize(THUMBNAIL_SIZE.width, THUMBNAIL_SIZE.height, {
       fit: "cover",
       position: "attention"
     })
     .jpeg({ quality: 92, mozjpeg: true })
-    .toFile(thumbnailPath);
+    .toBuffer();
+
+  return { featuredBuffer, thumbnailBuffer };
+}
+
+export async function storePostImageVariants(postId: string, sourceBytes: Buffer) {
+  const stamp = `${postId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const { featuredBuffer, thumbnailBuffer } = await renderImageVariants(sourceBytes);
+
+  if (imageStorageMode() === "local") {
+    try {
+      const directory = imageDirectory();
+      await mkdir(directory, { recursive: true });
+      const featuredName = `${stamp}-1920x1080.jpg`;
+      const thumbnailName = `${stamp}-1200x675.jpg`;
+      const featuredPath = path.join(directory, featuredName);
+      const thumbnailPath = path.join(directory, thumbnailName);
+
+      await Promise.all([
+        writeFile(featuredPath, featuredBuffer),
+        writeFile(thumbnailPath, thumbnailBuffer)
+      ]);
+
+      return {
+        imageStorage: "local",
+        featuredImage: `/generated/${featuredName}`,
+        thumbnailImage: `/generated/${thumbnailName}`,
+        featuredImageData: null,
+        thumbnailImageData: null
+      };
+    } catch (error) {
+      logError("local_image_storage_failed_using_database", error, { postId });
+    }
+  }
 
   return {
-    featuredImage: `/generated/${featuredName}`,
-    thumbnailImage: `/generated/${thumbnailName}`
+    imageStorage: "database",
+    featuredImage: `/api/images/posts/${postId}/featured?v=${stamp}`,
+    thumbnailImage: `/api/images/posts/${postId}/thumbnail?v=${stamp}`,
+    featuredImageData: featuredBuffer.toString("base64"),
+    thumbnailImageData: thumbnailBuffer.toString("base64")
   };
+}
+
+async function writeImageVariants(postId: string, sourceBytes: Buffer) {
+  return storePostImageVariants(postId, sourceBytes);
 }
 
 export async function generateImageForPost(
@@ -203,17 +244,24 @@ export async function generateImageForPost(
       imageGeneratedAt: now,
       imageStatus: options.statusWhenDone || "completed",
       imageLicense: "Illustration generated with AI.",
-      imageCredit: "AI illustration / Daily Signal Wire"
+      imageCredit: "AI illustration / Daily Signal Wire",
+      imageStorage: variants.imageStorage
     };
 
     await prisma.post.update({
       where: { id: postId },
       data: {
         ...assets,
-        imageError: null
+        imageError: null,
+        featuredImageData: variants.featuredImageData,
+        thumbnailImageData: variants.thumbnailImageData
       }
     });
-    logInfo("post_image_generated", { postId, model });
+    logInfo("post_image_generated", {
+      postId,
+      model,
+      imageStorage: variants.imageStorage
+    });
     return assets;
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 1000) : "Image generation failed.";
