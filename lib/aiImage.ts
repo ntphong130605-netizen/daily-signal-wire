@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
-import OpenAI from "openai";
 import sharp from "sharp";
 import { prisma } from "@/lib/prisma";
 import { logError, logInfo } from "@/lib/logger";
@@ -55,7 +54,9 @@ export type StoredImageAssets = {
 };
 
 function imageModel() {
-  return process.env.IMAGE_MODEL || "gpt-image-2";
+  const configured = process.env.IMAGE_MODEL?.trim();
+  if (!configured || configured === "gpt-image-2") return "gpt-image-1";
+  return configured;
 }
 
 function imageDirectory() {
@@ -191,23 +192,53 @@ export function buildEditorialImagePrompt(post: ImageContext, promptOverride?: s
   });
 }
 
-function client() {
-  if (!process.env.OPENAI_API_KEY) {
+export async function generateEditorialImage(prompt: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not configured.");
   }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
 
-export async function generateEditorialImage(prompt: string) {
-  const result = await client().images.generate(
-    {
-      model: imageModel(),
-      prompt,
-      size: "1536x1024",
-      quality: "high"
-    },
-    { timeout: IMAGE_API_TIMEOUT_MS }
-  );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), IMAGE_API_TIMEOUT_MS);
+  let result: {
+    data?: Array<{ b64_json?: string; url?: string }>;
+    error?: { message?: string };
+  };
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: imageModel(),
+        prompt,
+        size: "1536x1024",
+        quality: "high"
+      }),
+      signal: controller.signal
+    });
+
+    const text = await response.text();
+    result = text ? JSON.parse(text) : {};
+    if (!response.ok) {
+      throw new Error(
+        result.error?.message ||
+          `Image API failed with HTTP ${response.status}.`
+      );
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(
+        "Image generation timed out. Try Regenerate Image, upload an image, or paste a licensed image URL."
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const item = result.data?.[0];
   if (item?.b64_json) return Buffer.from(item.b64_json, "base64");
