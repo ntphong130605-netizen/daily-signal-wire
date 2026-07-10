@@ -7,10 +7,19 @@ export function isDatabaseConfigured() {
   return Boolean(process.env.DATABASE_URL?.trim());
 }
 
+function isLocalProductionBuildWithSqliteFallback() {
+  const databaseUrl = process.env.DATABASE_URL?.trim() || "";
+  return (
+    process.env.NODE_ENV === "production" &&
+    !process.env.VERCEL &&
+    databaseUrl.startsWith("file:")
+  );
+}
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"]
+    log: process.env.NODE_ENV === "development" ? ["warn"] : []
   });
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
@@ -21,6 +30,7 @@ export async function safeDbQuery<T>(
   query: () => Promise<T>
 ) {
   if (!isDatabaseConfigured()) return fallback;
+  if (isLocalProductionBuildWithSqliteFallback()) return fallback;
 
   try {
     return await query();
