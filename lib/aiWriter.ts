@@ -20,7 +20,7 @@ const ArticleSchema = z.object({
   facebookCaption: z.string().min(40).max(500),
   imagePrompt: z.string().min(80).max(1200),
   category: z.string().min(3).max(50),
-  sourceUrls: z.array(z.string().url()).min(1).max(10),
+  sourceUrls: z.array(z.string().min(8).max(500)).min(1).max(10),
   factCheckNotes: z.array(z.string().min(5)).min(1).max(20)
 });
 
