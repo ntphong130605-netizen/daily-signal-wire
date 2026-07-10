@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { parseJsonArray, parseStringArray } from "@/lib/json";
 import { generateArticleFromTrend } from "@/lib/aiWriter";
-import { tryGenerateImageForPost } from "@/lib/aiImage";
 import type { SourceContext } from "@/lib/trends";
 import { logError, logInfo } from "@/lib/logger";
 import { slugify } from "@/lib/slug";
@@ -110,7 +109,6 @@ export async function generateDraftForTrend(trendId: string) {
       }
     });
     logInfo("article_draft_generated", { trendId, postId: post.id });
-    await tryGenerateImageForPost(post.id);
     return post;
   } catch (error) {
     await prisma.trend

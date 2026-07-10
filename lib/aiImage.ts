@@ -10,6 +10,7 @@ import { logError, logInfo } from "@/lib/logger";
 const FEATURED_SIZE = { width: 1920, height: 1080 };
 const THUMBNAIL_SIZE = { width: 1200, height: 675 };
 const AI_DISCLOSURE = "AI-generated editorial illustration";
+const IMAGE_API_TIMEOUT_MS = 120_000;
 
 type ImageContext = {
   id: string;
@@ -198,12 +199,15 @@ function client() {
 }
 
 export async function generateEditorialImage(prompt: string) {
-  const result = await client().images.generate({
-    model: imageModel(),
-    prompt,
-    size: "1536x1024",
-    quality: "high"
-  });
+  const result = await client().images.generate(
+    {
+      model: imageModel(),
+      prompt,
+      size: "1536x1024",
+      quality: "high"
+    },
+    { timeout: IMAGE_API_TIMEOUT_MS }
+  );
 
   const item = result.data?.[0];
   if (item?.b64_json) return Buffer.from(item.b64_json, "base64");

@@ -1,6 +1,8 @@
+import { after } from "next/server";
 import { protectMutation, apiError } from "@/lib/apiSecurity";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 import { generateDraftForTrend } from "@/lib/generateDraft";
+import { tryGenerateImageForPost } from "@/lib/aiImage";
 
 export const maxDuration = 180;
 
@@ -28,7 +30,10 @@ export async function POST(
     }
     const { id } = await params;
     const post = await generateDraftForTrend(id);
-    return Response.json({ ok: true, postId: post.id });
+    after(async () => {
+      await tryGenerateImageForPost(post.id);
+    });
+    return Response.json({ ok: true, postId: post.id, imageQueued: true });
   } catch (error) {
     return apiError(error);
   }

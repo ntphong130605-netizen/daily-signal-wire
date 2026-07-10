@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { protectMutation, apiError } from "@/lib/apiSecurity";
 import { generateArticleFromTrend } from "@/lib/aiWriter";
@@ -146,8 +147,10 @@ export async function POST(
         });
 
     logInfo("rss_story_converted_to_draft", { storyId: story.id, postId: post.id });
-    await tryGenerateImageForPost(post.id);
-    return Response.json({ postId: post.id, slug: post.slug });
+    after(async () => {
+      await tryGenerateImageForPost(post.id);
+    });
+    return Response.json({ postId: post.id, slug: post.slug, imageQueued: true });
   } catch (error) {
     logError("rss_story_convert_failed", error);
     return apiError(error);
