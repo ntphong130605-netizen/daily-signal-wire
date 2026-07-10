@@ -55,7 +55,7 @@ DATABASE_URL="file:./dev.db"
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
 OPENAI_API_KEY=
-AI_MODEL=gpt-5.4-mini
+AI_MODEL=gpt-5.6-luna
 IMAGE_MODEL=gpt-image-2
 IMAGE_STORAGE=local
 
