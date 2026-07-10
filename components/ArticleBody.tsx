@@ -1,4 +1,4 @@
-import AdSlot from "@/components/AdSlot";
+import AdSlot from "@/components/ads/AdSlot";
 
 type Block =
   | { type: "heading"; text: string }
@@ -49,13 +49,13 @@ function parseMarkdown(content: string): Block[] {
 
 export default function ArticleBody({ content }: { content: string }) {
   const blocks = parseMarkdown(content);
-  const midpoint = Math.max(2, Math.floor(blocks.length / 2));
+  const inArticleIndex = blocks.length >= 8 ? 5 : -1;
 
   return (
     <div className="reader-article-body">
       {blocks.map((block, index) => (
         <div key={`${block.type}-${index}`}>
-          {index === midpoint && <AdSlot position="middle" />}
+          {index === inArticleIndex && <AdSlot position="in-article" />}
           {block.type === "heading" && <h2>{block.text}</h2>}
           {block.type === "paragraph" && <p>{block.text}</p>}
           {block.type === "list" && (

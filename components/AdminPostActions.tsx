@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { trackEvent } from "@/lib/client/analytics";
 
 async function copyText(value: string) {
   try {
@@ -55,6 +56,7 @@ export default function AdminPostActions({
       `${title}\n\n${shortHook}\n\nRead full story:\n${articleUrl()}`
     );
     setMessage(copied ? "Facebook post copied" : "Copy blocked");
+    trackEvent("copy_facebook_post", { post_id: id, article_slug: slug });
   }
 
   async function copyUrl() {
@@ -84,6 +86,7 @@ export default function AdminPostActions({
       return;
     }
     setMessage("Published");
+    trackEvent("publish_article", { post_id: id, article_slug: slug });
     router.refresh();
   }
 
@@ -102,6 +105,7 @@ export default function AdminPostActions({
       return;
     }
     setMessage(mode === "generate" ? "Image generated" : "Image regenerated");
+    trackEvent("generate_ai_image", { post_id: id, mode });
     router.refresh();
   }
 

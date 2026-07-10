@@ -2,6 +2,7 @@
 
 import { ChangeEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/client/analytics";
 
 type PostDraft = {
   id: string;
@@ -86,6 +87,7 @@ export default function TrendEditor({
     );
     if (result) {
       setMessage("Draft generated. Review every fact before publishing.");
+      trackEvent("generate_ai_article", { trend_id: trend.id });
       router.refresh();
     }
   }
@@ -149,6 +151,7 @@ export default function TrendEditor({
     if (result) {
       mergeImageResult(result);
       setMessage("Editorial image generated. Review and accept before publishing.");
+      trackEvent("generate_ai_image", { post_id: draft.id, mode: "generate" });
     }
   }
 
@@ -178,6 +181,9 @@ export default function TrendEditor({
                 ? "Image removed."
               : "Image regenerated. Review and accept before publishing."
       );
+      if (mode === "regenerate" || mode === "retry") {
+        trackEvent("generate_ai_image", { post_id: draft.id, mode });
+      }
     }
   }
 
@@ -231,6 +237,10 @@ export default function TrendEditor({
     if (result) {
       setDraft({ ...draft, status: "published" });
       setMessage("Article published.");
+      trackEvent("publish_article", {
+        post_id: draft.id,
+        article_slug: draft.slug
+      });
       router.refresh();
     }
   }
@@ -279,6 +289,10 @@ export default function TrendEditor({
     setMessage(
       copied ? "Facebook post copied." : "Copy was blocked by the browser."
     );
+    trackEvent("copy_facebook_post", {
+      post_id: draft.id,
+      article_slug: draft.slug
+    });
   }
 
   function field(

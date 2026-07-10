@@ -51,30 +51,30 @@ Then open <http://localhost:3001>.
 Copy `.env.example` to `.env`.
 
 ```env
-DATABASE_URL="file:./dev.db"
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_SECRET=replace-with-a-nextauth-secret-before-production
+NEXTAUTH_URL=http://localhost:3000
 
 OPENAI_API_KEY=
 AI_MODEL=gpt-5.5
 IMAGE_MODEL=gpt-image-1
+CRON_SECRET=replace-with-a-long-random-string
 IMAGE_STORAGE=local
 BLOB_READ_WRITE_TOKEN=
 
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=replace-with-a-nextauth-secret-before-production
-
-GOOGLE_ANALYTICS_ID=
-GOOGLE_SITE_VERIFICATION=
-NEXT_PUBLIC_ADSENSE_CLIENT=
 NEXT_PUBLIC_ADSENSE_CLIENT_ID=
+ADSENSE_PUBLISHER_ID=
 NEXT_PUBLIC_ADSENSE_SLOT_TOP=
-NEXT_PUBLIC_ADSENSE_SLOT_MIDDLE=
-NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
+NEXT_PUBLIC_ADSENSE_SLOT_IN_ARTICLE=
 NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR=
+NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
+
+NEXT_PUBLIC_GA_MEASUREMENT_ID=
+GOOGLE_SITE_VERIFICATION=
 
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
-CRON_SECRET=replace-with-a-long-random-string
 MAX_TRENDS_PER_RUN=5
 ```
 
@@ -297,7 +297,7 @@ Editorial image policy:
 
 Published article pages show this disclosure below generated images:
 
-> Illustration generated with AI.
+> AI-generated editorial illustration.
 
 ## Admin
 
@@ -342,11 +342,56 @@ Story actions include:
 
 ## AdSense
 
-When AdSense variables are empty, the site shows development placeholders
-labeled `Ad Slot`.
+Daily Signal Wire has production-ready Google AdSense slots and an `/ads.txt`
+route. When AdSense variables are empty, development shows placeholders labeled
+`Advertisement`; production hides real ad units until configuration exists.
 
-The AdSense script is only loaded when `NEXT_PUBLIC_ADSENSE_CLIENT_ID` or the
-legacy `NEXT_PUBLIC_ADSENSE_CLIENT` is set.
+Use these variables in Vercel Project Settings → Environment Variables:
+
+```env
+NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-XXXXXXXXXXXXXXXX
+ADSENSE_PUBLISHER_ID=pub-XXXXXXXXXXXXXXXX
+NEXT_PUBLIC_ADSENSE_SLOT_TOP=1234567890
+NEXT_PUBLIC_ADSENSE_SLOT_IN_ARTICLE=1234567891
+NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR=1234567892
+NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=1234567893
+```
+
+Notes:
+
+- `NEXT_PUBLIC_ADSENSE_CLIENT_ID` includes the `ca-` prefix.
+- `ADSENSE_PUBLISHER_ID` is used by `/ads.txt` and should be `pub-...` without
+  the `ca-` prefix.
+- Each ad slot is the numeric ID from a specific AdSense ad unit.
+- The app still supports legacy `NEXT_PUBLIC_ADSENSE_CLIENT` and
+  `NEXT_PUBLIC_ADSENSE_SLOT_MIDDLE` so older production deploys do not break.
+- After adding or changing Vercel environment variables, redeploy the project.
+
+Check ads.txt:
+
+```text
+https://daily-signal-wire.vercel.app/ads.txt
+```
+
+Expected configured output:
+
+```text
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+```
+
+Do not click your own ads to test them. Use the browser console, AdSense
+preview tools, `/admin/settings`, `/ads.txt`, and production page source to
+verify configuration.
+
+Ad positions:
+
+- homepage top ad below the reader header
+- homepage feed ad after roughly 6 stories
+- homepage/right reader sidebar ad
+- article top ad after metadata
+- article in-content ad after the opening body section when the article is long
+  enough
+- article bottom and sidebar ads
 
 ## SEO and monitoring
 
@@ -359,9 +404,38 @@ Production includes:
 - canonical URLs
 - Open Graph metadata
 - Twitter Card metadata
-- NewsArticle JSON-LD on article pages
-- Google Search Console verification placeholder
-- Google Analytics integration through `GOOGLE_ANALYTICS_ID`
+- NewsArticle, Article and Breadcrumb JSON-LD on article pages
+- Google Search Console verification through `GOOGLE_SITE_VERIFICATION`
+- admin and draft pages excluded from indexing
+- published articles only in `/sitemap.xml`
+- Google Analytics integration through `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+- consent banner prepared for Google Consent Mode v2
+
+GA4 is optional:
+
+```env
+NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+```
+
+When configured and accepted through the cookie banner, the app tracks:
+
+- `page_view`
+- `article_view`
+- `copy_facebook_post`
+- `publish_article`
+- `generate_ai_article`
+- `generate_ai_image`
+
+If no GA4 ID is set, no GA script is loaded and the site does not crash.
+
+Public policy pages:
+
+- `/about`
+- `/contact`
+- `/privacy-policy`
+- `/cookie-policy`
+- `/terms`
+- `/editorial-policy`
 
 ## Useful commands
 

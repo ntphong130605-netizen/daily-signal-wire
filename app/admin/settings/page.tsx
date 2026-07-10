@@ -1,3 +1,11 @@
+import Link from "next/link";
+import {
+  adsenseClientId,
+  adsensePublisherId,
+  adsenseSlotFor,
+  hasAdsTxtConfiguration,
+  maskPublicId
+} from "@/lib/ads";
 import { isDatabaseConfigured, prisma, safeDbQuery } from "@/lib/prisma";
 
 function flag(value: string | undefined) {
@@ -19,6 +27,16 @@ export default async function AdminSettingsPage() {
     }
   );
 
+  const adsenseChecks = [
+    ["Client ID configured", adsenseClientId()],
+    ["Top slot configured", adsenseSlotFor("top")],
+    ["In-article slot configured", adsenseSlotFor("in-article")],
+    ["Sidebar slot configured", adsenseSlotFor("sidebar")],
+    ["Bottom slot configured", adsenseSlotFor("bottom")],
+    ["ads.txt configured", hasAdsTxtConfiguration() ? adsensePublisherId() : ""],
+    ["Cookie consent enabled", "enabled"]
+  ] as const;
+
   const settings = [
     ["Database", isDatabaseConfigured() ? "Configured" : "Missing DATABASE_URL"],
     ["OpenAI", flag(process.env.OPENAI_API_KEY)],
@@ -32,12 +50,12 @@ export default async function AdminSettingsPage() {
     ["Site URL", process.env.NEXT_PUBLIC_SITE_URL || "Default Vercel URL fallback"],
     [
       "AdSense client",
-      flag(
-        process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
-          process.env.NEXT_PUBLIC_ADSENSE_CLIENT
-      )
+      adsenseClientId() ? maskPublicId(adsenseClientId()) : "Not configured"
     ],
-    ["Google Analytics", flag(process.env.GOOGLE_ANALYTICS_ID)],
+    [
+      "Google Analytics",
+      flag(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.GOOGLE_ANALYTICS_ID)
+    ],
     ["Cron secret", flag(process.env.CRON_SECRET)],
     ["NextAuth secret", flag(process.env.NEXTAUTH_SECRET)]
   ];
@@ -75,6 +93,39 @@ export default async function AdminSettingsPage() {
           <aside className="admin-side-stack">
             <section className="panel admin-form-panel">
               <div className="panel-heading compact">
+                <div>
+                  <p className="eyebrow">Google AdSense</p>
+                  <h2>Ad configuration</h2>
+                </div>
+              </div>
+              <div className="settings-list compact adsense-status-list">
+                {adsenseChecks.map(([name, value]) => (
+                  <div key={name}>
+                    <span>{name}</span>
+                    <strong className={value ? "configured" : "missing"}>
+                      {value ? "Configured" : "Not configured"}
+                    </strong>
+                    {value && value !== "enabled" && (
+                      <small>{maskPublicId(value)}</small>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="settings-actions">
+                <Link className="button button-secondary" href="/?previewAds=1">
+                  Preview Ad Placements
+                </Link>
+                <Link className="button button-secondary" href="/api/health" target="_blank">
+                  Validate Configuration
+                </Link>
+              </div>
+              <p className="settings-help-text">
+                No revenue data is estimated here. Use Google AdSense reports after
+                account approval and never click your own ads for testing.
+              </p>
+            </section>
+            <section className="panel admin-form-panel">
+              <div className="panel-heading compact">
                 <h2>Ad slots</h2>
               </div>
               <div className="settings-list compact">
@@ -82,7 +133,7 @@ export default async function AdminSettingsPage() {
                   <div key={slot.id}>
                     <span>{slot.label}</span>
                     <strong>{slot.enabled ? "Enabled" : "Hidden"}</strong>
-                    <small>{slot.slotId || "Dev placeholder: Ad Slot"}</small>
+                    <small>{slot.slotId || "Dev placeholder: Advertisement"}</small>
                   </div>
                 ))}
               </div>

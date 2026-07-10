@@ -11,6 +11,8 @@ export default function ReaderFooter() {
           <Link href="/about">About</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/privacy-policy">Privacy</Link>
+          <Link href="/cookie-policy">Cookies</Link>
+          <Link href="/editorial-policy">Editorial Policy</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/admin">Newsroom</Link>
         </nav>

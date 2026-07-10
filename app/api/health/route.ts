@@ -1,5 +1,6 @@
 import { isDatabaseConfigured, prisma } from "@/lib/prisma";
 import { configuredImageStorageLabel } from "@/lib/aiImage";
+import { adsenseClientId, hasAdsTxtConfiguration } from "@/lib/ads";
 
 export const dynamic = "force-dynamic";
 
@@ -10,9 +11,11 @@ export async function GET() {
     databaseReachable: false,
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
     imageStorage: configuredImageStorageLabel(),
-    adsenseConfigured: Boolean(
-      process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
-        process.env.NEXT_PUBLIC_ADSENSE_CLIENT
+    adsenseConfigured: Boolean(adsenseClientId()),
+    adsTxtConfigured: hasAdsTxtConfiguration(),
+    consentModeReady: true,
+    gaConfigured: Boolean(
+      process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.GOOGLE_ANALYTICS_ID
     ),
     siteUrlConfigured: Boolean(
       process.env.NEXT_PUBLIC_SITE_URL ||

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
+import { trackEvent } from "@/lib/client/analytics";
 
 type EditablePost = {
   id: string;
@@ -155,6 +156,12 @@ export default function AdminPostEditor({
         imageCredit: result.imageCredit ?? ""
       }));
       setMessage(`${mode} complete.`);
+      if (mode === "generate" || mode === "regenerate") {
+        trackEvent("generate_ai_image", {
+          post_id: post.id,
+          mode
+        });
+      }
       router.refresh();
     }
   }
@@ -241,6 +248,10 @@ export default function AdminPostEditor({
     if (result) {
       setPost((current) => ({ ...current, status: "published" }));
       setMessage("Published.");
+      trackEvent("publish_article", {
+        post_id: post.id,
+        article_slug: post.slug
+      });
       router.refresh();
     }
   }
@@ -255,11 +266,36 @@ export default function AdminPostEditor({
         ? "Facebook post copied."
         : "Copy blocked."
     );
+    trackEvent("copy_facebook_post", {
+      post_id: post.id,
+      article_slug: post.slug
+    });
   }
 
   async function copyUrl() {
     setMessage((await copyText(articleUrl())) ? "URL copied." : "Copy blocked.");
   }
+
+  const contentWordCount = post.content.trim().split(/\s+/).filter(Boolean).length;
+  const publishChecklist: { label: string; done: boolean }[] = [
+    { label: "Source URLs are attached", done: post.sourceUrls.length > 0 },
+    { label: "Fact-check notes are attached", done: post.factCheckNotes.length > 0 },
+    { label: "No fabricated quotes or unsupported numbers", done: confirmed },
+    { label: "Article is original and not copied verbatim", done: confirmed },
+    { label: "Featured image is present", done: Boolean(previewImageUrl()) },
+    { label: "Featured image is accepted", done: post.imageStatus === "accepted" },
+    { label: "Image alt text is present", done: Boolean(post.imageAlt.trim()) },
+    {
+      label: "AI image disclosure is present when needed",
+      done: post.imageSourceType !== "ai" || Boolean(post.imageDisclosure.trim())
+    },
+    { label: "SEO title is present", done: Boolean(post.seoTitle.trim()) },
+    { label: "Meta description is present", done: Boolean(post.seoDescription.trim()) },
+    {
+      label: "Article length is 500–900 words",
+      done: contentWordCount >= 500 && contentWordCount <= 900
+    }
+  ];
 
   return (
     <main className="admin-content">
@@ -515,6 +551,27 @@ export default function AdminPostEditor({
         </details>
       </section>
 
+      <section className="panel publish-checklist-panel">
+        <div className="panel-heading compact">
+          <div>
+            <p className="eyebrow">AdSense-ready review</p>
+            <h2>Pre-publish checklist</h2>
+          </div>
+        </div>
+        <ul className="publish-checklist">
+          {publishChecklist.map(({ label, done }) => (
+            <li key={label} className={done ? "done" : "needs-review"}>
+              <span>{done ? "✓" : "!"}</span>
+              {label}
+            </li>
+          ))}
+        </ul>
+        <p className="settings-help-text">
+          Manual checks are required before publishing. AI drafts are never
+          published automatically.
+        </p>
+      </section>
+
       <section className="action-bar sticky-action-bar">
         <button className="button button-dark" onClick={save} disabled={Boolean(busy)}>
           {busy === "save" ? "Saving…" : "Save"}
@@ -571,7 +628,7 @@ export default function AdminPostEditor({
               checked={confirmed}
               onChange={(event) => setConfirmed(event.target.checked)}
             />
-            <span>Fact-check complete</span>
+            <span>I completed the source, quote, copyright, SEO and image review.</span>
           </label>
         )}
         {post.status !== "published" && (

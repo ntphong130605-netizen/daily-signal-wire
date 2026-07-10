@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import AdSlot from "@/components/AdSlot";
+import AdSlot from "@/components/ads/AdSlot";
 import ArticleBody from "@/components/ArticleBody";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
@@ -36,7 +36,15 @@ export async function generateMetadata({
         }
       })
   );
-  if (!post || post.status !== "published") return {};
+  if (!post) return {};
+  if (post.status !== "published") {
+    return {
+      robots: {
+        index: false,
+        follow: false
+      }
+    };
+  }
   const ogImage =
     post.openGraphImage || post.featuredImageUrl || post.featuredImage || post.imageUrl;
   const twitterImage =
@@ -144,26 +152,53 @@ export default async function NewsArticlePage({
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const structuredData = {
     "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    headline: post.title,
-    description: post.excerpt,
-    datePublished: (post.publishedAt || post.createdAt).toISOString(),
-    dateModified: post.updatedAt.toISOString(),
-    mainEntityOfPage: articleUrl,
-    url: articleUrl,
-    image: coverImage ? [absoluteUrl(coverImage)] : undefined,
-    author: {
-      "@type": "Organization",
-      name: siteName,
-      url: absoluteUrl("/")
-    },
-    publisher: {
-      "@type": "Organization",
-      name: siteName,
-      url: absoluteUrl("/")
-    },
-    articleSection: categoryLabel,
-    isAccessibleForFree: true
+    "@graph": [
+      {
+        "@type": ["NewsArticle", "Article"],
+        headline: post.title,
+        description: post.excerpt,
+        datePublished: (post.publishedAt || post.createdAt).toISOString(),
+        dateModified: post.updatedAt.toISOString(),
+        mainEntityOfPage: articleUrl,
+        url: articleUrl,
+        image: coverImage ? [absoluteUrl(coverImage)] : undefined,
+        author: {
+          "@type": "Organization",
+          name: siteName,
+          url: absoluteUrl("/")
+        },
+        publisher: {
+          "@type": "Organization",
+          name: siteName,
+          url: absoluteUrl("/")
+        },
+        articleSection: categoryLabel,
+        isAccessibleForFree: true
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: absoluteUrl("/")
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: categoryLabel,
+            item: absoluteUrl(`/?topic=${encodeURIComponent(categoryLabel)}`)
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: post.title,
+            item: articleUrl
+          }
+        ]
+      }
+    ]
   };
 
   return (
@@ -174,7 +209,6 @@ export default async function NewsArticlePage({
         </div>
       )}
       <main className="article-page">
-        <AdSlot position="top" />
         <div className="article-page-grid">
           <article className="reader-article">
             <div className="article-breadcrumb">
@@ -199,6 +233,8 @@ export default async function NewsArticlePage({
                 <ShareButtons title={post.title} slug={post.slug} />
               </div>
             </header>
+
+            <AdSlot position="top" className="article-top-ad" />
 
             <figure className="article-cover">
               {coverImage ? (

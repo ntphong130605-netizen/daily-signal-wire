@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { trackEvent } from "@/lib/client/analytics";
 
 async function copyText(value: string) {
   try {
@@ -122,6 +123,7 @@ export default function StoryActions({
       `${title}\n\n${shortHook}\n\nRead full story:\n${sourceUrl}`
     );
     setMessage(copied ? "Facebook post copied" : "Copy blocked");
+    trackEvent("copy_facebook_post", { story_id: storyId });
   }
 
   async function convertToDraft() {
@@ -134,6 +136,7 @@ export default function StoryActions({
     try {
       const payload = await post(`/api/admin/stories/${storyId}/convert`);
       setMessage(`AI draft created: ${payload.slug}`);
+      trackEvent("generate_ai_article", { story_id: storyId });
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Draft failed");

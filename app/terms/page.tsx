@@ -24,6 +24,11 @@ export default function TermsPage() {
             "AI-generated drafts and images require human review before publication. Editors remain responsible for accuracy, attribution and final publishing decisions."
         },
         {
+          title: "Advertising and analytics",
+          body:
+            "The site may display Google AdSense ads or use analytics when configured. Readers should not click ads to test them; use preview tools and configuration checks instead."
+        },
+        {
           title: "Availability",
           body:
             "The service may use external APIs for trends, AI generation, analytics, advertising and database hosting. Missing or unavailable services should degrade gracefully."

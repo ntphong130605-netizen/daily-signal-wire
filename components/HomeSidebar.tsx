@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AdSlot from "@/components/AdSlot";
+import AdSlot from "@/components/ads/AdSlot";
 import type { ReaderPost } from "@/components/ArticleCard";
 import NewsletterCard from "@/components/NewsletterCard";
 

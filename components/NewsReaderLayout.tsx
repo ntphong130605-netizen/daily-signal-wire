@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AddFeedPanel from "@/components/AddFeedPanel";
+import AdSlot from "@/components/ads/AdSlot";
 import { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
 import Logo from "@/components/Logo";
 import ReaderThemeToggle from "@/components/ReaderThemeToggle";
@@ -114,6 +115,8 @@ export default function NewsReaderLayout({
           Admin
         </Link>
       </header>
+
+      <AdSlot position="top" className="reader-top-ad" />
 
       {featuredPost && (
         <section className="published-wire-hero">
@@ -242,36 +245,40 @@ export default function NewsReaderLayout({
             </div>
           ) : (
             <div className={`story-list story-list-${filters.view}`}>
-              {stories.map((item) => (
-                <Link
-                  className={`story-row ${item.id === activeStoryId ? "active" : ""} ${item.isRead ? "read" : "unread"}`}
-                  href={withQuery(filters, { story: item.id })}
-                  key={item.id}
-                >
-                  <div className="story-row-image">
-                    {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.imageUrl} alt="" />
-                    ) : (
-                      <span>DSW</span>
-                    )}
-                  </div>
-                  <div className="story-row-copy">
-                    <div className="story-row-meta">
-                      <span>{item.feedTitle}</span>
-                      <time>{timeAgo(item.publishedAt || item.fetchedAt)}</time>
+              {stories.map((item, index) => (
+                <div key={item.id} className="story-row-wrapper">
+                  {index === 6 && stories.length >= 9 && (
+                    <AdSlot position="feed" className="reader-feed-ad" />
+                  )}
+                  <Link
+                    className={`story-row ${item.id === activeStoryId ? "active" : ""} ${item.isRead ? "read" : "unread"}`}
+                    href={withQuery(filters, { story: item.id })}
+                  >
+                    <div className="story-row-image">
+                      {item.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.imageUrl} alt="" />
+                      ) : (
+                        <span>DSW</span>
+                      )}
                     </div>
-                    <h2>{item.title}</h2>
-                    <p>{item.excerpt || "Open the original source for more context."}</p>
-                    <div className="story-row-tags">
-                      {!item.isRead && <small>Unread</small>}
-                      {item.isSaved && <small>Saved</small>}
-                      {item.tags.slice(0, 2).map((tag) => (
-                        <small key={tag}>{tag}</small>
-                      ))}
+                    <div className="story-row-copy">
+                      <div className="story-row-meta">
+                        <span>{item.feedTitle}</span>
+                        <time>{timeAgo(item.publishedAt || item.fetchedAt)}</time>
+                      </div>
+                      <h2>{item.title}</h2>
+                      <p>{item.excerpt || "Open the original source for more context."}</p>
+                      <div className="story-row-tags">
+                        {!item.isRead && <small>Unread</small>}
+                        {item.isSaved && <small>Saved</small>}
+                        {item.tags.slice(0, 2).map((tag) => (
+                          <small key={tag}>{tag}</small>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </div>
           )}
@@ -317,6 +324,7 @@ export default function NewsReaderLayout({
                 isSaved={story.isSaved}
                 aiConfigured={aiConfigured}
               />
+              <AdSlot position="sidebar" className="reader-detail-ad" />
             </>
           )}
         </article>

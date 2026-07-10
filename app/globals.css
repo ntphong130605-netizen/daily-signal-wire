@@ -1852,6 +1852,11 @@ textarea:focus {
   text-align: center;
 }
 
+.ad-slot .adsbygoogle {
+  width: 100%;
+  min-height: 90px;
+}
+
 .ad-slot span {
   font-size: 9px;
   font-weight: 800;
@@ -1873,6 +1878,11 @@ textarea:focus {
   margin: 38px 0;
 }
 
+.ad-slot-in-article {
+  min-height: 250px;
+  margin: 38px 0;
+}
+
 .ad-slot-bottom {
   min-height: 120px;
   margin-top: 42px;
@@ -1880,6 +1890,30 @@ textarea:focus {
 
 .ad-slot-sidebar {
   min-height: 280px;
+}
+
+.ad-slot-feed {
+  min-height: 120px;
+  margin: 10px 0;
+}
+
+.reader-top-ad {
+  width: min(970px, calc(100% - 28px));
+  min-height: 90px;
+  margin: 14px auto 0;
+}
+
+.reader-feed-ad {
+  min-height: 120px;
+}
+
+.reader-detail-ad {
+  margin-top: 22px;
+}
+
+.article-top-ad {
+  min-height: 90px;
+  margin: 0 0 30px;
 }
 
 .article-breadcrumb {
@@ -3418,15 +3452,19 @@ html[data-theme="light"],
   padding: 12px;
 }
 
+.story-row-wrapper {
+  display: contents;
+}
+
 .story-list-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.story-list-magazine .story-row:first-child {
+.story-list-magazine .story-row-wrapper:first-child .story-row {
   grid-template-columns: 1fr;
 }
 
-.story-list-magazine .story-row:first-child .story-row-image {
+.story-list-magazine .story-row-wrapper:first-child .story-row-image {
   width: 100%;
   height: 185px;
 }
@@ -3870,9 +3908,77 @@ html[data-theme="light"],
   font-size: 13px;
 }
 
+.settings-list strong.configured {
+  color: #137c56;
+}
+
+.settings-list strong.missing {
+  color: #b45309;
+}
+
 .settings-list small {
   color: var(--muted);
   font-size: 11px;
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding: 16px 20px 0;
+}
+
+.settings-help-text {
+  margin: 12px 20px 20px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.publish-checklist-panel {
+  margin-top: 18px;
+}
+
+.publish-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.publish-checklist li {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.publish-checklist li span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 11px;
+}
+
+.publish-checklist li.done span {
+  background: #16a34a;
+}
+
+.publish-checklist li.needs-review span {
+  background: #d97706;
 }
 
 .settings-note {
@@ -4120,9 +4226,85 @@ html[data-theme="light"],
   margin-top: 18px;
 }
 
+.cookie-consent {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 80;
+  display: grid;
+  width: min(520px, calc(100% - 36px));
+  gap: 14px;
+  border: 1px solid rgba(34, 166, 179, 0.28);
+  border-radius: 22px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 80px rgba(17, 24, 39, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.cookie-consent h2 {
+  margin: 0 0 6px;
+  letter-spacing: -0.03em;
+}
+
+.cookie-consent p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.cookie-actions,
+.cookie-preferences {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cookie-actions button,
+.cookie-preferences-button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 14px;
+  color: var(--text);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.cookie-actions button:first-child {
+  color: #fff;
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.cookie-preferences label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cookie-preferences-button {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 70;
+  padding: 8px 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.12);
+}
+
 @media (max-width: 920px) {
   .static-page-card,
-  .category-grid {
+  .category-grid,
+  .publish-checklist {
     grid-template-columns: 1fr;
   }
 }

@@ -528,8 +528,11 @@ async function seedReaderData() {
 
   for (const slot of [
     ["reader-top", "Reader top banner", "reader"],
+    ["reader-feed", "Reader feed ad", "feed"],
     ["reader-sidebar", "Reader sidebar", "sidebar"],
-    ["article-middle", "Article middle", "article"]
+    ["article-top", "Article top", "article"],
+    ["article-in-article", "Article in-content", "article"],
+    ["article-bottom", "Article bottom", "article"]
   ] as const) {
     await prisma.adSlot.upsert({
       where: { key: slot[0] },

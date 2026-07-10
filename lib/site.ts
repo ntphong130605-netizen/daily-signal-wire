@@ -1,13 +1,12 @@
 export const siteName = "Daily Signal Wire";
 
 export function siteUrl() {
-  const vercelUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : "";
+  const nextAuthUrl = process.env.NEXTAUTH_URL || "";
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXTAUTH_URL ||
-    vercelUrl ||
+    (nextAuthUrl.includes("localhost") || nextAuthUrl.includes("127.0.0.1")
+      ? ""
+      : nextAuthUrl) ||
     "https://daily-signal-wire.vercel.app"
   ).replace(/\/+$/, "");
 }

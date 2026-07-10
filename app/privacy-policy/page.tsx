@@ -21,7 +21,17 @@ export default function PrivacyPolicyPage() {
         {
           title: "Third-party services",
           body:
-            "If Google Analytics, AdSense, OpenAI, Neon or Supabase are configured, their respective privacy policies also apply to the data sent to those services."
+            "If Google Analytics, Google AdSense, OpenAI, Neon, Vercel Blob or similar providers are configured, their respective privacy policies apply to the data processed by those services."
+        },
+        {
+          title: "Advertising and consent",
+          body:
+            "AdSense and Analytics scripts are gated by the site consent banner. Readers can reject optional ad and analytics storage or manage preferences before those services load."
+        },
+        {
+          title: "AI-assisted content",
+          body:
+            "AI tools may process trend keywords, article drafts, summaries and image prompts. Editors should avoid sending private personal data into AI workflows."
         },
         {
           title: "Operational controls",

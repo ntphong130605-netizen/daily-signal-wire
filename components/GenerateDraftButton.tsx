@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { trackEvent } from "@/lib/client/analytics";
 
 export default function GenerateDraftButton({
   trendId,
@@ -28,6 +29,7 @@ export default function GenerateDraftButton({
       setError(body.error || "Generation failed");
       return;
     }
+    trackEvent("generate_ai_article", { trend_id: trendId });
     router.push(`/admin/trends/${trendId}`);
     router.refresh();
   }
