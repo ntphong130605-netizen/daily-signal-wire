@@ -6,7 +6,10 @@ export type ReaderPost = {
   title: string;
   excerpt: string;
   imageUrl: string | null;
+  imageAlt?: string | null;
   category: string;
+  source?: string;
+  relatedCount?: number;
   publishedAt: Date | null;
   createdAt: Date;
 };
@@ -31,7 +34,7 @@ export function ArticleImage({
     <div className={`article-image ${className}`}>
       {post.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.imageUrl} alt="" />
+        <img src={post.imageUrl} alt={post.imageAlt || post.title} />
       ) : (
         <div className="article-image-fallback" aria-label="No article image">
           <svg viewBox="0 0 80 52" aria-hidden="true">

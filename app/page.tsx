@@ -3,6 +3,7 @@ import NewsReaderLayout, {
   type ReaderFolder,
   type ReaderStory
 } from "@/components/NewsReaderLayout";
+import type { ReaderPost } from "@/components/ArticleCard";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -86,7 +87,8 @@ export default async function HomePage({
     unreadCount,
     savedCount,
     trendingCount,
-    draftCount
+    draftCount,
+    publishedPosts
   } = await safeDbQuery(
     "home_reader_query_failed",
     {
@@ -98,7 +100,8 @@ export default async function HomePage({
       unreadCount: 0,
       savedCount: 0,
       trendingCount: 0,
-      draftCount: 0
+      draftCount: 0,
+      publishedPosts: []
     } as {
       folders: Array<{
         id: string;
@@ -119,6 +122,7 @@ export default async function HomePage({
       savedCount: number;
       trendingCount: number;
       draftCount: number;
+      publishedPosts: ReaderPost[];
     },
     async () => {
       const [
@@ -130,7 +134,8 @@ export default async function HomePage({
         unreadCount,
         savedCount,
         trendingCount,
-        draftCount
+        draftCount,
+        publishedPosts
       ] = await Promise.all([
         prisma.feedFolder.findMany({
           include: {
@@ -164,7 +169,17 @@ export default async function HomePage({
         prisma.feedStory.count({
           where: { publishedAt: { gte: new Date(Date.now() - 72 * 60 * 60 * 1000) } }
         }),
-        prisma.post.count({ where: { status: "draft" } })
+        prisma.post.count({ where: { status: "draft" } }),
+        prisma.post.findMany({
+          where: { status: "published" },
+          include: {
+            trend: { select: { category: true } },
+            category: { select: { name: true } },
+            sourceStory: { include: { feed: { select: { title: true } } } }
+          },
+          orderBy: { publishedAt: "desc" },
+          take: 6
+        })
       ]);
 
       return {
@@ -176,7 +191,24 @@ export default async function HomePage({
         unreadCount,
         savedCount,
         trendingCount,
-        draftCount
+        draftCount,
+        publishedPosts: publishedPosts.map((post) => ({
+          id: post.id,
+          slug: post.slug,
+          title: post.title,
+          excerpt: post.excerpt,
+          imageUrl:
+            post.featuredImageUrl ||
+            post.featuredImage ||
+            post.imageUrl ||
+            post.thumbnailImage,
+          imageAlt: post.imageAlt || "",
+          category: post.category?.name || post.trend?.category || "Latest",
+          source: post.sourceStory?.feed?.title || "Daily Signal Wire",
+          relatedCount: Math.max(0, publishedPosts.length - 1),
+          publishedAt: post.publishedAt,
+          createdAt: post.createdAt
+        }))
       };
     }
   );
@@ -214,6 +246,7 @@ export default async function HomePage({
       }}
       draftCount={draftCount}
       aiConfigured={Boolean(process.env.OPENAI_API_KEY)}
+      publishedPosts={publishedPosts}
     />
   );
 }

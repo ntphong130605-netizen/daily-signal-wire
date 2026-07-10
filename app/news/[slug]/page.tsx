@@ -29,6 +29,7 @@ export async function generateMetadata({
           seoTitle: true,
           seoDescription: true,
           imageUrl: true,
+          featuredImageUrl: true,
           featuredImage: true,
           openGraphImage: true,
           twitterImage: true
@@ -36,8 +37,10 @@ export async function generateMetadata({
       })
   );
   if (!post || post.status !== "published") return {};
-  const ogImage = post.openGraphImage || post.featuredImage || post.imageUrl;
-  const twitterImage = post.twitterImage || post.openGraphImage || post.imageUrl;
+  const ogImage =
+    post.openGraphImage || post.featuredImageUrl || post.featuredImage || post.imageUrl;
+  const twitterImage =
+    post.twitterImage || post.openGraphImage || post.featuredImageUrl || post.imageUrl;
   const canonical = absoluteUrl(`/news/${slug}`);
   return {
     title: post.seoTitle,
@@ -77,7 +80,11 @@ export default async function NewsArticlePage({
     () =>
       prisma.post.findUnique({
         where: { slug },
-        include: { trend: { select: { category: true } } }
+        include: {
+          trend: { select: { category: true } },
+          category: { select: { name: true } },
+          sourceStory: { include: { feed: { select: { title: true } } } }
+        }
       })
   );
   if (!post) notFound();
@@ -86,6 +93,10 @@ export default async function NewsArticlePage({
     post.status !== "published" && preview === "1" && (await isAdmin());
   if (post.status !== "published" && !previewAllowed) notFound();
 
+  const relatedCategoryFilters = [
+    ...(post.category?.name ? [{ category: { name: post.category.name } }] : []),
+    ...(post.trend?.category ? [{ trend: { category: post.trend.category } }] : [])
+  ];
   const related = await safeDbQuery(
     "article_related_query_failed",
     [],
@@ -94,11 +105,12 @@ export default async function NewsArticlePage({
         where: {
           status: "published",
           id: { not: post.id },
-          ...(post.trend?.category
-            ? { trend: { category: post.trend.category } }
-            : {})
+          ...(relatedCategoryFilters.length ? { OR: relatedCategoryFilters } : {})
         },
-        include: { trend: { select: { category: true } } },
+        include: {
+          trend: { select: { category: true } },
+          category: { select: { name: true } }
+        },
         orderBy: { publishedAt: "desc" },
         take: 4
       })
@@ -108,8 +120,9 @@ export default async function NewsArticlePage({
     slug: item.slug,
     title: item.title,
     excerpt: item.excerpt,
-    imageUrl: item.imageUrl,
-    category: item.trend?.category || "Latest",
+    imageUrl: item.featuredImageUrl || item.featuredImage || item.imageUrl || item.thumbnailImage,
+    imageAlt: item.imageAlt || "",
+    category: item.category?.name || item.trend?.category || "Latest",
     publishedAt: item.publishedAt,
     createdAt: item.createdAt
   }));
@@ -120,7 +133,14 @@ export default async function NewsArticlePage({
     hour: "numeric",
     minute: "2-digit"
   }).format(post.publishedAt || post.updatedAt);
-  const coverImage = post.featuredImage || post.imageUrl || post.thumbnailImage;
+  const categoryLabel = post.category?.name || post.trend?.category || "Latest";
+  const coverImage =
+    post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage;
+  const readingMinutes = Math.max(
+    1,
+    Math.ceil(post.content.split(/\s+/).filter(Boolean).length / 220)
+  );
+  const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const structuredData = {
     "@context": "https://schema.org",
@@ -142,7 +162,7 @@ export default async function NewsArticlePage({
       name: siteName,
       url: absoluteUrl("/")
     },
-    articleSection: post.trend?.category || "Latest",
+    articleSection: categoryLabel,
     isAccessibleForFree: true
   };
 
@@ -160,21 +180,21 @@ export default async function NewsArticlePage({
             <div className="article-breadcrumb">
               <Link href="/">Home</Link>
               <span>/</span>
-              <Link href={`/?topic=${encodeURIComponent(post.trend?.category || "Latest")}`}>
-                {post.trend?.category || "Latest"}
+              <Link href={`/?topic=${encodeURIComponent(categoryLabel)}`}>
+                {categoryLabel}
               </Link>
             </div>
             <header className="article-title-block">
-              <span className="article-category">
-                {post.trend?.category || "Latest"}
-              </span>
+              <span className="article-category">{categoryLabel}</span>
               <h1>{post.title}</h1>
               <p>{post.excerpt}</p>
               <div className="article-byline">
                 <div className="author-avatar">DS</div>
                 <div>
-                  <strong>Daily Signal Wire</strong>
-                  <span>Published {date}</span>
+                  <strong>{sourceLabel}</strong>
+                  <span>
+                    By Daily Signal Wire · Published {date} · {readingMinutes} min read
+                  </span>
                 </div>
                 <ShareButtons title={post.title} slug={post.slug} />
               </div>
@@ -183,7 +203,7 @@ export default async function NewsArticlePage({
             <figure className="article-cover">
               {coverImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverImage} alt="" />
+                <img src={coverImage} alt={post.imageAlt || post.title} />
               ) : (
                 <div className="article-cover-fallback">
                   <svg viewBox="0 0 100 60" aria-hidden="true">
@@ -192,11 +212,20 @@ export default async function NewsArticlePage({
                   <span>Editorial coverage · Daily Signal Wire</span>
                 </div>
               )}
-              {(post.imageCredit || post.imageLicense) && (
+              {(post.imageCaption ||
+                post.imageDisclosure ||
+                post.imageCredit ||
+                post.imageLicense) && (
                 <figcaption>
-                  {post.imageModel && (
+                  {post.imageCaption && (
                     <>
-                      <span>Illustration generated with AI.</span>
+                      <span>{post.imageCaption}</span>
+                      <br />
+                    </>
+                  )}
+                  {post.imageDisclosure && (
+                    <>
+                      <span>{post.imageDisclosure}</span>
                       <br />
                     </>
                   )}

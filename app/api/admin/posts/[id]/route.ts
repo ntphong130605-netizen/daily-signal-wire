@@ -10,6 +10,9 @@ const DraftSchema = z.object({
   seoDescription: z.string().min(20).max(300),
   facebookCaption: z.string().min(10).max(1000),
   imagePrompt: z.string().max(4000).nullable().optional(),
+  imageAlt: z.string().max(300).nullable().optional(),
+  imageCaption: z.string().max(500).nullable().optional(),
+  imageDisclosure: z.string().max(300).nullable().optional(),
   factCheckNotes: z.array(z.string().min(1)).max(50),
   sourceUrls: z.array(z.string().url()).max(20)
 });

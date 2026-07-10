@@ -58,6 +58,7 @@ OPENAI_API_KEY=
 AI_MODEL=gpt-5.6-luna
 IMAGE_MODEL=gpt-image-2
 IMAGE_STORAGE=local
+BLOB_READ_WRITE_TOKEN=
 
 NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=replace-with-a-nextauth-secret-before-production
@@ -127,6 +128,8 @@ NEXTAUTH_SECRET=generate-a-long-random-secret
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_SESSION_SECRET=generate-another-long-random-secret
 CRON_SECRET=generate-a-long-random-secret
+IMAGE_STORAGE=blob
+BLOB_READ_WRITE_TOKEN=vercel-blob-token
 ```
 
 4. From a production-capable shell with the same `DATABASE_URL`, run:
@@ -236,20 +239,18 @@ Generated images are resized into two landscape 16:9 assets:
 - `1920x1080` for featured/OpenGraph image
 
 Local development defaults to filesystem storage under `public/generated`.
-Production on Vercel defaults to database-backed media routes so serverless
-filesystem limits do not break image generation.
+Production should use Vercel Blob so generated images are stored as public URLs
+instead of base64 database payloads.
 
 ```env
-IMAGE_STORAGE=database
+BLOB_READ_WRITE_TOKEN=...
+IMAGE_STORAGE=blob
 ```
 
 Use `IMAGE_STORAGE=local` only when the runtime has a persistent writable
-filesystem. Database-backed generated images are served from:
-
-```text
-/api/images/posts/[id]/featured
-/api/images/posts/[id]/thumbnail
-```
+filesystem. If Blob is not configured in production, the app still saves the
+article draft, marks `imageStatus=failed`, shows a category placeholder image,
+and lets an editor retry after storage is configured.
 
 Each post stores:
 
@@ -258,11 +259,16 @@ Each post stores:
 - `imageGeneratedAt`
 - `imageStatus`
 - `imageUrl`
+- `featuredImageUrl`
 - `featuredImage`
 - `thumbnailImage`
 - `openGraphImage`
 - `twitterImage`
 - `imageStorage`
+- `imageAlt`
+- `imageCaption`
+- `imageDisclosure`
+- `imageSourceType`
 
 The admin visual desk supports:
 
@@ -271,7 +277,9 @@ The admin visual desk supports:
 - Edit Prompt
 - Preview
 - Accept Image
-- Reject Image
+- Remove Image
+- Upload / replace image
+- Paste licensed image URL
 - Retry after failure
 
 If `OPENAI_API_KEY` is missing, image generation buttons are disabled or return

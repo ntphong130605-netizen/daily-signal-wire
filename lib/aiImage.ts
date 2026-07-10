@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { put } from "@vercel/blob";
 import OpenAI from "openai";
 import sharp from "sharp";
 import { prisma } from "@/lib/prisma";
@@ -8,6 +9,7 @@ import { logError, logInfo } from "@/lib/logger";
 
 const FEATURED_SIZE = { width: 1920, height: 1080 };
 const THUMBNAIL_SIZE = { width: 1200, height: 675 };
+const AI_DISCLOSURE = "AI-generated editorial illustration";
 
 type ImageContext = {
   id: string;
@@ -15,13 +17,26 @@ type ImageContext = {
   excerpt: string;
   content: string;
   imagePrompt: string | null;
+  imageUrl?: string | null;
+  featuredImage?: string | null;
+  featuredImageUrl?: string | null;
+  thumbnailImage?: string | null;
   trend?: { category: string | null } | null;
   category?: { name: string | null } | null;
   sourceStory?: { feed?: { category?: { name: string | null } | null } | null } | null;
 };
 
+export type ArticleImageRequest = {
+  title: string;
+  excerpt: string;
+  category?: string | null;
+  contentSummary: string;
+  imagePrompt?: string | null;
+};
+
 export type StoredImageAssets = {
   imageUrl: string;
+  featuredImageUrl: string;
   featuredImage: string;
   thumbnailImage: string;
   openGraphImage: string;
@@ -29,6 +44,10 @@ export type StoredImageAssets = {
   imageModel: string;
   imageGeneratedAt: Date;
   imageStatus: string;
+  imageAlt: string;
+  imageCaption: string;
+  imageDisclosure: string;
+  imageSourceType: "ai" | "upload" | "licensed_url" | "placeholder";
   imageLicense: string;
   imageCredit: string;
   imageStorage: string;
@@ -42,12 +61,41 @@ function imageDirectory() {
   return path.join(process.cwd(), "public", "generated");
 }
 
-function imageStorageMode() {
+function normalizedImageStorageMode() {
   const configured = process.env.IMAGE_STORAGE?.trim().toLowerCase();
-  if (configured === "local" || configured === "database") return configured;
+  if (configured === "local") return "local";
+  if (configured === "blob" || configured === "vercel-blob") return "blob";
+
+  // `database` existed in an older build. Keep the app safe, but do not write
+  // new image files into database columns anymore.
+  if (configured === "database") {
+    return process.env.VERCEL || process.env.NODE_ENV === "production"
+      ? "blob"
+      : "local";
+  }
+
   return process.env.VERCEL || process.env.NODE_ENV === "production"
-    ? "database"
+    ? "blob"
     : "local";
+}
+
+export function isBlobStorageConfigured() {
+  return Boolean(
+    process.env.BLOB_READ_WRITE_TOKEN ||
+      (process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN)
+  );
+}
+
+export function isGeneratedImageStorageConfigured() {
+  const mode = normalizedImageStorageMode();
+  if (mode === "local") return !process.env.VERCEL;
+  return isBlobStorageConfigured();
+}
+
+export function configuredImageStorageLabel() {
+  const mode = normalizedImageStorageMode();
+  if (mode === "local") return "local";
+  return isBlobStorageConfigured() ? "vercel-blob" : "vercel-blob-missing-token";
 }
 
 function articleCategory(post: ImageContext) {
@@ -59,53 +107,87 @@ function articleCategory(post: ImageContext) {
   );
 }
 
-function compactText(value: string, max = 850) {
+function compactText(value: string, max = 900) {
   return value.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-export function buildEditorialImagePrompt(post: ImageContext, promptOverride?: string) {
-  const category = articleCategory(post);
-  const prompt = promptOverride?.trim() || post.imagePrompt?.trim();
-  if (!prompt) {
-    throw new Error("Add an image prompt before generating an image.");
+export function placeholderImageForCategory(category?: string | null) {
+  const value = (category || "").toLowerCase();
+  if (value.includes("sport")) return "/editorial/sports-desk.svg";
+  if (value.includes("money") || value.includes("business")) {
+    return "/editorial/money-context.svg";
   }
+  if (value.includes("tech") || value.includes("ai")) {
+    return "/editorial/responsible-ai.svg";
+  }
+  if (value.includes("entertain") || value.includes("culture")) {
+    return "/editorial/culture-wire.svg";
+  }
+  if (value.includes("science")) return "/editorial/science-context.svg";
+  if (value.includes("world") || value.includes("us news")) {
+    return "/editorial/developing-story.svg";
+  }
+  return "/editorial/source-first-newsroom.svg";
+}
 
-  return `${prompt}
+function imageAltFor(title: string) {
+  return `Editorial illustration for “${title}”`;
+}
 
-Article title: ${post.title}
-Article category: ${category}
-Article excerpt: ${post.excerpt}
-Article context: ${compactText(post.content)}
+function imageCaptionFor(sourceType: StoredImageAssets["imageSourceType"]) {
+  if (sourceType === "ai") return "AI-generated editorial illustration.";
+  if (sourceType === "upload") return "Publisher-uploaded editorial image.";
+  if (sourceType === "licensed_url") return "Licensed editorial image.";
+  return "Daily Signal Wire editorial placeholder image.";
+}
 
-Create a high-quality editorial image for a modern American news publication.
+export function buildArticleImagePrompt({
+  title,
+  excerpt,
+  category,
+  contentSummary,
+  imagePrompt
+}: ArticleImageRequest) {
+  const base =
+    imagePrompt?.trim() ||
+    `A realistic editorial news image about: ${title}.`;
+  const categoryLabel = category || "Editorial";
+  const summary = compactText(`${excerpt}\n${contentSummary}`, 1100);
 
-Required visual style:
-- photorealistic editorial illustration
-- ultra realistic
-- 8K look
-- editorial magazine quality
-- cinematic lighting
-- high detail
-- newspaper style
-- professional composition
-- landscape 16:9 composition
+  return `${base}
+
+Use the following article-specific context. The visual concept must be based directly on this story, not a generic newsroom image:
+- Article title: ${title}
+- Category: ${categoryLabel}
+- Article summary: ${summary}
+- Main event or issue: infer only from the supplied article summary
+- Important people, objects, setting, or location: include only when clearly implied by the title or summary
+- Visual mood: professional, modern, source-first news coverage
+- Editorial context: an illustration for a US-facing digital newspaper
+
+Create a realistic editorial photography-style image with professional news composition, cinematic but natural lighting, high detail, natural skin tones where people are shown, and a landscape 16:9 crop suitable for 1200x675 and 1920x1080 cover use.
 
 Hard constraints:
-- no watermark
 - no readable text
+- no watermark
 - no logo
 - no border
 - no frame
-- no captions
 - no fake screenshot
 - no brand marks
 
 Editorial safety:
-If the article discusses a real event, public controversy, crime, accident, disaster, court matter, political action, breaking news, or developing report, DO NOT make the image look like a documentary photograph, eyewitness photo, scene photo, evidence photo, mugshot, press photo, or real event capture. Instead, create a staged, symbolic, photorealistic editorial illustration that communicates the topic without pretending to document the event.
+If this story concerns a real event, celebrity, public figure, crime, disaster, court matter, political controversy, accident, war, or developing report, DO NOT make the image look like a real documentary photo, eyewitness photo, evidence image, mugshot, press photo, or actual event capture. Make it a clearly staged, symbolic, photorealistic editorial illustration instead, so readers are not misled about what the image depicts.`;
+}
 
-For Technology, Business, Lifestyle, Sports, Food, and Travel articles, a very realistic illustrative image is allowed, but it must still be a non-deceptive editorial illustration and must not imply that it is a real photo from the reported event.
-
-The final image must feel like a premium newspaper or magazine visual package, not social-media clip art.`;
+export function buildEditorialImagePrompt(post: ImageContext, promptOverride?: string) {
+  return buildArticleImagePrompt({
+    title: post.title,
+    excerpt: post.excerpt,
+    category: articleCategory(post),
+    contentSummary: post.content,
+    imagePrompt: promptOverride?.trim() || post.imagePrompt
+  });
 }
 
 function client() {
@@ -157,47 +239,130 @@ async function renderImageVariants(sourceBytes: Buffer) {
   return { featuredBuffer, thumbnailBuffer };
 }
 
-export async function storePostImageVariants(postId: string, sourceBytes: Buffer) {
-  const stamp = `${postId}-${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const { featuredBuffer, thumbnailBuffer } = await renderImageVariants(sourceBytes);
-
-  if (imageStorageMode() === "local") {
-    try {
-      const directory = imageDirectory();
-      await mkdir(directory, { recursive: true });
-      const featuredName = `${stamp}-1920x1080.jpg`;
-      const thumbnailName = `${stamp}-1200x675.jpg`;
-      const featuredPath = path.join(directory, featuredName);
-      const thumbnailPath = path.join(directory, thumbnailName);
-
-      await Promise.all([
-        writeFile(featuredPath, featuredBuffer),
-        writeFile(thumbnailPath, thumbnailBuffer)
-      ]);
-
-      return {
-        imageStorage: "local",
-        featuredImage: `/generated/${featuredName}`,
-        thumbnailImage: `/generated/${thumbnailName}`,
-        featuredImageData: null,
-        thumbnailImageData: null
-      };
-    } catch (error) {
-      logError("local_image_storage_failed_using_database", error, { postId });
-    }
+async function uploadToVercelBlob(postId: string, stamp: string, featuredBuffer: Buffer, thumbnailBuffer: Buffer) {
+  if (!isBlobStorageConfigured()) {
+    throw new Error(
+      "AI image storage is not configured. Connect Vercel Blob or add BLOB_READ_WRITE_TOKEN."
+    );
   }
 
+  const folder = `daily-signal-wire/posts/${postId}`;
+  const [featured, thumbnail] = await Promise.all([
+    put(
+      `${folder}/${stamp}-1920x1080.jpg`,
+      new Blob([new Uint8Array(featuredBuffer)], { type: "image/jpeg" }),
+      {
+        access: "public",
+        addRandomSuffix: false,
+        contentType: "image/jpeg",
+        cacheControlMaxAge: 60 * 60 * 24 * 365
+      }
+    ),
+    put(
+      `${folder}/${stamp}-1200x675.jpg`,
+      new Blob([new Uint8Array(thumbnailBuffer)], { type: "image/jpeg" }),
+      {
+        access: "public",
+        addRandomSuffix: false,
+        contentType: "image/jpeg",
+        cacheControlMaxAge: 60 * 60 * 24 * 365
+      }
+    )
+  ]);
+
   return {
-    imageStorage: "database",
-    featuredImage: `/api/images/posts/${postId}/featured?v=${stamp}`,
-    thumbnailImage: `/api/images/posts/${postId}/thumbnail?v=${stamp}`,
-    featuredImageData: featuredBuffer.toString("base64"),
-    thumbnailImageData: thumbnailBuffer.toString("base64")
+    imageStorage: "vercel-blob",
+    featuredImage: featured.url,
+    thumbnailImage: thumbnail.url,
+    featuredImageData: null,
+    thumbnailImageData: null
   };
 }
 
-async function writeImageVariants(postId: string, sourceBytes: Buffer) {
-  return storePostImageVariants(postId, sourceBytes);
+export async function storePostImageVariants(postId: string, sourceBytes: Buffer) {
+  const stamp = `${Date.now()}-${randomUUID().slice(0, 8)}`;
+  const { featuredBuffer, thumbnailBuffer } = await renderImageVariants(sourceBytes);
+  const mode = normalizedImageStorageMode();
+
+  if (mode === "blob") {
+    return uploadToVercelBlob(postId, stamp, featuredBuffer, thumbnailBuffer);
+  }
+
+  if (mode === "local" && !process.env.VERCEL) {
+    const directory = imageDirectory();
+    await mkdir(directory, { recursive: true });
+    const featuredName = `${postId}-${stamp}-1920x1080.jpg`;
+    const thumbnailName = `${postId}-${stamp}-1200x675.jpg`;
+    const featuredPath = path.join(directory, featuredName);
+    const thumbnailPath = path.join(directory, thumbnailName);
+
+    await Promise.all([
+      writeFile(featuredPath, featuredBuffer),
+      writeFile(thumbnailPath, thumbnailBuffer)
+    ]);
+
+    return {
+      imageStorage: "local",
+      featuredImage: `/generated/${featuredName}`,
+      thumbnailImage: `/generated/${thumbnailName}`,
+      featuredImageData: null,
+      thumbnailImageData: null
+    };
+  }
+
+  throw new Error(
+    "Persistent image storage is not configured. Use Vercel Blob for production AI images."
+  );
+}
+
+export async function generateArticleImage({
+  postId,
+  title,
+  excerpt,
+  category,
+  contentSummary,
+  imagePrompt
+}: ArticleImageRequest & { postId: string }) {
+  const finalPrompt = buildArticleImagePrompt({
+    title,
+    excerpt,
+    category,
+    contentSummary,
+    imagePrompt
+  });
+  const sourceBytes = await generateEditorialImage(finalPrompt);
+  const variants = await storePostImageVariants(postId, sourceBytes);
+  return { finalPrompt, variants };
+}
+
+async function applyPlaceholderImageForPost(
+  postId: string,
+  post: ImageContext,
+  reason: string,
+  status: "failed" | "idle" = "failed"
+) {
+  const category = articleCategory(post);
+  const placeholder = placeholderImageForCategory(category);
+  return prisma.post.update({
+    where: { id: postId },
+    data: {
+      imageUrl: placeholder,
+      featuredImageUrl: placeholder,
+      featuredImage: placeholder,
+      thumbnailImage: placeholder,
+      openGraphImage: placeholder,
+      twitterImage: placeholder,
+      imageStorage: "url",
+      featuredImageData: null,
+      thumbnailImageData: null,
+      imageAlt: imageAltFor(post.title),
+      imageCaption: imageCaptionFor("placeholder"),
+      imageDisclosure: null,
+      imageSourceType: "placeholder",
+      imageStatus: status,
+      imageError: reason
+    }
+  });
 }
 
 export async function generateImageForPost(
@@ -218,11 +383,25 @@ export async function generateImageForPost(
   });
   const finalPrompt = buildEditorialImagePrompt(post, options.promptOverride);
   const model = imageModel();
+  const category = articleCategory(post);
+
+  if (!process.env.OPENAI_API_KEY) {
+    const reason = "AI image generation is not configured.";
+    await applyPlaceholderImageForPost(postId, post, reason);
+    throw new Error(reason);
+  }
+
+  if (!isGeneratedImageStorageConfigured()) {
+    const reason =
+      "AI image storage is not configured. Connect Vercel Blob before generating production images.";
+    await applyPlaceholderImageForPost(postId, post, reason);
+    throw new Error(reason);
+  }
 
   await prisma.post.update({
     where: { id: postId },
     data: {
-      imagePrompt: options.promptOverride?.trim() || post.imagePrompt,
+      imagePrompt: finalPrompt,
       imageModel: model,
       imageStatus: "generating",
       imageError: null
@@ -231,11 +410,12 @@ export async function generateImageForPost(
 
   try {
     const sourceBytes = await generateEditorialImage(finalPrompt);
-    const variants = await writeImageVariants(postId, sourceBytes);
+    const variants = await storePostImageVariants(postId, sourceBytes);
     const now = new Date();
     const imageUrl = variants.thumbnailImage;
     const assets: StoredImageAssets = {
       imageUrl,
+      featuredImageUrl: variants.featuredImage,
       featuredImage: variants.featuredImage,
       thumbnailImage: variants.thumbnailImage,
       openGraphImage: variants.featuredImage,
@@ -243,8 +423,12 @@ export async function generateImageForPost(
       imageModel: model,
       imageGeneratedAt: now,
       imageStatus: options.statusWhenDone || "completed",
-      imageLicense: "Illustration generated with AI.",
-      imageCredit: "AI illustration / Daily Signal Wire",
+      imageAlt: imageAltFor(post.title),
+      imageCaption: imageCaptionFor("ai"),
+      imageDisclosure: AI_DISCLOSURE,
+      imageSourceType: "ai",
+      imageLicense: "AI-generated editorial illustration.",
+      imageCredit: "Daily Signal Wire / AI image generation",
       imageStorage: variants.imageStorage
     };
 
@@ -253,45 +437,40 @@ export async function generateImageForPost(
       data: {
         ...assets,
         imageError: null,
-        featuredImageData: variants.featuredImageData,
-        thumbnailImageData: variants.thumbnailImageData
+        featuredImageData: null,
+        thumbnailImageData: null
       }
     });
     logInfo("post_image_generated", {
       postId,
       model,
+      category,
       imageStorage: variants.imageStorage
     });
     return assets;
   } catch (error) {
-    const message = error instanceof Error ? error.message.slice(0, 1000) : "Image generation failed.";
-    await prisma.post.update({
-      where: { id: postId },
-      data: {
-        imageStatus: "failed",
-        imageError: message,
-        imageModel: model
-      }
-    });
+    const message =
+      error instanceof Error ? error.message.slice(0, 1000) : "Image generation failed.";
+    const hasExistingImage =
+      Boolean(post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage);
+    if (hasExistingImage) {
+      await prisma.post.update({
+        where: { id: postId },
+        data: {
+          imageStatus: "failed",
+          imageError: message,
+          imageModel: model
+        }
+      });
+    } else {
+      await applyPlaceholderImageForPost(postId, post, message);
+    }
     logError("post_image_generation_failed", error, { postId, model });
     throw error;
   }
 }
 
 export async function tryGenerateImageForPost(postId: string) {
-  if (!process.env.OPENAI_API_KEY) {
-    await prisma.post
-      .update({
-        where: { id: postId },
-        data: {
-          imageStatus: "idle",
-          imageError: "OPENAI_API_KEY is not configured."
-        }
-      })
-      .catch((error) => logError("post_image_skip_status_failed", error, { postId }));
-    return null;
-  }
-
   try {
     return await generateImageForPost(postId);
   } catch {

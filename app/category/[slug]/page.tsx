@@ -60,7 +60,8 @@ export default async function CategoryPage({
       slug: post.slug,
       title: post.title,
       excerpt: post.excerpt,
-      imageUrl: post.featuredImage || post.imageUrl || post.thumbnailImage,
+      imageUrl: post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage,
+      imageAlt: post.imageAlt || "",
       category: post.category?.name || post.trend?.category || categoryTitle,
       publishedAt: post.publishedAt,
       createdAt: post.createdAt

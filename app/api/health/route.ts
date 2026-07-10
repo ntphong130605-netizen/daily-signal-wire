@@ -1,4 +1,5 @@
 import { isDatabaseConfigured, prisma } from "@/lib/prisma";
+import { configuredImageStorageLabel } from "@/lib/aiImage";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,7 @@ export async function GET() {
     databaseConfigured: isDatabaseConfigured(),
     databaseReachable: false,
     openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
-    imageStorage: process.env.IMAGE_STORAGE || (process.env.VERCEL ? "database" : "local"),
+    imageStorage: configuredImageStorageLabel(),
     adsenseConfigured: Boolean(
       process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ||
         process.env.NEXT_PUBLIC_ADSENSE_CLIENT

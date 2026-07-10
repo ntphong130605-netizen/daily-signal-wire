@@ -55,7 +55,8 @@ The article body must be 500-900 words and begin with a short unheaded intro, fo
 ## What comes next
 Return sourceUrls only from the supplied source packet.
 factCheckNotes must identify every claim or ambiguity an editor should verify and end with "Fact-check before publishing."
-The image prompt must request a photorealistic editorial illustration in landscape 16:9, ultra realistic, 8K look, editorial magazine quality, cinematic lighting, high detail, newspaper style, and professional composition.
+The image prompt must be specific to the article. Base it on the article title, category, short summary, main event or issue, important people/objects only when supported by the sources, location only when supported by the sources, visual mood, and editorial context.
+It must request a realistic editorial photography-style image in landscape 16:9, ultra realistic, 8K look, editorial magazine quality, cinematic but natural lighting, high detail, realistic lighting, natural skin tones when people appear, newspaper style, and professional composition.
 It must explicitly prohibit watermark, readable text, logos, borders, frames, captions, and brand marks.
 If the article discusses a real event or developing report, the prompt must say the image should not look like documentary photography or a real event photo. It should be a staged, symbolic, photorealistic editorial illustration instead.
 Do not imply that an AI-generated image depicts a real moment, person, crime scene, disaster scene, evidence photo, or event photograph.

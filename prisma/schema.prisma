@@ -217,6 +217,7 @@ model Post {
   imageStatus        String     @default("idle")
   imageError         String?
   imageUrl           String?
+  featuredImageUrl   String?
   featuredImage      String?
   thumbnailImage     String?
   openGraphImage     String?
@@ -224,6 +225,10 @@ model Post {
   imageStorage       String     @default("url")
   featuredImageData  String?
   thumbnailImageData String?
+  imageAlt           String?
+  imageCaption       String?
+  imageDisclosure    String?
+  imageSourceType    String     @default("placeholder")
   imageLicense       String?
   imageCredit        String?
   aiGenerated        Boolean    @default(false)

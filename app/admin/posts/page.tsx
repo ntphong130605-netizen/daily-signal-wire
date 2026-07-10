@@ -87,9 +87,18 @@ export default async function AdminPostsPage({
                 <article className="admin-post-row" key={post.id}>
                   <div className="admin-post-story">
                     <div className="admin-post-thumb">
-                      {post.imageUrl ? (
+                      {post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={post.imageUrl} alt="" />
+                        <img
+                          src={
+                            post.featuredImageUrl ||
+                            post.featuredImage ||
+                            post.imageUrl ||
+                            post.thumbnailImage ||
+                            ""
+                          }
+                          alt={post.imageAlt || post.title}
+                        />
                       ) : (
                         <span>DS</span>
                       )}
@@ -121,6 +130,7 @@ export default async function AdminPostsPage({
                     imageStatus={post.imageStatus}
                     hasImage={Boolean(
                       post.imageUrl ||
+                        post.featuredImageUrl ||
                         post.featuredImage ||
                         post.thumbnailImage ||
                         post.openGraphImage ||

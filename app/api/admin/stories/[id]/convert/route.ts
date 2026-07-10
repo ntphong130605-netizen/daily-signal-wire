@@ -75,6 +75,27 @@ export async function POST(
     });
     const slug = await uniquePostSlug(article.slug || article.title, existing?.id);
     const categoryId = await categoryIdFor(article.category || story.feed.category?.name || "RSS");
+    const resetImage = {
+      imageStatus: "idle",
+      imageError: null,
+      imageModel: null,
+      imageGeneratedAt: null,
+      imageUrl: null,
+      featuredImageUrl: null,
+      featuredImage: null,
+      thumbnailImage: null,
+      openGraphImage: null,
+      twitterImage: null,
+      imageStorage: "url",
+      featuredImageData: null,
+      thumbnailImageData: null,
+      imageAlt: null,
+      imageCaption: null,
+      imageDisclosure: null,
+      imageSourceType: "placeholder",
+      imageLicense: null,
+      imageCredit: null
+    };
     const post = existing
       ? await prisma.post.update({
           where: { id: existing.id },
@@ -96,7 +117,8 @@ export async function POST(
             ]),
             sourceUrls: JSON.stringify(article.sourceUrls),
             status: "draft",
-            publishedAt: null
+            publishedAt: null,
+            ...resetImage
           }
         })
       : await prisma.post.create({
@@ -118,7 +140,8 @@ export async function POST(
               "Fact-check before publishing."
             ]),
             sourceUrls: JSON.stringify(article.sourceUrls),
-            status: "draft"
+            status: "draft",
+            ...resetImage
           }
         });
 

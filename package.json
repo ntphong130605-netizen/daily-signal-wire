@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "@vercel/blob": "^2.6.1",
     "fast-xml-parser": "^5.2.5",
     "next": "15.5.19",
     "openai": "^6.15.0",

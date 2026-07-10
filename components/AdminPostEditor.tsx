@@ -17,10 +17,15 @@ type EditablePost = {
   imageStatus: string;
   imageError: string;
   imageUrl: string;
+  featuredImageUrl: string;
   featuredImage: string;
   thumbnailImage: string;
   openGraphImage: string;
   twitterImage: string;
+  imageAlt: string;
+  imageCaption: string;
+  imageDisclosure: string;
+  imageSourceType: string;
   imageLicense: string;
   imageCredit: string;
   factCheckNotes: string[];
@@ -59,12 +64,15 @@ export default function AdminPostEditor({
   const [confirmed, setConfirmed] = useState(false);
   const [urlFields, setUrlFields] = useState({
     imageUrl: "",
+    imageAlt: "",
+    imageCaption: "",
+    imageDisclosure: "",
     imageLicense: "",
     imageCredit: ""
   });
 
   function previewImageUrl() {
-    return post.featuredImage || post.imageUrl || post.thumbnailImage || "";
+    return post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage || "";
   }
 
   function articleUrl() {
@@ -102,6 +110,9 @@ export default function AdminPostEditor({
           seoDescription: post.seoDescription,
           facebookCaption: post.facebookCaption,
           imagePrompt: post.imagePrompt,
+          imageAlt: post.imageAlt,
+          imageCaption: post.imageCaption,
+          imageDisclosure: post.imageDisclosure,
           factCheckNotes: post.factCheckNotes,
           sourceUrls: post.sourceUrls
         })
@@ -114,7 +125,7 @@ export default function AdminPostEditor({
     }
   }
 
-  async function image(mode: "generate" | "regenerate" | "accept" | "reject") {
+  async function image(mode: "generate" | "regenerate" | "accept" | "reject" | "remove") {
     const result = await call(
       `/api/admin/posts/${post.id}/image`,
       {
@@ -131,10 +142,15 @@ export default function AdminPostEditor({
         imageStatus: result.imageStatus ?? current.imageStatus,
         imageError: result.imageError ?? "",
         imageUrl: result.imageUrl ?? "",
+        featuredImageUrl: result.featuredImageUrl ?? "",
         featuredImage: result.featuredImage ?? "",
         thumbnailImage: result.thumbnailImage ?? "",
         openGraphImage: result.openGraphImage ?? "",
         twitterImage: result.twitterImage ?? "",
+        imageAlt: result.imageAlt ?? "",
+        imageCaption: result.imageCaption ?? "",
+        imageDisclosure: result.imageDisclosure ?? "",
+        imageSourceType: result.imageSourceType ?? current.imageSourceType,
         imageLicense: result.imageLicense ?? "",
         imageCredit: result.imageCredit ?? ""
       }));
@@ -147,6 +163,8 @@ export default function AdminPostEditor({
     if (!event.target.files?.[0]) return;
     const form = new FormData();
     form.append("file", event.target.files[0]);
+    form.append("alt", post.imageAlt);
+    form.append("caption", post.imageCaption);
     form.append("license", "Owned/uploaded by publisher");
     form.append("credit", "Daily Signal Wire");
     const result = await call(
@@ -160,10 +178,15 @@ export default function AdminPostEditor({
         imageStatus: result.imageStatus ?? current.imageStatus,
         imageError: result.imageError ?? "",
         imageUrl: result.imageUrl ?? "",
+        featuredImageUrl: result.featuredImageUrl ?? "",
         featuredImage: result.featuredImage ?? "",
         thumbnailImage: result.thumbnailImage ?? "",
         openGraphImage: result.openGraphImage ?? "",
         twitterImage: result.twitterImage ?? "",
+        imageAlt: result.imageAlt ?? current.imageAlt,
+        imageCaption: result.imageCaption ?? current.imageCaption,
+        imageDisclosure: result.imageDisclosure ?? "",
+        imageSourceType: result.imageSourceType ?? "upload",
         imageLicense: result.imageLicense ?? "",
         imageCredit: result.imageCredit ?? ""
       }));
@@ -188,10 +211,15 @@ export default function AdminPostEditor({
         imageStatus: result.imageStatus ?? current.imageStatus,
         imageError: result.imageError ?? "",
         imageUrl: result.imageUrl ?? "",
+        featuredImageUrl: result.featuredImageUrl ?? "",
         featuredImage: result.featuredImage ?? "",
         thumbnailImage: result.thumbnailImage ?? "",
         openGraphImage: result.openGraphImage ?? "",
         twitterImage: result.twitterImage ?? "",
+        imageAlt: result.imageAlt ?? current.imageAlt,
+        imageCaption: result.imageCaption ?? current.imageCaption,
+        imageDisclosure: result.imageDisclosure ?? current.imageDisclosure,
+        imageSourceType: result.imageSourceType ?? "licensed_url",
         imageLicense: result.imageLicense ?? "",
         imageCredit: result.imageCredit ?? ""
       }));
@@ -304,6 +332,32 @@ export default function AdminPostEditor({
           </label>
           <div className="two-col">
             <label>
+              Image alt text
+              <input
+                value={post.imageAlt}
+                onChange={(event) => field("imageAlt", event.target.value)}
+                placeholder="Describe the cover image for accessibility"
+              />
+            </label>
+            <label>
+              Image caption
+              <input
+                value={post.imageCaption}
+                onChange={(event) => field("imageCaption", event.target.value)}
+                placeholder="Caption shown under the article image"
+              />
+            </label>
+          </div>
+          <label>
+            Image disclosure
+            <input
+              value={post.imageDisclosure}
+              onChange={(event) => field("imageDisclosure", event.target.value)}
+              placeholder="AI-generated editorial illustration"
+            />
+          </label>
+          <div className="two-col">
+            <label>
               Fact-check notes, one per line
               <textarea
                 rows={6}
@@ -349,11 +403,31 @@ export default function AdminPostEditor({
             {post.imageStatus}
           </span>
         </div>
+        <div className="image-badge-row">
+          <span className={`image-source-badge image-source-${post.imageSourceType}`}>
+            {post.imageSourceType === "ai"
+              ? "Generated"
+              : post.imageSourceType === "upload"
+                ? "Manual Upload"
+                : post.imageSourceType === "licensed_url"
+                  ? "Licensed URL"
+                  : "Placeholder"}
+          </span>
+          {post.imageStatus === "generating" && <span>Generating…</span>}
+          {post.imageStatus === "failed" && <span>Failed · retry available</span>}
+        </div>
+        {!aiConfigured && (
+          <div className="warning-banner">
+            AI image generation is not configured.
+          </div>
+        )}
         {previewImageUrl() ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="admin-editor-image" src={previewImageUrl()} alt="" />
-            <p className="ai-image-disclosure">Illustration generated with AI.</p>
+            <img className="admin-editor-image" src={previewImageUrl()} alt={post.imageAlt} />
+            {post.imageDisclosure && (
+              <p className="ai-image-disclosure">{post.imageDisclosure}</p>
+            )}
           </>
         ) : (
           <div className="reader-empty-state compact">
@@ -365,17 +439,22 @@ export default function AdminPostEditor({
         {(post.featuredImage || post.thumbnailImage) && (
           <div className="image-asset-list">
             <span>1200×675: {post.thumbnailImage || "pending"}</span>
-            <span>1920×1080: {post.featuredImage || "pending"}</span>
+            <span>1920×1080: {post.featuredImageUrl || post.featuredImage || "pending"}</span>
             <span>OpenGraph: {post.openGraphImage || "pending"}</span>
             <span>Twitter: {post.twitterImage || "pending"}</span>
           </div>
         )}
+        <div className="image-meta-preview">
+          <span>Alt: {post.imageAlt || "Not set"}</span>
+          <span>Caption: {post.imageCaption || "Not set"}</span>
+          <span>Disclosure: {post.imageDisclosure || "None"}</span>
+        </div>
         <p className="license-line">
           {post.imageLicense || "License not set"}
           {post.imageCredit ? ` · ${post.imageCredit}` : ""}
         </p>
         <label className="upload-button">
-          Upload image
+          Replace / Upload image
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -389,6 +468,27 @@ export default function AdminPostEditor({
             value={urlFields.imageUrl}
             onChange={(event) =>
               setUrlFields({ ...urlFields, imageUrl: event.target.value })
+            }
+          />
+          <input
+            placeholder="Alt text"
+            value={urlFields.imageAlt}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageAlt: event.target.value })
+            }
+          />
+          <input
+            placeholder="Caption"
+            value={urlFields.imageCaption}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageCaption: event.target.value })
+            }
+          />
+          <input
+            placeholder="Disclosure (optional)"
+            value={urlFields.imageDisclosure}
+            onChange={(event) =>
+              setUrlFields({ ...urlFields, imageDisclosure: event.target.value })
             }
           />
           <input
@@ -442,10 +542,10 @@ export default function AdminPostEditor({
         </button>
         <button
           className="button button-secondary"
-          onClick={() => image("reject")}
+          onClick={() => image("remove")}
           disabled={Boolean(busy) || !previewImageUrl()}
         >
-          Reject Image
+          Remove Image
         </button>
         <button
           className="button button-secondary"

@@ -18,10 +18,15 @@ type PostDraft = {
   imageStatus: string;
   imageError: string;
   imageUrl: string;
+  featuredImageUrl: string;
   featuredImage: string;
   thumbnailImage: string;
   openGraphImage: string;
   twitterImage: string;
+  imageAlt: string;
+  imageCaption: string;
+  imageDisclosure: string;
+  imageSourceType: string;
   imageLicense: string;
   imageCredit: string;
   factCheckNotes: string[];
@@ -53,6 +58,9 @@ export default function TrendEditor({
   const [confirmed, setConfirmed] = useState(false);
   const [urlFields, setUrlFields] = useState({
     imageUrl: "",
+    imageAlt: "",
+    imageCaption: "",
+    imageDisclosure: "",
     imageLicense: "",
     imageCredit: ""
   });
@@ -145,7 +153,7 @@ export default function TrendEditor({
   }
 
   async function imageMode(
-    mode: "regenerate" | "retry" | "prompt" | "accept" | "reject"
+    mode: "regenerate" | "retry" | "prompt" | "accept" | "reject" | "remove"
   ) {
     if (!draft) return;
     const result = await call(
@@ -166,6 +174,8 @@ export default function TrendEditor({
             ? "Image accepted for publishing."
             : mode === "reject"
               ? "Image rejected."
+              : mode === "remove"
+                ? "Image removed."
               : "Image regenerated. Review and accept before publishing."
       );
     }
@@ -192,6 +202,8 @@ export default function TrendEditor({
     if (!draft || !event.target.files?.[0]) return;
     const form = new FormData();
     form.append("file", event.target.files[0]);
+    form.append("alt", draft.imageAlt);
+    form.append("caption", draft.imageCaption);
     form.append("license", "Owned/uploaded by publisher");
     form.append("credit", "Daily Signal Wire");
     const result = await call(
@@ -295,10 +307,15 @@ export default function TrendEditor({
       imageStatus: result.imageStatus ?? draft.imageStatus,
       imageError: result.imageError ?? "",
       imageUrl: result.imageUrl ?? "",
+      featuredImageUrl: result.featuredImageUrl ?? "",
       featuredImage: result.featuredImage ?? "",
       thumbnailImage: result.thumbnailImage ?? "",
       openGraphImage: result.openGraphImage ?? "",
       twitterImage: result.twitterImage ?? "",
+      imageAlt: result.imageAlt ?? draft.imageAlt,
+      imageCaption: result.imageCaption ?? draft.imageCaption,
+      imageDisclosure: result.imageDisclosure ?? draft.imageDisclosure,
+      imageSourceType: result.imageSourceType ?? draft.imageSourceType,
       imageLicense: result.imageLicense ?? "",
       imageCredit: result.imageCredit ?? ""
     });
@@ -306,7 +323,7 @@ export default function TrendEditor({
 
   function previewImageUrl() {
     if (!draft) return "";
-    return draft.featuredImage || draft.imageUrl || draft.thumbnailImage || "";
+    return draft.featuredImageUrl || draft.featuredImage || draft.imageUrl || draft.thumbnailImage || "";
   }
 
   return (
@@ -585,14 +602,25 @@ export default function TrendEditor({
                 <div className="image-preview">
                   {previewImageUrl() ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={previewImageUrl()} alt="Article preview" />
+                    <img src={previewImageUrl()} alt={draft.imageAlt || "Article preview"} />
                   ) : (
                     <span>No image selected</span>
                   )}
                 </div>
-                {previewImageUrl() && (
-                  <p className="ai-image-disclosure">Illustration generated with AI.</p>
+                {previewImageUrl() && draft.imageDisclosure && (
+                  <p className="ai-image-disclosure">{draft.imageDisclosure}</p>
                 )}
+                <div className="image-badge-row">
+                  <span className={`image-source-badge image-source-${draft.imageSourceType}`}>
+                    {draft.imageSourceType === "ai"
+                      ? "Generated"
+                      : draft.imageSourceType === "upload"
+                        ? "Manual Upload"
+                        : draft.imageSourceType === "licensed_url"
+                          ? "Licensed URL"
+                          : "Placeholder"}
+                  </span>
+                </div>
                 <label>
                   Image prompt
                   <textarea
@@ -651,10 +679,10 @@ export default function TrendEditor({
                   </button>
                   <button
                     className="button button-secondary"
-                    onClick={() => imageMode("reject")}
+                    onClick={() => imageMode("remove")}
                     disabled={Boolean(busy) || !previewImageUrl()}
                   >
-                    Reject Image
+                    Remove Image
                   </button>
                 </div>
                 {!aiConfigured && (
@@ -665,17 +693,22 @@ export default function TrendEditor({
                 {(draft.featuredImage || draft.thumbnailImage) && (
                   <div className="image-asset-list">
                     <span>1200×675: {draft.thumbnailImage || "pending"}</span>
-                    <span>1920×1080: {draft.featuredImage || "pending"}</span>
+                    <span>1920×1080: {draft.featuredImageUrl || draft.featuredImage || "pending"}</span>
                     <span>OpenGraph: {draft.openGraphImage || "pending"}</span>
                     <span>Twitter: {draft.twitterImage || "pending"}</span>
                   </div>
                 )}
+                <div className="image-meta-preview">
+                  <span>Alt: {draft.imageAlt || "Not set"}</span>
+                  <span>Caption: {draft.imageCaption || "Not set"}</span>
+                  <span>Disclosure: {draft.imageDisclosure || "None"}</span>
+                </div>
                 <p className="license-line">
                   {draft.imageLicense || "License not set"}
                   {draft.imageCredit ? ` · ${draft.imageCredit}` : ""}
                 </p>
                 <label className="upload-button">
-                  Upload image
+                  Replace / Upload image
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
@@ -689,6 +722,27 @@ export default function TrendEditor({
                     value={urlFields.imageUrl}
                     onChange={(event) =>
                       setUrlFields({ ...urlFields, imageUrl: event.target.value })
+                    }
+                  />
+                  <input
+                    placeholder="Alt text"
+                    value={urlFields.imageAlt}
+                    onChange={(event) =>
+                      setUrlFields({ ...urlFields, imageAlt: event.target.value })
+                    }
+                  />
+                  <input
+                    placeholder="Caption"
+                    value={urlFields.imageCaption}
+                    onChange={(event) =>
+                      setUrlFields({ ...urlFields, imageCaption: event.target.value })
+                    }
+                  />
+                  <input
+                    placeholder="Disclosure (optional)"
+                    value={urlFields.imageDisclosure}
+                    onChange={(event) =>
+                      setUrlFields({ ...urlFields, imageDisclosure: event.target.value })
                     }
                   />
                   <input

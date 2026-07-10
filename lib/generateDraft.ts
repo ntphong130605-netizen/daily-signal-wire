@@ -4,6 +4,18 @@ import { generateArticleFromTrend } from "@/lib/aiWriter";
 import { tryGenerateImageForPost } from "@/lib/aiImage";
 import type { SourceContext } from "@/lib/trends";
 import { logError, logInfo } from "@/lib/logger";
+import { slugify } from "@/lib/slug";
+
+async function categoryIdFor(name: string) {
+  const cleanName = name || "Editorial";
+  const slug = slugify(cleanName) || "editorial";
+  const category = await prisma.category.upsert({
+    where: { slug },
+    update: { name: cleanName },
+    create: { name: cleanName, slug }
+  });
+  return category.id;
+}
 
 export async function generateDraftForTrend(trendId: string) {
   const locked = await prisma.trend.updateMany({
@@ -29,6 +41,28 @@ export async function generateDraftForTrend(trendId: string) {
     });
     const existing = await prisma.post.findUnique({ where: { trendId } });
     const slug = existing?.slug || `${article.slug}-${trend.id.slice(-6)}`;
+    const categoryId = await categoryIdFor(article.category);
+    const resetImage = {
+      imageStatus: "idle",
+      imageError: null,
+      imageModel: null,
+      imageGeneratedAt: null,
+      imageUrl: null,
+      featuredImageUrl: null,
+      featuredImage: null,
+      thumbnailImage: null,
+      openGraphImage: null,
+      twitterImage: null,
+      imageStorage: "url",
+      featuredImageData: null,
+      thumbnailImageData: null,
+      imageAlt: null,
+      imageCaption: null,
+      imageDisclosure: null,
+      imageSourceType: "placeholder",
+      imageLicense: null,
+      imageCredit: null
+    };
     const post = await prisma.post.upsert({
       where: { trendId },
       update: {
@@ -40,11 +74,13 @@ export async function generateDraftForTrend(trendId: string) {
         seoDescription: article.seoDescription,
         facebookCaption: article.facebookCaption,
         imagePrompt: article.imagePrompt,
+        categoryId,
         aiGenerated: true,
         factCheckNotes: JSON.stringify(article.factCheckNotes),
         sourceUrls: JSON.stringify(article.sourceUrls),
         status: "draft",
-        publishedAt: null
+        publishedAt: null,
+        ...resetImage
       },
       create: {
         trendId,
@@ -56,10 +92,12 @@ export async function generateDraftForTrend(trendId: string) {
         seoDescription: article.seoDescription,
         facebookCaption: article.facebookCaption,
         imagePrompt: article.imagePrompt,
+        categoryId,
         aiGenerated: true,
         factCheckNotes: JSON.stringify(article.factCheckNotes),
         sourceUrls: JSON.stringify(article.sourceUrls),
-        status: "draft"
+        status: "draft",
+        ...resetImage
       }
     });
     await prisma.trend.update({

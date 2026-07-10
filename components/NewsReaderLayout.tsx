@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AddFeedPanel from "@/components/AddFeedPanel";
+import { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
 import Logo from "@/components/Logo";
 import ReaderThemeToggle from "@/components/ReaderThemeToggle";
 import StoryActions from "@/components/StoryActions";
@@ -72,7 +73,8 @@ export default function NewsReaderLayout({
   filters,
   counts,
   draftCount,
-  aiConfigured
+  aiConfigured,
+  publishedPosts
 }: {
   folders: ReaderFolder[];
   stories: ReaderStory[];
@@ -86,10 +88,13 @@ export default function NewsReaderLayout({
   };
   draftCount: number;
   aiConfigured: boolean;
+  publishedPosts: ReaderPost[];
 }) {
   const folderOptions = folders.map((folder) => ({ id: folder.id, name: folder.name }));
   const story = selectedStory || stories[0] || null;
   const activeStoryId = story?.id;
+  const featuredPost = publishedPosts[0] || null;
+  const secondaryPosts = publishedPosts.slice(1, 4);
 
   return (
     <div className="news-reader-app">
@@ -109,6 +114,39 @@ export default function NewsReaderLayout({
           Admin
         </Link>
       </header>
+
+      {featuredPost && (
+        <section className="published-wire-hero">
+          <div className="published-wire-copy">
+            <p className="reader-mini-label">Published AI Wire</p>
+            <h1>
+              <Link href={`/news/${featuredPost.slug}`}>{featuredPost.title}</Link>
+            </h1>
+            <div className="published-wire-meta">
+              <span>{featuredPost.source || "Daily Signal Wire"}</span>
+              <time>{timeAgo(featuredPost.publishedAt || featuredPost.createdAt)}</time>
+              <span>{featuredPost.relatedCount ?? secondaryPosts.length} related</span>
+            </div>
+            <p>{featuredPost.excerpt}</p>
+            <Link className="read-story-link" href={`/news/${featuredPost.slug}`}>
+              Read the full story <span>→</span>
+            </Link>
+          </div>
+          <Link className="published-wire-image-link" href={`/news/${featuredPost.slug}`}>
+            <ArticleImage post={featuredPost} className="published-wire-image" />
+          </Link>
+          {secondaryPosts.length > 0 && (
+            <div className="published-wire-strip">
+              {secondaryPosts.map((post) => (
+                <Link key={post.id} href={`/news/${post.slug}`}>
+                  <span>{post.category}</span>
+                  <strong>{post.title}</strong>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <main className="news-reader-grid">
         <aside className="reader-source-column">

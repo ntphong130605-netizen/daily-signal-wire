@@ -16,16 +16,20 @@ const allowedImageHosts = [
 
 const ImageActionSchema = z.object({
   mode: z
-    .enum(["generate", "regenerate", "retry", "url", "prompt", "accept", "reject"])
+    .enum(["generate", "regenerate", "retry", "url", "prompt", "accept", "reject", "remove"])
     .default("generate"),
   imagePrompt: z.string().max(4000).optional(),
   imageUrl: z.string().optional(),
+  imageAlt: z.string().max(300).optional(),
+  imageCaption: z.string().max(500).optional(),
+  imageDisclosure: z.string().max(300).optional(),
   imageLicense: z.string().optional(),
   imageCredit: z.string().optional()
 });
 
 function imagePayload(post: {
   imageUrl: string | null;
+  featuredImageUrl: string | null;
   featuredImage: string | null;
   thumbnailImage: string | null;
   openGraphImage: string | null;
@@ -36,11 +40,16 @@ function imagePayload(post: {
   imageStatus: string;
   imageError: string | null;
   imageStorage: string;
+  imageAlt: string | null;
+  imageCaption: string | null;
+  imageDisclosure: string | null;
+  imageSourceType: string;
   imageLicense: string | null;
   imageCredit: string | null;
 }) {
   return {
     imageUrl: post.imageUrl,
+    featuredImageUrl: post.featuredImageUrl,
     featuredImage: post.featuredImage,
     thumbnailImage: post.thumbnailImage,
     openGraphImage: post.openGraphImage,
@@ -51,6 +60,10 @@ function imagePayload(post: {
     imageStatus: post.imageStatus,
     imageError: post.imageError,
     imageStorage: post.imageStorage,
+    imageAlt: post.imageAlt,
+    imageCaption: post.imageCaption,
+    imageDisclosure: post.imageDisclosure,
+    imageSourceType: post.imageSourceType,
     imageLicense: post.imageLicense,
     imageCredit: post.imageCredit
   };
@@ -90,15 +103,24 @@ export async function POST(
         where: { id },
         data: {
           imageUrl,
+          featuredImageUrl: featuredImage,
           featuredImage,
           thumbnailImage,
           openGraphImage: featuredImage,
           twitterImage: thumbnailImage,
           imageStorage: stored.imageStorage,
-          featuredImageData: stored.featuredImageData,
-          thumbnailImageData: stored.thumbnailImageData,
+          featuredImageData: null,
+          thumbnailImageData: null,
           imageStatus: "accepted",
           imageError: null,
+          imageAlt:
+            String(form.get("alt") || "").trim() ||
+            `Editorial image for “${post.title}”`,
+          imageCaption:
+            String(form.get("caption") || "").trim() ||
+            "Publisher-uploaded editorial image.",
+          imageDisclosure: null,
+          imageSourceType: "upload",
           imageLicense: String(form.get("license") || "Owned/uploaded by publisher"),
           imageCredit: String(form.get("credit") || "Daily Signal Wire")
         }
@@ -151,6 +173,7 @@ export async function POST(
         where: { id },
         data: {
           imageUrl: url,
+          featuredImageUrl: url,
           featuredImage: url,
           thumbnailImage: url,
           openGraphImage: url,
@@ -160,6 +183,10 @@ export async function POST(
           thumbnailImageData: null,
           imageStatus: "accepted",
           imageError: null,
+          imageAlt: body.imageAlt?.trim() || `Editorial image for “${post.title}”`,
+          imageCaption: body.imageCaption?.trim() || "Licensed editorial image.",
+          imageDisclosure: body.imageDisclosure?.trim() || null,
+          imageSourceType: "licensed_url",
           imageLicense: body.imageLicense.trim(),
           imageCredit: body.imageCredit.trim()
         }
@@ -176,6 +203,19 @@ export async function POST(
         data: {
           imageStatus: "accepted",
           imageError: null,
+          imageAlt: post.imageAlt || `Editorial image for “${post.title}”`,
+          imageCaption:
+            post.imageCaption ||
+            (post.imageModel
+              ? "AI-generated editorial illustration."
+              : "Editorial image."),
+          imageDisclosure:
+            post.imageDisclosure ||
+            (post.imageModel ? "AI-generated editorial illustration" : null),
+          imageSourceType:
+            post.imageSourceType === "placeholder"
+              ? "placeholder"
+              : post.imageSourceType || (post.imageModel ? "ai" : "upload"),
           imageLicense: post.imageLicense || "Illustration generated with AI.",
           imageCredit: post.imageCredit || "AI illustration / Daily Signal Wire"
         }
@@ -183,13 +223,14 @@ export async function POST(
       return Response.json({ ok: true, ...imagePayload(updated) });
     }
 
-    if (body.mode === "reject") {
+    if (body.mode === "reject" || body.mode === "remove") {
       const updated = await prisma.post.update({
         where: { id },
         data: {
           imageStatus: "rejected",
           imageError: null,
           imageUrl: null,
+          featuredImageUrl: null,
           featuredImage: null,
           thumbnailImage: null,
           openGraphImage: null,
@@ -197,6 +238,10 @@ export async function POST(
           imageStorage: "url",
           featuredImageData: null,
           thumbnailImageData: null,
+          imageAlt: null,
+          imageCaption: null,
+          imageDisclosure: null,
+          imageSourceType: "placeholder",
           imageLicense: null,
           imageCredit: null
         }

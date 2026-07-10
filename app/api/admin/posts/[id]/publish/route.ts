@@ -31,7 +31,7 @@ export async function POST(
       post.aiGenerated &&
       (!post.imageStatus ||
         post.imageStatus !== "accepted" ||
-        (!post.imageUrl && !post.featuredImage))
+        (!post.imageUrl && !post.featuredImage && !post.featuredImageUrl))
     ) {
       return Response.json(
         { error: "Accept an editorial image before publishing this AI draft." },
