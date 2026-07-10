@@ -74,7 +74,7 @@ export async function generateArticleFromTrend(
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const response = await client().responses.parse({
-      model: process.env.AI_MODEL || "gpt-5.6-luna",
+      model: process.env.AI_MODEL || "gpt-5.5",
       instructions: editorialRules,
       input: JSON.stringify({
         task: "Create a complete draft article JSON object.",
@@ -125,7 +125,7 @@ export async function regenerateArticleField(
   article: { title: string; excerpt: string; content: string }
 ) {
   const response = await client().responses.parse({
-    model: process.env.AI_MODEL || "gpt-5.6-luna",
+    model: process.env.AI_MODEL || "gpt-5.5",
     instructions:
       field === "title"
         ? "Write one accurate, engaging US news headline. Do not add facts, certainty, or sensational claims. Return JSON."
