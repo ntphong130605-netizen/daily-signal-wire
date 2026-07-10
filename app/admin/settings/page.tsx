@@ -6,6 +6,7 @@ import {
   hasAdsTxtConfiguration,
   maskPublicId
 } from "@/lib/ads";
+import { configuredImageStorageLabel } from "@/lib/aiImage";
 import { isDatabaseConfigured, prisma, safeDbQuery } from "@/lib/prisma";
 
 function flag(value: string | undefined) {
@@ -42,11 +43,7 @@ export default async function AdminSettingsPage() {
     ["OpenAI", flag(process.env.OPENAI_API_KEY)],
     ["AI model", process.env.AI_MODEL || "Default model fallback"],
     ["Image model", process.env.IMAGE_MODEL || "Default image model fallback"],
-    [
-      "Image storage",
-      process.env.IMAGE_STORAGE ||
-        (process.env.VERCEL ? "database fallback" : "local development")
-    ],
+    ["Image storage", configuredImageStorageLabel()],
     ["Site URL", process.env.NEXT_PUBLIC_SITE_URL || "Default Vercel URL fallback"],
     [
       "AdSense client",
