@@ -1,16 +1,25 @@
 export default function Loading() {
   return (
-    <main className="system-state-page">
-      <div className="system-state-card loading-card">
-        <div className="empty-signal">
-          <span />
-          <span />
-          <span />
+    <main className="newsroom-skeleton-page">
+      <section className="newsroom-skeleton-hero">
+        <div>
+          <span className="skeleton-line short" />
+          <span className="skeleton-line title" />
+          <span className="skeleton-line title small" />
+          <span className="skeleton-line" />
+          <span className="skeleton-line medium" />
         </div>
-        <p className="eyebrow">Daily Signal Wire</p>
-        <h1>Loading newsroom…</h1>
-        <p>Preparing the latest reader and editorial queue.</p>
-      </div>
+        <div className="skeleton-image" />
+      </section>
+      <section className="newsroom-skeleton-grid">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div className="skeleton-card" key={index}>
+            <span className="skeleton-thumb" />
+            <span className="skeleton-line" />
+            <span className="skeleton-line medium" />
+          </div>
+        ))}
+      </section>
     </main>
   );
 }

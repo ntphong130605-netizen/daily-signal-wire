@@ -513,7 +513,7 @@ export async function generateImageForPost(
 
 export async function tryGenerateImageForPost(postId: string) {
   try {
-    return await generateImageForPost(postId);
+    return await generateImageForPost(postId, { statusWhenDone: "accepted" });
   } catch {
     return null;
   }

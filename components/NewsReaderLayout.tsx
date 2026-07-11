@@ -100,6 +100,29 @@ export default function NewsReaderLayout({
   const secondaryPosts = publishedPosts.slice(1, 4);
   const latestUpdates = stories.slice(0, 5);
   const mostRead = publishedPosts.slice(0, 5);
+  const breakingItems = (publishedPosts.length
+    ? publishedPosts.slice(0, 5).map((post) => ({
+        id: post.id,
+        title: post.title,
+        href: `/news/${post.slug}`,
+        label: post.category
+      }))
+    : stories.slice(0, 5).map((item) => ({
+        id: item.id,
+        title: item.title,
+        href: withQuery(filters, { story: item.id }),
+        label: item.feedTitle
+      })));
+  const trendingTopics = [
+    ...new Set([
+      ...publishedPosts.map((post) => post.category),
+      ...stories.flatMap((item) => item.tags),
+      "US News",
+      "Technology",
+      "Business",
+      "World"
+    ])
+  ].filter(Boolean).slice(0, 14);
   const categories = [
     "US Trending",
     "Technology",
@@ -147,6 +170,20 @@ export default function NewsReaderLayout({
 
       <AdSlot position="top" className="reader-top-ad" />
 
+      {breakingItems.length > 0 && (
+        <section className="breaking-ticker" aria-label="Breaking news ticker">
+          <strong>Breaking</strong>
+          <div className="breaking-track">
+            {[...breakingItems, ...breakingItems].map((item, index) => (
+              <Link key={`${item.id}-${index}`} href={item.href}>
+                <span>{item.label}</span>
+                {item.title}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {featuredPost && (
         <section className="published-wire-hero">
           <div className="published-wire-copy">
@@ -187,6 +224,14 @@ export default function NewsReaderLayout({
             <h2>What readers are following</h2>
           </div>
           <Link href="/?filter=trending">View US trending</Link>
+        </div>
+        <div className="trending-topic-carousel" aria-label="Trending topics">
+          {trendingTopics.map((topic) => (
+            <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+              <span>#</span>
+              {topic}
+            </Link>
+          ))}
         </div>
         <div className="reader-topic-grid">
           {(publishedPosts.length ? publishedPosts.slice(0, 6) : secondaryPosts).map((post) => (
@@ -323,7 +368,7 @@ export default function NewsReaderLayout({
                     <div className="story-row-image">
                       {item.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt="" />
+                        <img src={item.imageUrl} alt="" loading="lazy" decoding="async" />
                       ) : (
                         <span>DSW</span>
                       )}
@@ -366,7 +411,13 @@ export default function NewsReaderLayout({
               <h1>{story.title}</h1>
               {story.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img className="reader-detail-image" src={story.imageUrl} alt="" />
+                <img
+                  className="reader-detail-image"
+                  src={story.imageUrl}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                />
               )}
               <p className="reader-detail-excerpt">
                 {story.excerpt || "This feed supplied metadata only. Open the original story to read more."}

@@ -34,7 +34,12 @@ export function ArticleImage({
     <div className={`article-image ${className}`}>
       {post.imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.imageUrl} alt={post.imageAlt || post.title} />
+        <img
+          src={post.imageUrl}
+          alt={post.imageAlt || post.title}
+          loading="lazy"
+          decoding="async"
+        />
       ) : (
         <div className="article-image-fallback" aria-label="No article image">
           <svg viewBox="0 0 80 52" aria-hidden="true">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import AdSlot from "@/components/ads/AdSlot";
 import ArticleBody from "@/components/ArticleBody";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
+import ReadingProgressBar from "@/components/ReadingProgressBar";
 import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
 import { placeholderImageForCategory } from "@/lib/aiImage";
@@ -301,6 +302,7 @@ export default async function NewsArticlePage({
 
   return (
     <ReaderShell>
+      <ReadingProgressBar />
       {previewAllowed && (
         <div className="preview-ribbon">
           Draft preview · This article is not public
@@ -336,7 +338,12 @@ export default async function NewsArticlePage({
             <figure className="article-cover">
               {coverImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={coverImage} alt={post.imageAlt || post.title} />
+                <img
+                  src={coverImage}
+                  alt={post.imageAlt || post.title}
+                  fetchPriority="high"
+                  decoding="async"
+                />
               ) : (
                 <div className="article-cover-fallback">
                   <svg viewBox="0 0 100 60" aria-hidden="true">
@@ -385,7 +392,7 @@ export default async function NewsArticlePage({
             {tags.length > 0 && (
               <div className="article-tags" aria-label="Article tags">
                 {tags.map((tag) => (
-                  <Link key={tag} href={`/?q=${encodeURIComponent(tag)}`}>
+                  <Link key={tag} href={`/tag/${slugify(tag)}`}>
                     {tag}
                   </Link>
                 ))}
@@ -429,6 +436,17 @@ export default async function NewsArticlePage({
             <div className="sticky-share-rail">
               <ShareButtons title={post.title} slug={post.slug} />
             </div>
+            <section className="author-card">
+              <div className="author-card-avatar">DS</div>
+              <div>
+                <p className="section-kicker">Author</p>
+                <h2>Daily Signal Wire Desk</h2>
+                <p>
+                  Source-first newsroom coverage prepared with editorial review,
+                  factual checks and transparent AI-assisted workflow controls.
+                </p>
+              </div>
+            </section>
             {headings.length > 0 && (
               <section className="article-toc">
                 <p className="section-kicker">In this story</p>
@@ -443,7 +461,7 @@ export default async function NewsArticlePage({
             <AdSlot position="sidebar" />
             <section className="related-panel">
               <p className="section-kicker">Keep reading</p>
-              <h2>Related stories</h2>
+              <h2>Recommended articles</h2>
               {relatedPosts.length ? (
                 <div className="related-list">
                   {relatedPosts.map((item) => (
