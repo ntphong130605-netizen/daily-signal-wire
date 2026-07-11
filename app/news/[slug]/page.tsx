@@ -180,20 +180,48 @@ export default async function NewsArticlePage({
     minute: "2-digit"
   }).format(post.publishedAt || post.updatedAt);
   const categoryLabel = post.category?.name || post.trend?.category || "Latest";
+  const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
   const coverImage =
     post.featuredImageUrl ||
     post.featuredImage ||
     post.imageUrl ||
     post.thumbnailImage ||
     placeholderImageForCategory(categoryLabel);
-  const tags = parseStringArray(post.tags);
-  const faq = parseJsonArray<{ question: string; answer: string }>(post.faq);
+  const storedTags = parseStringArray(post.tags);
+  const tags = storedTags.length
+    ? storedTags
+    : [
+        categoryLabel,
+        sourceLabel,
+        "Daily Signal Wire"
+      ].filter((item, index, list) => item && list.indexOf(item) === index);
+  const storedFaq = parseJsonArray<{ question: string; answer: string }>(post.faq);
+  const faq = storedFaq.length
+    ? storedFaq
+    : [
+        {
+          question: `What is this ${categoryLabel.toLowerCase()} story about?`,
+          answer:
+            post.summary ||
+            post.excerpt ||
+            `This Daily Signal Wire story covers ${post.title}.`
+        },
+        {
+          question: "Why does it matter?",
+          answer:
+            "The story is part of Daily Signal Wire's source-first coverage, which highlights what happened, why it matters, relevant background and what may come next."
+        },
+        {
+          question: "How was this article prepared?",
+          answer:
+            "Daily Signal Wire uses source review, editorial checks and human approval before publication. AI-assisted drafts are not published automatically."
+        }
+      ];
   const headings = [...post.content.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
   const readingMinutes = Math.max(
     1,
     Math.ceil(post.content.split(/\s+/).filter(Boolean).length / 220)
   );
-  const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const categoryUrl = absoluteUrl(`/category/${slugify(categoryLabel)}`);
   const structuredData: {
