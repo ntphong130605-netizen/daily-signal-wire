@@ -52,7 +52,7 @@ function toReaderStory(story: StoryRecord): ReaderStory {
     excerpt: story.excerpt || "",
     content: story.content,
     sourceUrl: story.sourceUrl,
-    imageUrl: story.imageUrl,
+    imageUrl: normalizeEditorialImageUrl(story.imageUrl, story.feed.title),
     publishedAt: story.publishedAt,
     fetchedAt: story.fetchedAt,
     isRead: story.isRead,
