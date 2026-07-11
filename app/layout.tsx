@@ -6,6 +6,8 @@ import { adsenseClientId } from "@/lib/ads";
 import { absoluteUrl, siteDescription, siteName, siteUrl } from "@/lib/site";
 import "./globals.css";
 
+const adsenseAccountMeta = adsenseClientId();
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
   title: {
@@ -38,6 +40,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   verification: process.env.GOOGLE_SITE_VERIFICATION
     ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
+  other: adsenseAccountMeta
+    ? {
+        "google-adsense-account": adsenseAccountMeta
+      }
     : undefined
 };
 
