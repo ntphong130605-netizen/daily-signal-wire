@@ -7,6 +7,26 @@ import { absoluteUrl, siteDescription, siteName, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const adsenseAccountMeta = adsenseClientId();
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "NewsMediaOrganization",
+  name: siteName,
+  url: absoluteUrl("/"),
+  logo: absoluteUrl("/icon.svg"),
+  sameAs: []
+};
+const webSiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: siteName,
+  url: absoluteUrl("/"),
+  description: siteDescription(),
+  potentialAction: {
+    "@type": "SearchAction",
+    target: `${absoluteUrl("/")}?q={search_term_string}`,
+    "query-input": "required name=search_term_string"
+  }
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -58,6 +78,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify([organizationJsonLd, webSiteJsonLd])
+          }}
+        />
         {children}
         <CookieConsent />
         <Suspense fallback={null}>

@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms",
-  description: "Terms of use for Daily Signal Wire."
+  description: "Terms of use for Daily Signal Wire.",
+  alternates: {
+    canonical: absoluteUrl("/terms")
+  }
 };
 
 export default function TermsPage() {

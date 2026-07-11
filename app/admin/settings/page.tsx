@@ -144,8 +144,9 @@ export default async function AdminSettingsPage() {
               </p>
               <p>
                 The schema includes User, Feed, FeedFolder, FeedStory, SavedStory,
-                StoryTag, Category, AdSlot, Post and Trend models. NextAuth environment
-                fields are ready for production integration.
+                StoryTag, Category, AdSlot, GeneratedImage, SiteSetting, Post and
+                Trend models. NextAuth environment fields are ready for production
+                integration.
               </p>
             </section>
           </aside>

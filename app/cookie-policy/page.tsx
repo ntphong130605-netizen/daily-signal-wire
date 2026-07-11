@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description:
-    "Cookie policy for Daily Signal Wire, including analytics, advertising and consent choices."
+    "Cookie policy for Daily Signal Wire, including analytics, advertising and consent choices.",
+  alternates: {
+    canonical: absoluteUrl("/cookie-policy")
+  }
 };
 
 export default function CookiePolicyPage() {

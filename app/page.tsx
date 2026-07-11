@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import type { Prisma } from "@prisma/client";
 import NewsReaderLayout, {
   type ReaderFolder,
@@ -5,8 +6,29 @@ import NewsReaderLayout, {
 } from "@/components/NewsReaderLayout";
 import type { ReaderPost } from "@/components/ArticleCard";
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { absoluteUrl, siteDescription, siteName } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: siteName,
+  description: siteDescription(),
+  alternates: {
+    canonical: absoluteUrl("/")
+  },
+  openGraph: {
+    title: siteName,
+    description: siteDescription(),
+    url: absoluteUrl("/"),
+    siteName,
+    type: "website"
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteName,
+    description: siteDescription()
+  }
+};
 
 type StoryRecord = Prisma.FeedStoryGetPayload<{
   include: {

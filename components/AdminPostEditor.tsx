@@ -277,9 +277,17 @@ export default function AdminPostEditor({
   }
 
   const contentWordCount = post.content.trim().split(/\s+/).filter(Boolean).length;
+  const placeholderPattern =
+    /\b(lorem ipsum|placeholder|sample draft|demonstration draft|todo)\b/i;
+  const hasPlaceholderText = placeholderPattern.test(
+    `${post.title}\n${post.excerpt}\n${post.content}\n${post.seoTitle}\n${post.seoDescription}`
+  );
   const publishChecklist: { label: string; done: boolean }[] = [
+    { label: "Headline is present", done: Boolean(post.title.trim()) },
+    { label: "Excerpt is present", done: Boolean(post.excerpt.trim()) },
     { label: "Source URLs are attached", done: post.sourceUrls.length > 0 },
     { label: "Fact-check notes are attached", done: post.factCheckNotes.length > 0 },
+    { label: "Placeholder text has been removed", done: !hasPlaceholderText },
     { label: "No fabricated quotes or unsupported numbers", done: confirmed },
     { label: "Article is original and not copied verbatim", done: confirmed },
     { label: "Featured image is present", done: Boolean(previewImageUrl()) },

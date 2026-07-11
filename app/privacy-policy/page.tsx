@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Privacy policy for Daily Signal Wire."
+  description: "Privacy policy for Daily Signal Wire.",
+  alternates: {
+    canonical: absoluteUrl("/privacy-policy")
+  }
 };
 
 export default function PrivacyPolicyPage() {

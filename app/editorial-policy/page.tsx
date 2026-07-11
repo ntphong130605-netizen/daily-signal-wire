@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Editorial Policy",
   description:
-    "Daily Signal Wire editorial policy for AI-assisted drafts, sourcing, corrections and AI-generated illustrations."
+    "Daily Signal Wire editorial policy for AI-assisted drafts, sourcing, corrections and AI-generated illustrations.",
+  alternates: {
+    canonical: absoluteUrl("/editorial-policy")
+  }
 };
 
 export default function EditorialPolicyPage() {

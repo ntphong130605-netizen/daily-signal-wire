@@ -3,6 +3,7 @@ import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { absoluteUrl, siteName } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +22,24 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const title = titleFromSlug(slug) || "Category";
+  const url = absoluteUrl(`/category/${slug}`);
   return {
     title,
-    description: `Latest Daily Signal Wire stories in ${title}.`
+    description: `Latest Daily Signal Wire stories in ${title}.`,
+    alternates: {
+      canonical: url
+    },
+    openGraph: {
+      title: `${title} | ${siteName}`,
+      description: `Latest Daily Signal Wire stories in ${title}.`,
+      url,
+      type: "website"
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${title} | ${siteName}`,
+      description: `Latest Daily Signal Wire stories in ${title}.`
+    }
   };
 }
 

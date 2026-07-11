@@ -9,7 +9,13 @@ export async function POST(
   try {
     await protectMutation(request);
     const { id } = await params;
-    const post = await prisma.post.findUniqueOrThrow({ where: { id } });
+    const post = await prisma.post.findUniqueOrThrow({
+      where: { id },
+      include: {
+        category: { select: { name: true } },
+        trend: { select: { category: true } }
+      }
+    });
     const body = (await request.json().catch(() => ({}))) as {
       confirmedFactCheck?: boolean;
     };
@@ -24,6 +30,32 @@ export async function POST(
     if (sources.length === 0 || notes.length === 0) {
       return Response.json(
         { error: "Sources and fact-check notes are required." },
+        { status: 400 }
+      );
+    }
+    if (!post.title.trim() || !post.excerpt.trim() || !post.content.trim()) {
+      return Response.json(
+        { error: "Title, excerpt and article content are required before publishing." },
+        { status: 400 }
+      );
+    }
+    const hasCategory =
+      Boolean(post.category?.name?.trim()) || Boolean(post.trend?.category?.trim());
+    if (!hasCategory) {
+      return Response.json(
+        { error: "A category is required before publishing." },
+        { status: 400 }
+      );
+    }
+    const placeholderPattern =
+      /\b(lorem ipsum|placeholder|sample draft|demonstration draft|todo)\b/i;
+    if (
+      placeholderPattern.test(
+        `${post.title}\n${post.excerpt}\n${post.content}\n${post.seoTitle}\n${post.seoDescription}`
+      )
+    ) {
+      return Response.json(
+        { error: "Placeholder text must be removed before publishing." },
         { status: 400 }
       );
     }

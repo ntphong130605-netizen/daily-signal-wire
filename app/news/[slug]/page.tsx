@@ -8,6 +8,7 @@ import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
 import { isAdmin } from "@/lib/auth";
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { slugify } from "@/lib/slug";
 import { absoluteUrl, siteName } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -150,6 +151,7 @@ export default async function NewsArticlePage({
   );
   const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
+  const categoryUrl = absoluteUrl(`/category/${slugify(categoryLabel)}`);
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -170,7 +172,11 @@ export default async function NewsArticlePage({
         publisher: {
           "@type": "Organization",
           name: siteName,
-          url: absoluteUrl("/")
+          url: absoluteUrl("/"),
+          logo: {
+            "@type": "ImageObject",
+            url: absoluteUrl("/icon.svg")
+          }
         },
         articleSection: categoryLabel,
         isAccessibleForFree: true
@@ -188,7 +194,7 @@ export default async function NewsArticlePage({
             "@type": "ListItem",
             position: 2,
             name: categoryLabel,
-            item: absoluteUrl(`/?topic=${encodeURIComponent(categoryLabel)}`)
+            item: categoryUrl
           },
           {
             "@type": "ListItem",
@@ -214,9 +220,7 @@ export default async function NewsArticlePage({
             <div className="article-breadcrumb">
               <Link href="/">Home</Link>
               <span>/</span>
-              <Link href={`/?topic=${encodeURIComponent(categoryLabel)}`}>
-                {categoryLabel}
-              </Link>
+              <Link href={`/category/${slugify(categoryLabel)}`}>{categoryLabel}</Link>
             </div>
             <header className="article-title-block">
               <span className="article-category">{categoryLabel}</span>

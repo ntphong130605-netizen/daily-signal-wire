@@ -282,6 +282,9 @@ The admin visual desk supports:
 - Paste licensed image URL
 - Retry after failure
 
+The Prisma model also includes `GeneratedImage` for image generation audit
+metadata and `SiteSetting` for future runtime configuration records.
+
 If `OPENAI_API_KEY` is missing, image generation buttons are disabled or return
 a clear configuration message. The website does not crash.
 
@@ -399,6 +402,7 @@ Production includes:
 
 - `/api/health`
 - `/sitemap.xml`
+- `/news-sitemap.xml`
 - `/robots.txt`
 - `/rss.xml`
 - canonical URLs
@@ -436,6 +440,8 @@ Public policy pages:
 - `/cookie-policy`
 - `/terms`
 - `/editorial-policy`
+- `/ai-content-policy`
+- `/dmca`
 
 ## Useful commands
 

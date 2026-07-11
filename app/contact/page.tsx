@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Contact Daily Signal Wire about corrections, partnerships and newsroom feedback."
+  description: "Contact Daily Signal Wire about corrections, partnerships and newsroom feedback.",
+  alternates: {
+    canonical: absoluteUrl("/contact")
+  }
 };
 
 export default function ContactPage() {

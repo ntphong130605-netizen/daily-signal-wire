@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import StaticPage from "@/components/StaticPage";
+import { absoluteUrl } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Learn how Daily Signal Wire combines RSS signals, search trends and human review to publish source-first news."
+    "Learn how Daily Signal Wire combines RSS signals, search trends and human review to publish source-first news.",
+  alternates: {
+    canonical: absoluteUrl("/about")
+  }
 };
 
 export default function AboutPage() {

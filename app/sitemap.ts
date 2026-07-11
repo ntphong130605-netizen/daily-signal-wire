@@ -9,7 +9,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/privacy-policy",
     "/cookie-policy",
     "/terms",
-    "/editorial-policy"
+    "/editorial-policy",
+    "/ai-content-policy",
+    "/dmca"
   ];
   const posts = await safeDbQuery(
     "sitemap_posts_query_failed",

@@ -75,9 +75,48 @@ export default function GoogleScripts({
     }
   }, [consent.analytics_storage, gaConfigured, gaMeasurementId, pathname, searchParams]);
 
+  useEffect(() => {
+    if (!adsenseClientId || consent.ad_storage !== "granted") return;
+
+    function markAdsenseReady() {
+      window.__dswAdsenseReady = true;
+      window.dispatchEvent(new Event("dsw-adsense-ready"));
+    }
+
+    if (window.__dswAdsenseReady) {
+      markAdsenseReady();
+      return;
+    }
+
+    const existing = document.getElementById("adsense-script") as
+      | HTMLScriptElement
+      | null;
+    if (existing) {
+      existing.addEventListener("load", markAdsenseReady, { once: true });
+      if (existing.dataset.ready === "true") markAdsenseReady();
+      return () => existing.removeEventListener("load", markAdsenseReady);
+    }
+
+    const script = document.createElement("script");
+    script.id = "adsense-script";
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
+      adsenseClientId
+    )}`;
+    script.addEventListener(
+      "load",
+      () => {
+        script.dataset.ready = "true";
+        markAdsenseReady();
+      },
+      { once: true }
+    );
+    document.head.appendChild(script);
+  }, [adsenseClientId, consent.ad_storage]);
+
   const analyticsAllowed =
     Boolean(gaMeasurementId) && consent.analytics_storage === "granted";
-  const adsAllowed = Boolean(adsenseClientId) && consent.ad_storage === "granted";
 
   return (
     <>
@@ -101,21 +140,6 @@ export default function GoogleScripts({
           src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(
             gaMeasurementId
           )}`}
-        />
-      )}
-      {adsAllowed && (
-        <Script
-          id="adsense-script"
-          async
-          strategy="afterInteractive"
-          crossOrigin="anonymous"
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(
-            adsenseClientId
-          )}`}
-          onLoad={() => {
-            window.__dswAdsenseReady = true;
-            window.dispatchEvent(new Event("dsw-adsense-ready"));
-          }}
         />
       )}
     </>

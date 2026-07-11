@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import LoginPage from "@/app/login/page";
 
 export const metadata: Metadata = {
   robots: {
@@ -8,4 +7,6 @@ export const metadata: Metadata = {
   }
 };
 
-export default LoginPage;
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
+  return children;
+}
