@@ -6,7 +6,9 @@ import ArticleBody from "@/components/ArticleBody";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
+import { placeholderImageForCategory } from "@/lib/aiImage";
 import { isAdmin } from "@/lib/auth";
+import { parseJsonArray, parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { absoluteUrl, siteName } from "@/lib/site";
@@ -29,6 +31,7 @@ export async function generateMetadata({
           status: true,
           seoTitle: true,
           seoDescription: true,
+          openGraphDescription: true,
           imageUrl: true,
           featuredImageUrl: true,
           featuredImage: true,
@@ -53,13 +56,13 @@ export async function generateMetadata({
   const canonical = absoluteUrl(`/news/${slug}`);
   return {
     title: post.seoTitle,
-    description: post.seoDescription,
+    description: post.openGraphDescription || post.seoDescription,
     alternates: {
       canonical
     },
     openGraph: {
       title: post.seoTitle,
-      description: post.seoDescription,
+      description: post.openGraphDescription || post.seoDescription,
       url: canonical,
       siteName,
       type: "article",
@@ -68,7 +71,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       title: post.seoTitle,
-      description: post.seoDescription,
+      description: post.openGraphDescription || post.seoDescription,
       images: twitterImage ? [absoluteUrl(twitterImage)] : []
     }
   };
@@ -106,7 +109,9 @@ export default async function NewsArticlePage({
     ...(post.category?.name ? [{ category: { name: post.category.name } }] : []),
     ...(post.trend?.category ? [{ trend: { category: post.trend.category } }] : [])
   ];
-  const related = await safeDbQuery(
+  const publishedAt = post.publishedAt;
+  const [related, previousPost, nextPost] = await Promise.all([
+    safeDbQuery(
     "article_related_query_failed",
     [],
     () =>
@@ -123,13 +128,45 @@ export default async function NewsArticlePage({
         orderBy: { publishedAt: "desc" },
         take: 4
       })
-  );
+    ),
+    publishedAt
+      ? safeDbQuery("article_previous_query_failed", null, () =>
+          prisma.post.findFirst({
+            where: {
+              status: "published",
+              publishedAt: { lt: publishedAt },
+              id: { not: post.id }
+            },
+            select: { slug: true, title: true },
+            orderBy: { publishedAt: "desc" }
+          })
+        )
+      : Promise.resolve(null),
+    publishedAt
+      ? safeDbQuery("article_next_query_failed", null, () =>
+          prisma.post.findFirst({
+            where: {
+              status: "published",
+              publishedAt: { gt: publishedAt },
+              id: { not: post.id }
+            },
+            select: { slug: true, title: true },
+            orderBy: { publishedAt: "asc" }
+          })
+        )
+      : Promise.resolve(null)
+  ]);
   const relatedPosts: ReaderPost[] = related.map((item) => ({
     id: item.id,
     slug: item.slug,
     title: item.title,
     excerpt: item.excerpt,
-    imageUrl: item.featuredImageUrl || item.featuredImage || item.imageUrl || item.thumbnailImage,
+    imageUrl:
+      item.featuredImageUrl ||
+      item.featuredImage ||
+      item.imageUrl ||
+      item.thumbnailImage ||
+      placeholderImageForCategory(item.category?.name || item.trend?.category || "Latest"),
     imageAlt: item.imageAlt || "",
     category: item.category?.name || item.trend?.category || "Latest",
     publishedAt: item.publishedAt,
@@ -144,7 +181,14 @@ export default async function NewsArticlePage({
   }).format(post.publishedAt || post.updatedAt);
   const categoryLabel = post.category?.name || post.trend?.category || "Latest";
   const coverImage =
-    post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage;
+    post.featuredImageUrl ||
+    post.featuredImage ||
+    post.imageUrl ||
+    post.thumbnailImage ||
+    placeholderImageForCategory(categoryLabel);
+  const tags = parseStringArray(post.tags);
+  const faq = parseJsonArray<{ question: string; answer: string }>(post.faq);
+  const headings = [...post.content.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]);
   const readingMinutes = Math.max(
     1,
     Math.ceil(post.content.split(/\s+/).filter(Boolean).length / 220)
@@ -152,13 +196,17 @@ export default async function NewsArticlePage({
   const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const categoryUrl = absoluteUrl(`/category/${slugify(categoryLabel)}`);
-  const structuredData = {
+  const structuredData: {
+    "@context": string;
+    "@graph": Array<Record<string, unknown>>;
+  } = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": ["NewsArticle", "Article"],
         headline: post.title,
-        description: post.excerpt,
+        alternativeHeadline: post.subtitle || undefined,
+        description: post.openGraphDescription || post.excerpt,
         datePublished: (post.publishedAt || post.createdAt).toISOString(),
         dateModified: post.updatedAt.toISOString(),
         mainEntityOfPage: articleUrl,
@@ -179,6 +227,7 @@ export default async function NewsArticlePage({
           }
         },
         articleSection: categoryLabel,
+        keywords: tags.length ? tags.join(", ") : undefined,
         isAccessibleForFree: true
       },
       {
@@ -206,6 +255,19 @@ export default async function NewsArticlePage({
       }
     ]
   };
+  if (faq.length) {
+    structuredData["@graph"].push({
+      "@type": "FAQPage",
+      mainEntity: faq.map((item) => ({
+        "@type": "Question",
+        name: item.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.answer
+        }
+      }))
+    });
+  }
 
   return (
     <ReaderShell>
@@ -225,6 +287,7 @@ export default async function NewsArticlePage({
             <header className="article-title-block">
               <span className="article-category">{categoryLabel}</span>
               <h1>{post.title}</h1>
+              {post.subtitle && <p className="article-subtitle">{post.subtitle}</p>}
               <p>{post.excerpt}</p>
               <div className="article-byline">
                 <div className="author-avatar">DS</div>
@@ -277,6 +340,47 @@ export default async function NewsArticlePage({
             </figure>
 
             <ArticleBody content={post.content} />
+            {faq.length > 0 && (
+              <section className="article-faq">
+                <p className="section-kicker">FAQ</p>
+                <h2>Reader questions</h2>
+                {faq.map((item) => (
+                  <details key={item.question}>
+                    <summary>{item.question}</summary>
+                    <p>{item.answer}</p>
+                  </details>
+                ))}
+              </section>
+            )}
+            {tags.length > 0 && (
+              <div className="article-tags" aria-label="Article tags">
+                {tags.map((tag) => (
+                  <Link key={tag} href={`/?q=${encodeURIComponent(tag)}`}>
+                    {tag}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {(previousPost || nextPost) && (
+              <nav className="article-prev-next" aria-label="Previous and next stories">
+                {previousPost ? (
+                  <Link href={`/news/${previousPost.slug}`}>
+                    <span>Previous</span>
+                    <strong>{previousPost.title}</strong>
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                {nextPost ? (
+                  <Link href={`/news/${nextPost.slug}`}>
+                    <span>Next</span>
+                    <strong>{nextPost.title}</strong>
+                  </Link>
+                ) : (
+                  <span />
+                )}
+              </nav>
+            )}
             <AdSlot position="bottom" />
             <script
               type="application/ld+json"
@@ -292,6 +396,20 @@ export default async function NewsArticlePage({
           </article>
 
           <aside className="article-sidebar">
+            <div className="sticky-share-rail">
+              <ShareButtons title={post.title} slug={post.slug} />
+            </div>
+            {headings.length > 0 && (
+              <section className="article-toc">
+                <p className="section-kicker">In this story</p>
+                <h2>Table of contents</h2>
+                {headings.map((heading) => (
+                  <Link key={heading} href={`#${slugify(heading)}`}>
+                    {heading}
+                  </Link>
+                ))}
+              </section>
+            )}
             <AdSlot position="sidebar" />
             <section className="related-panel">
               <p className="section-kicker">Keep reading</p>

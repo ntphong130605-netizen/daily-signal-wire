@@ -1,6 +1,7 @@
 import { databaseUnavailableResponse, isDatabaseConfigured } from "@/lib/prisma";
 import { generateDraftForTrend } from "@/lib/generateDraft";
 import { logError, logInfo } from "@/lib/logger";
+import { publishDueScheduledPosts } from "@/lib/scheduledPublish";
 import { ingestGoogleTrendsUS } from "@/lib/trendIngest";
 
 export const maxDuration = 300;
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    const scheduledPublished = await publishDueScheduledPosts();
     const ingest = await ingestGoogleTrendsUS();
 
     const maximum = Math.max(
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
       generated: selected.length
     });
     return Response.json({
+      scheduledPublished,
       discovered: ingest.discovered,
       created: ingest.created,
       existing: ingest.existing,

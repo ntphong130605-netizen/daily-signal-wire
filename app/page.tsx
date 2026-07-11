@@ -5,6 +5,7 @@ import NewsReaderLayout, {
   type ReaderStory
 } from "@/components/NewsReaderLayout";
 import type { ReaderPost } from "@/components/ArticleCard";
+import { placeholderImageForCategory } from "@/lib/aiImage";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { absoluteUrl, siteDescription, siteName } from "@/lib/site";
 
@@ -200,7 +201,7 @@ export default async function HomePage({
             sourceStory: { include: { feed: { select: { title: true } } } }
           },
           orderBy: { publishedAt: "desc" },
-          take: 6
+          take: 24
         })
       ]);
 
@@ -214,23 +215,27 @@ export default async function HomePage({
         savedCount,
         trendingCount,
         draftCount,
-        publishedPosts: publishedPosts.map((post) => ({
-          id: post.id,
-          slug: post.slug,
-          title: post.title,
-          excerpt: post.excerpt,
-          imageUrl:
-            post.featuredImageUrl ||
-            post.featuredImage ||
-            post.imageUrl ||
-            post.thumbnailImage,
-          imageAlt: post.imageAlt || "",
-          category: post.category?.name || post.trend?.category || "Latest",
-          source: post.sourceStory?.feed?.title || "Daily Signal Wire",
-          relatedCount: Math.max(0, publishedPosts.length - 1),
-          publishedAt: post.publishedAt,
-          createdAt: post.createdAt
-        }))
+        publishedPosts: publishedPosts.map((post) => {
+          const category = post.category?.name || post.trend?.category || "Latest";
+          return {
+            id: post.id,
+            slug: post.slug,
+            title: post.title,
+            excerpt: post.excerpt,
+            imageUrl:
+              post.featuredImageUrl ||
+              post.featuredImage ||
+              post.imageUrl ||
+              post.thumbnailImage ||
+              placeholderImageForCategory(category),
+            imageAlt: post.imageAlt || "",
+            category,
+            source: post.sourceStory?.feed?.title || "Daily Signal Wire",
+            relatedCount: Math.max(0, publishedPosts.length - 1),
+            publishedAt: post.publishedAt,
+            createdAt: post.createdAt
+          };
+        })
       };
     }
   );

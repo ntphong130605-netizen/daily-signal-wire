@@ -111,8 +111,10 @@ Production uses a separate PostgreSQL schema file:
 prisma/schema.postgres.prisma
 ```
 
-Vercel runs `npm run build:vercel`, which generates Prisma Client from that
-PostgreSQL schema. Local development keeps `prisma/schema.prisma` on SQLite.
+Vercel runs `npm run build:vercel`, which syncs the PostgreSQL schema with
+`prisma db push`, generates Prisma Client from `prisma/schema.postgres.prisma`,
+and then builds Next.js. Local development keeps `prisma/schema.prisma` on
+SQLite.
 
 ### Neon or Supabase production database
 
@@ -140,9 +142,10 @@ npm run db:push:prod
 npm run db:seed:prod
 ```
 
-`db:push:prod` applies the Prisma data model to the PostgreSQL database. Use a
-managed migration workflow before large schema changes on a live production
-database.
+`db:push:prod` applies the Prisma data model to the PostgreSQL database. Vercel
+also runs this during `build:vercel` so newly added non-destructive columns are
+available before the deployed app starts. Use a managed migration workflow
+before large schema changes on a live production database.
 
 If `DATABASE_URL` is missing, public pages, admin pages and `/api/health` do not
 crash. They render empty/degraded states until a production database is attached.
@@ -197,9 +200,10 @@ Admins can also import the latest US trend signals manually from:
 /admin/trends
 ```
 
-The `Refresh Google Trends` action fetches Google Trends US, falls back to
-mock-safe signals if the upstream feed fails, and saves new trends as idle
-signals. It does not generate, publish or overwrite stories automatically.
+The `Refresh Google Trends` action fetches Google Trends US and saves new
+trends as idle signals. If the upstream feed fails, the app logs the error and
+does not create fake trend data. It does not publish or overwrite stories
+automatically.
 
 If Google Trends, Google News or any RSS source fails, the app logs the error
 and keeps running. Missing API keys never crash the site.
@@ -236,7 +240,7 @@ configured.
 Generated images are resized into two landscape 16:9 assets:
 
 - `1200x675` for thumbnail/Twitter image
-- `1920x1080` for featured/OpenGraph image
+- `1600x900` for featured/OpenGraph image
 
 Local development defaults to filesystem storage under `public/generated`.
 Production should use Vercel Blob so generated images are stored as public URLs
@@ -249,7 +253,7 @@ IMAGE_STORAGE=blob
 
 Use `IMAGE_STORAGE=local` only when the runtime has a persistent writable
 filesystem. If Blob is not configured in production, the app still saves the
-article draft, marks `imageStatus=failed`, shows a category placeholder image,
+article draft, marks `imageStatus=failed`, shows a category fallback image,
 and lets an editor retry after storage is configured.
 
 Each post stores:
@@ -295,12 +299,12 @@ Editorial image policy:
 - no logo
 - no border or frame
 - landscape 16:9
-- photorealistic editorial illustration
+- realistic editorial news photography style
 - do not create fake documentary photos of real events
 
 Published article pages show this disclosure below generated images:
 
-> AI-generated editorial illustration.
+> AI-generated editorial image.
 
 ## Admin
 
@@ -340,7 +344,7 @@ Story actions include:
 - AI drafts must be original English-language articles
 - No invented quotes, numbers or unsupported claims
 - Source URLs and fact-check notes are saved with drafts
-- Image prompts require editorial illustrations, not fake event photos
+- Image prompts require realistic editorial images, not fake event photos
 - Publishing requires admin approval
 
 ## AdSense

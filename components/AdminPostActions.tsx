@@ -109,6 +109,46 @@ export default function AdminPostActions({
     router.refresh();
   }
 
+  async function regenerateArticle() {
+    setBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/admin/posts/${id}/regenerate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ field: "article" })
+    });
+    const body = await response.json().catch(() => ({}));
+    setBusy(false);
+    if (!response.ok) {
+      setMessage(body.error || "Article regeneration failed");
+      return;
+    }
+    setMessage("Article regenerated");
+    trackEvent("generate_ai_article", { post_id: id, mode: "regenerate" });
+    router.refresh();
+  }
+
+  async function rejectDraft() {
+    const rejectionReason =
+      window.prompt("Why should this draft be rejected?") ||
+      "Rejected by editor for revision.";
+    setBusy(true);
+    setMessage("");
+    const response = await fetch(`/api/admin/posts/${id}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "reject", rejectionReason })
+    });
+    const body = await response.json().catch(() => ({}));
+    setBusy(false);
+    if (!response.ok) {
+      setMessage(body.error || "Reject failed");
+      return;
+    }
+    setMessage("Rejected");
+    router.refresh();
+  }
+
   return (
     <div className="admin-post-actions">
       <button onClick={copyFacebook}>Copy Facebook Post</button>
@@ -120,6 +160,11 @@ export default function AdminPostActions({
         Preview
       </Link>
       <Link href={`/admin/posts/${id}`}>Edit</Link>
+      {status !== "published" && (
+        <button onClick={regenerateArticle} disabled={busy || !aiConfigured}>
+          Regenerate Article
+        </button>
+      )}
       <button
         onClick={() => imageAction("generate")}
         disabled={busy || !aiConfigured || imageStatus === "generating"}
@@ -135,6 +180,11 @@ export default function AdminPostActions({
         Regenerate Image
       </button>
       {status !== "published" && (
+        <button onClick={rejectDraft} disabled={busy || status === "rejected"}>
+          Reject
+        </button>
+      )}
+      {status !== "published" && status !== "rejected" && (
         <button className="publish-action" onClick={publish} disabled={busy}>
           {busy ? "Publishing…" : "Publish"}
         </button>

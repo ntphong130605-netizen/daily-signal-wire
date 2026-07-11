@@ -197,50 +197,59 @@ model StoryTag {
 }
 
 model Post {
-  id                 String     @id @default(cuid())
-  trendId            String?    @unique
-  trend              Trend?     @relation(fields: [trendId], references: [id], onDelete: SetNull)
-  sourceStoryId      String?
-  sourceStory        FeedStory? @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
-  categoryId         String?
-  category           Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  title              String
-  slug               String     @unique
-  excerpt            String
-  content            String
-  seoTitle           String
-  seoDescription     String
-  facebookCaption    String
-  imagePrompt        String?
-  imageModel         String?
-  imageGeneratedAt   DateTime?
-  imageStatus        String     @default("idle")
-  imageError         String?
-  imageUrl           String?
-  featuredImageUrl   String?
-  featuredImage      String?
-  thumbnailImage     String?
-  openGraphImage     String?
-  twitterImage       String?
-  imageStorage       String     @default("url")
-  featuredImageData  String?
-  thumbnailImageData String?
-  imageAlt           String?
-  imageCaption       String?
-  imageDisclosure    String?
-  imageSourceType    String     @default("placeholder")
-  imageLicense       String?
-  imageCredit        String?
-  generatedImages    GeneratedImage[]
-  aiGenerated        Boolean    @default(false)
-  factCheckNotes     String     @default("[]")
-  sourceUrls         String     @default("[]")
-  status             String     @default("draft")
-  publishedAt        DateTime?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                   String           @id @default(cuid())
+  trendId              String?          @unique
+  trend                Trend?           @relation(fields: [trendId], references: [id], onDelete: SetNull)
+  sourceStoryId        String?
+  sourceStory          FeedStory?       @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
+  categoryId           String?
+  category             Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title                String
+  slug                 String           @unique
+  subtitle             String?
+  excerpt              String
+  summary              String?
+  content              String
+  seoTitle             String
+  seoDescription       String
+  openGraphDescription String?
+  facebookCaption      String
+  tags                 String           @default("[]")
+  faq                  String           @default("[]")
+  imagePrompt          String?
+  imageModel           String?
+  imageGeneratedAt     DateTime?
+  imageStatus          String           @default("idle")
+  imageError           String?
+  imageUrl             String?
+  featuredImageUrl     String?
+  featuredImage        String?
+  thumbnailImage       String?
+  openGraphImage       String?
+  twitterImage         String?
+  imageStorage         String           @default("url")
+  featuredImageData    String?
+  thumbnailImageData   String?
+  imageAlt             String?
+  imageCaption         String?
+  imageDisclosure      String?
+  imageSourceType      String           @default("placeholder")
+  imageLicense         String?
+  imageCredit          String?
+  generatedImages      GeneratedImage[]
+  aiGenerated          Boolean          @default(false)
+  factCheckNotes       String           @default("[]")
+  sourceUrls           String           @default("[]")
+  status               String           @default("draft")
+  scheduledAt          DateTime?
+  rejectedAt           DateTime?
+  rejectionReason      String?
+  publishedAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
 
   @@index([status])
+  @@index([scheduledAt])
   @@index([publishedAt])
   @@index([imageStatus])
   @@index([sourceStoryId])
@@ -273,26 +282,26 @@ model AdSlot {
 }
 
 model GeneratedImage {
-  id             String   @id @default(cuid())
-  postId         String?
-  post           Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
-  prompt         String
-  model          String?
-  status         String   @default("generated")
-  url            String?
-  featuredUrl    String?
-  thumbnailUrl   String?
-  openGraphUrl   String?
-  twitterUrl     String?
-  alt            String?
-  caption        String?
-  disclosure     String?
-  sourceType     String   @default("ai")
-  license        String?
-  credit         String?
-  error          String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           String   @id @default(cuid())
+  postId       String?
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  prompt       String
+  model        String?
+  status       String   @default("generated")
+  url          String?
+  featuredUrl  String?
+  thumbnailUrl String?
+  openGraphUrl String?
+  twitterUrl   String?
+  alt          String?
+  caption      String?
+  disclosure   String?
+  sourceType   String   @default("ai")
+  license      String?
+  credit       String?
+  error        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([postId])
   @@index([status])

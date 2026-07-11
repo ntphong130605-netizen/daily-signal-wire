@@ -1,8 +1,12 @@
 import { apiError, protectMutation } from "@/lib/apiSecurity";
 import { prisma } from "@/lib/prisma";
-import { regenerateArticleField } from "@/lib/aiWriter";
+import {
+  regenerateArticleField,
+  regenerateFullArticleDraft
+} from "@/lib/aiWriter";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 import { logError } from "@/lib/logger";
+import { parseJsonArray, parseStringArray } from "@/lib/json";
 
 export async function POST(
   request: Request,
@@ -24,13 +28,68 @@ export async function POST(
       return Response.json({ error: "Rate limit reached." }, { status: 429 });
     }
     const body = (await request.json()) as {
-      field?: "title" | "facebookCaption";
+      field?: "title" | "facebookCaption" | "article";
     };
-    if (!body.field || !["title", "facebookCaption"].includes(body.field)) {
+    if (!body.field || !["title", "facebookCaption", "article"].includes(body.field)) {
       return Response.json({ error: "Unsupported field" }, { status: 400 });
     }
     const { id } = await params;
-    const post = await prisma.post.findUniqueOrThrow({ where: { id } });
+    const post = await prisma.post.findUniqueOrThrow({
+      where: { id },
+      include: {
+        category: { select: { name: true } },
+        trend: { select: { category: true } }
+      }
+    });
+    if (body.field === "article") {
+      if (post.status === "published") {
+        return Response.json(
+          { error: "Published articles cannot be regenerated. Edit a draft instead." },
+          { status: 400 }
+        );
+      }
+      const article = await regenerateFullArticleDraft({
+        title: post.title,
+        subtitle: post.subtitle,
+        excerpt: post.excerpt,
+        summary: post.summary,
+        content: post.content,
+        seoTitle: post.seoTitle,
+        seoDescription: post.seoDescription,
+        openGraphDescription: post.openGraphDescription,
+        facebookCaption: post.facebookCaption,
+        imagePrompt: post.imagePrompt,
+        category: post.category?.name || post.trend?.category || null,
+        sourceUrls: parseStringArray(post.sourceUrls),
+        factCheckNotes: parseStringArray(post.factCheckNotes),
+        tags: parseStringArray(post.tags),
+        faq: parseJsonArray<{ question: string; answer: string }>(post.faq)
+      });
+      await prisma.post.update({
+        where: { id },
+        data: {
+          title: article.title,
+          subtitle: article.subtitle,
+          excerpt: article.excerpt,
+          summary: article.summary,
+          content: article.content,
+          seoTitle: article.seoTitle,
+          seoDescription: article.seoDescription,
+          openGraphDescription: article.openGraphDescription,
+          facebookCaption: article.facebookCaption,
+          imagePrompt: article.imagePrompt,
+          tags: JSON.stringify(article.tags),
+          faq: JSON.stringify(article.faq),
+          factCheckNotes: JSON.stringify(article.factCheckNotes),
+          sourceUrls: JSON.stringify(article.sourceUrls),
+          imageStatus: "idle",
+          imageError: null,
+          rejectedAt: null,
+          rejectionReason: null
+        }
+      });
+      return Response.json({ ok: true, article });
+    }
     const value = await regenerateArticleField(body.field, post);
     await prisma.post.update({
       where: { id },

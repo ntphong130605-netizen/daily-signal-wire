@@ -4308,3 +4308,259 @@ html[data-theme="light"],
     grid-template-columns: 1fr;
   }
 }
+
+.reader-news-sections,
+.infinite-news-section {
+  width: min(1440px, calc(100% - 20px));
+  margin: 12px auto;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 18px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+.reader-topic-grid,
+.infinite-news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.topic-card {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fff 0%, #f4fbfa 100%);
+  transition: 160ms ease;
+}
+
+.topic-card:hover,
+.category-rail-list a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(22, 36, 30, 0.1);
+}
+
+.topic-card span,
+.topic-card small,
+.article-tags a {
+  color: var(--green-2);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.topic-card strong {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.category-rail {
+  margin-top: 22px;
+}
+
+.reader-section-heading.compact {
+  margin-bottom: 10px;
+}
+
+.category-rail-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.category-rail-list a {
+  display: grid;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 10px;
+  background: #fff;
+  transition: 160ms ease;
+}
+
+.category-rail-list .article-image {
+  min-height: 108px;
+}
+
+.category-rail-list strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.reader-side-panel,
+.newsletter-panel,
+.article-toc,
+.article-faq,
+.article-prev-next {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: #fff;
+}
+
+.reader-side-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.reader-side-panel a {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.reader-side-panel a span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.reader-side-panel a strong {
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.newsletter-panel {
+  margin-top: 16px;
+}
+
+.newsletter-panel .newsletter-card {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.infinite-sentinel {
+  padding: 18px 0 2px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.article-subtitle {
+  color: var(--text);
+  font-size: clamp(1.15rem, 2.4vw, 1.55rem);
+  font-weight: 700;
+}
+
+.article-toc {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.article-toc h2,
+.article-faq h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.article-toc a {
+  color: var(--green-2);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sticky-share-rail {
+  position: sticky;
+  top: 92px;
+  z-index: 2;
+  margin-bottom: 16px;
+}
+
+.article-faq {
+  display: grid;
+  gap: 10px;
+  margin: 28px 0;
+}
+
+.article-faq details {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff;
+}
+
+.article-faq summary {
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.article-faq p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.article-tags a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: #fff;
+}
+
+.article-prev-next {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 28px 0;
+}
+
+.article-prev-next a {
+  display: grid;
+  gap: 5px;
+}
+
+.article-prev-next span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.article-prev-next strong {
+  line-height: 1.25;
+}
+
+.schedule-control {
+  min-width: 220px;
+}
+
+.schedule-control input {
+  padding: 8px 10px;
+}
+
+@media (max-width: 920px) {
+  .reader-topic-grid,
+  .infinite-news-grid,
+  .category-rail-list,
+  .article-prev-next {
+    grid-template-columns: 1fr;
+  }
+
+  .sticky-share-rail {
+    position: static;
+  }
+}

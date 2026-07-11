@@ -17,39 +17,6 @@ export type TrendCandidate = {
   sources: SourceContext[];
 };
 
-function fallbackTrends(): TrendCandidate[] {
-  const source: SourceContext = {
-    title: "Google Trends data basics",
-    source: "Google Trends Help",
-    url: "https://support.google.com/trends/answer/4365533",
-    snippet:
-      "Background material explaining how Google Trends represents search interest."
-  };
-  return [
-    {
-      keyword: "AI newsroom standards",
-      normalizedKeyword: "fallback-ai-newsroom-standards",
-      traffic: "Offline sample",
-      relatedQueries: ["editorial AI policy", "human review", "fact checking"],
-      sources: [source]
-    },
-    {
-      keyword: "US consumer technology",
-      normalizedKeyword: "fallback-us-consumer-technology",
-      traffic: "Offline sample",
-      relatedQueries: ["technology explainers", "consumer impact"],
-      sources: [source]
-    },
-    {
-      keyword: "digital media trust",
-      normalizedKeyword: "fallback-digital-media-trust",
-      traffic: "Offline sample",
-      relatedQueries: ["news transparency", "source verification"],
-      sources: [source]
-    }
-  ];
-}
-
 const parser = new XMLParser({
   ignoreAttributes: false,
   trimValues: true,
@@ -145,9 +112,9 @@ export async function fetchGoogleTrendsUS(): Promise<TrendCandidate[]> {
       });
     }
 
-    return candidates.length ? candidates : fallbackTrends();
+    return candidates;
   } catch (error) {
-    logError("google_trends_feed_failed_using_fallback", error);
-    return fallbackTrends();
+    logError("google_trends_feed_failed", error);
+    return [];
   }
 }

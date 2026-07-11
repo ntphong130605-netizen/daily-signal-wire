@@ -2,7 +2,9 @@ import Link from "next/link";
 import AddFeedPanel from "@/components/AddFeedPanel";
 import AdSlot from "@/components/ads/AdSlot";
 import { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
+import InfinitePostFeed from "@/components/InfinitePostFeed";
 import Logo from "@/components/Logo";
+import NewsletterCard from "@/components/NewsletterCard";
 import ReaderThemeToggle from "@/components/ReaderThemeToggle";
 import StoryActions from "@/components/StoryActions";
 
@@ -96,6 +98,33 @@ export default function NewsReaderLayout({
   const activeStoryId = story?.id;
   const featuredPost = publishedPosts[0] || null;
   const secondaryPosts = publishedPosts.slice(1, 4);
+  const latestUpdates = stories.slice(0, 5);
+  const mostRead = publishedPosts.slice(0, 5);
+  const categories = [
+    "US Trending",
+    "Technology",
+    "Business",
+    "Science",
+    "World",
+    "Sports",
+    "Entertainment"
+  ];
+  const categorySections = categories
+    .map((category) => ({
+      category,
+      posts: publishedPosts.filter((post) => {
+        const value = post.category.toLowerCase();
+        const target = category.toLowerCase();
+        if (target === "us trending") return value.includes("us") || value.includes("trend");
+        return value.includes(target);
+      })
+    }))
+    .filter((section) => section.posts.length > 0);
+  const serializedPublishedPosts = publishedPosts.map((post) => ({
+    ...post,
+    publishedAt: post.publishedAt?.toISOString() || null,
+    createdAt: post.createdAt.toISOString()
+  }));
 
   return (
     <div className="news-reader-app">
@@ -150,6 +179,43 @@ export default function NewsReaderLayout({
           )}
         </section>
       )}
+
+      <section className="reader-news-sections">
+        <div className="reader-section-heading">
+          <div>
+            <p className="reader-mini-label">Trending section</p>
+            <h2>What readers are following</h2>
+          </div>
+          <Link href="/?filter=trending">View US trending</Link>
+        </div>
+        <div className="reader-topic-grid">
+          {(publishedPosts.length ? publishedPosts.slice(0, 6) : secondaryPosts).map((post) => (
+            <Link key={post.id} href={`/news/${post.slug}`} className="topic-card">
+              <span>{post.category}</span>
+              <strong>{post.title}</strong>
+              <small>{timeAgo(post.publishedAt || post.createdAt)}</small>
+            </Link>
+          ))}
+        </div>
+        {categorySections.map((section) => (
+          <div className="category-rail" key={section.category}>
+            <div className="reader-section-heading compact">
+              <h2>{section.category}</h2>
+              <Link href={`/category/${section.category.toLowerCase().replaceAll(" ", "-")}`}>
+                More
+              </Link>
+            </div>
+            <div className="category-rail-list">
+              {section.posts.slice(0, 4).map((post) => (
+                <Link key={post.id} href={`/news/${post.slug}`}>
+                  <ArticleImage post={post} />
+                  <strong>{post.title}</strong>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
 
       <main className="news-reader-grid">
         <aside className="reader-source-column">
@@ -324,11 +390,37 @@ export default function NewsReaderLayout({
                 isSaved={story.isSaved}
                 aiConfigured={aiConfigured}
               />
+              <section className="reader-side-panel">
+                <p className="reader-mini-label">Most read</p>
+                {mostRead.length ? (
+                  mostRead.map((post, index) => (
+                    <Link key={post.id} href={`/news/${post.slug}`}>
+                      <span>{index + 1}</span>
+                      <strong>{post.title}</strong>
+                    </Link>
+                  ))
+                ) : (
+                  <p>No published stories yet.</p>
+                )}
+              </section>
+              <section className="reader-side-panel">
+                <p className="reader-mini-label">Latest updates</p>
+                {latestUpdates.map((item) => (
+                  <Link key={item.id} href={withQuery(filters, { story: item.id })}>
+                    <span>{timeAgo(item.publishedAt || item.fetchedAt)}</span>
+                    <strong>{item.title}</strong>
+                  </Link>
+                ))}
+              </section>
+              <section className="newsletter-panel">
+                <NewsletterCard />
+              </section>
               <AdSlot position="sidebar" className="reader-detail-ad" />
             </>
           )}
         </article>
       </main>
+      <InfinitePostFeed initialPosts={serializedPublishedPosts} />
     </div>
   );
 }

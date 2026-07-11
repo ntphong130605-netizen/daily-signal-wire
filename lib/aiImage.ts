@@ -6,9 +6,9 @@ import sharp from "sharp";
 import { prisma } from "@/lib/prisma";
 import { logError, logInfo } from "@/lib/logger";
 
-const FEATURED_SIZE = { width: 1920, height: 1080 };
+const FEATURED_SIZE = { width: 1600, height: 900 };
 const THUMBNAIL_SIZE = { width: 1200, height: 675 };
-const AI_DISCLOSURE = "AI-generated editorial illustration";
+const AI_DISCLOSURE = "AI-generated editorial image.";
 const IMAGE_API_TIMEOUT_MS = 120_000;
 
 type ImageContext = {
@@ -133,14 +133,14 @@ export function placeholderImageForCategory(category?: string | null) {
 }
 
 function imageAltFor(title: string) {
-  return `Editorial illustration for “${title}”`;
+  return `Editorial news image for “${title}”`;
 }
 
 function imageCaptionFor(sourceType: StoredImageAssets["imageSourceType"]) {
-  if (sourceType === "ai") return "AI-generated editorial illustration.";
+  if (sourceType === "ai") return "AI-generated editorial image.";
   if (sourceType === "upload") return "Publisher-uploaded editorial image.";
   if (sourceType === "licensed_url") return "Licensed editorial image.";
-  return "Daily Signal Wire editorial placeholder image.";
+  return "Daily Signal Wire fallback editorial image.";
 }
 
 export function buildArticleImagePrompt({
@@ -165,11 +165,17 @@ Use the following article-specific context. The visual concept must be based dir
 - Main event or issue: infer only from the supplied article summary
 - Important people, objects, setting, or location: include only when clearly implied by the title or summary
 - Visual mood: professional, modern, source-first news coverage
-- Editorial context: an illustration for a US-facing digital newspaper
+- Editorial context: a realistic editorial image for a US-facing digital newspaper
 
-Create a realistic editorial photography-style image with professional news composition, cinematic but natural lighting, high detail, natural skin tones where people are shown, and a landscape 16:9 crop suitable for 1200x675 and 1920x1080 cover use.
+Create a realistic editorial news photography-style image with professional AP/Reuters-style composition, natural lighting, high detail, natural skin tones where people are shown, and a landscape 16:9 crop suitable for 1600x900 cover use.
 
 Hard constraints:
+- not cartoon
+- not illustration
+- not painting
+- not anime
+- not 3D render
+- not fantasy art
 - no readable text
 - no watermark
 - no logo
@@ -179,7 +185,7 @@ Hard constraints:
 - no brand marks
 
 Editorial safety:
-If this story concerns a real event, celebrity, public figure, crime, disaster, court matter, political controversy, accident, war, or developing report, DO NOT make the image look like a real documentary photo, eyewitness photo, evidence image, mugshot, press photo, or actual event capture. Make it a clearly staged, symbolic, photorealistic editorial illustration instead, so readers are not misled about what the image depicts.`;
+If this story concerns a real event, celebrity, public figure, crime, disaster, court matter, political controversy, accident, war, or developing report, DO NOT make the image look like a real documentary photo, eyewitness photo, evidence image, mugshot, press photo, or actual event capture. Make it a staged, generic, photorealistic editorial news image instead, so readers are not misled about what the image depicts.`;
 }
 
 export function buildEditorialImagePrompt(post: ImageContext, promptOverride?: string) {
@@ -284,7 +290,7 @@ async function uploadToVercelBlob(postId: string, stamp: string, featuredBuffer:
   const folder = `daily-signal-wire/posts/${postId}`;
   const [featured, thumbnail] = await Promise.all([
     put(
-      `${folder}/${stamp}-1920x1080.jpg`,
+      `${folder}/${stamp}-1600x900.jpg`,
       new Blob([new Uint8Array(featuredBuffer)], { type: "image/jpeg" }),
       {
         access: "public",
@@ -326,7 +332,7 @@ export async function storePostImageVariants(postId: string, sourceBytes: Buffer
   if (mode === "local" && !process.env.VERCEL) {
     const directory = imageDirectory();
     await mkdir(directory, { recursive: true });
-    const featuredName = `${postId}-${stamp}-1920x1080.jpg`;
+    const featuredName = `${postId}-${stamp}-1600x900.jpg`;
     const thumbnailName = `${postId}-${stamp}-1200x675.jpg`;
     const featuredPath = path.join(directory, featuredName);
     const thumbnailPath = path.join(directory, thumbnailName);
@@ -462,7 +468,7 @@ export async function generateImageForPost(
       imageCaption: imageCaptionFor("ai"),
       imageDisclosure: AI_DISCLOSURE,
       imageSourceType: "ai",
-      imageLicense: "AI-generated editorial illustration.",
+      imageLicense: "AI-generated editorial image.",
       imageCredit: "Daily Signal Wire / AI image generation",
       imageStorage: variants.imageStorage
     };

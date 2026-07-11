@@ -1,4 +1,5 @@
 import AdSlot from "@/components/ads/AdSlot";
+import { slugify } from "@/lib/slug";
 
 type Block =
   | { type: "heading"; text: string }
@@ -56,7 +57,7 @@ export default function ArticleBody({ content }: { content: string }) {
       {blocks.map((block, index) => (
         <div key={`${block.type}-${index}`}>
           {index === inArticleIndex && <AdSlot position="in-article" />}
-          {block.type === "heading" && <h2>{block.text}</h2>}
+          {block.type === "heading" && <h2 id={slugify(block.text)}>{block.text}</h2>}
           {block.type === "paragraph" && <p>{block.text}</p>}
           {block.type === "list" && (
             <ul>

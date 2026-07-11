@@ -5,7 +5,7 @@ import { absoluteUrl } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Editorial Policy",
   description:
-    "Daily Signal Wire editorial policy for AI-assisted drafts, sourcing, corrections and AI-generated illustrations.",
+    "Daily Signal Wire editorial policy for AI-assisted drafts, sourcing, corrections and AI-generated images.",
   alternates: {
     canonical: absoluteUrl("/editorial-policy")
   }
@@ -16,7 +16,7 @@ export default function EditorialPolicyPage() {
     <StaticPage
       eyebrow="Editorial Policy"
       title="Human-reviewed, source-first publishing."
-      description="Daily Signal Wire uses AI to prepare drafts and illustrations, but editorial judgment, fact-checking and publication remain human-controlled."
+      description="Daily Signal Wire uses AI to prepare drafts and editorial images, but editorial judgment, fact-checking and publication remain human-controlled."
       sections={[
         {
           title: "AI content disclosure",
@@ -26,7 +26,7 @@ export default function EditorialPolicyPage() {
         {
           title: "No fabricated evidence",
           body:
-            "AI-generated visuals are labeled as editorial illustrations. For real events, sensitive stories or public figures, images must not imply they are documentary photos of the event."
+            "AI-generated visuals are labeled as editorial images. For real events, sensitive stories or public figures, images must not imply they are documentary photos of the event."
         },
         {
           title: "Corrections and uncertainty",

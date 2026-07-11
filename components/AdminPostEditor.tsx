@@ -9,11 +9,16 @@ type EditablePost = {
   id: string;
   slug: string;
   title: string;
+  subtitle: string;
   excerpt: string;
+  summary: string;
   content: string;
   seoTitle: string;
   seoDescription: string;
+  openGraphDescription: string;
   facebookCaption: string;
+  tags: string[];
+  faq: { question: string; answer: string }[];
   imagePrompt: string;
   imageStatus: string;
   imageError: string;
@@ -32,6 +37,8 @@ type EditablePost = {
   factCheckNotes: string[];
   sourceUrls: string[];
   status: string;
+  scheduledAt: string;
+  rejectionReason: string;
 };
 
 async function copyText(value: string) {
@@ -63,6 +70,7 @@ export default function AdminPostEditor({
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [scheduleAt, setScheduleAt] = useState(initialPost.scheduledAt);
   const [urlFields, setUrlFields] = useState({
     imageUrl: "",
     imageAlt: "",
@@ -105,11 +113,16 @@ export default function AdminPostEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: post.title,
+          subtitle: post.subtitle,
           excerpt: post.excerpt,
+          summary: post.summary,
           content: post.content,
           seoTitle: post.seoTitle,
           seoDescription: post.seoDescription,
+          openGraphDescription: post.openGraphDescription,
           facebookCaption: post.facebookCaption,
+          tags: post.tags,
+          faq: post.faq,
           imagePrompt: post.imagePrompt,
           imageAlt: post.imageAlt,
           imageCaption: post.imageCaption,
@@ -122,6 +135,43 @@ export default function AdminPostEditor({
     );
     if (result) {
       setMessage("Draft saved.");
+      router.refresh();
+    }
+  }
+
+  async function regenerateArticle() {
+    const result = await call(
+      `/api/admin/posts/${post.id}/regenerate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ field: "article" })
+      },
+      "regenerate article"
+    );
+    if (result?.article) {
+      setPost((current) => ({
+        ...current,
+        title: result.article.title ?? current.title,
+        subtitle: result.article.subtitle ?? current.subtitle,
+        excerpt: result.article.excerpt ?? current.excerpt,
+        summary: result.article.summary ?? current.summary,
+        content: result.article.content ?? current.content,
+        seoTitle: result.article.seoTitle ?? current.seoTitle,
+        seoDescription: result.article.seoDescription ?? current.seoDescription,
+        openGraphDescription:
+          result.article.openGraphDescription ?? current.openGraphDescription,
+        facebookCaption: result.article.facebookCaption ?? current.facebookCaption,
+        tags: result.article.tags ?? current.tags,
+        faq: result.article.faq ?? current.faq,
+        imagePrompt: result.article.imagePrompt ?? current.imagePrompt,
+        factCheckNotes: result.article.factCheckNotes ?? current.factCheckNotes,
+        sourceUrls: result.article.sourceUrls ?? current.sourceUrls,
+        imageStatus: "idle",
+        imageError: ""
+      }));
+      setMessage("Article regenerated. Review all facts again before publishing.");
+      trackEvent("generate_ai_article", { post_id: post.id, mode: "regenerate" });
       router.refresh();
     }
   }
@@ -256,6 +306,43 @@ export default function AdminPostEditor({
     }
   }
 
+  async function statusAction(action: "approve" | "reject" | "draft" | "schedule") {
+    const payload: Record<string, unknown> = { action };
+    if (action === "reject") {
+      payload.rejectionReason =
+        window.prompt("Why is this draft rejected?", post.rejectionReason || "") ||
+        "Rejected by editor for revision.";
+    }
+    if (action === "schedule") {
+      if (!scheduleAt) {
+        setMessage("Choose a future schedule time first.");
+        return;
+      }
+      payload.scheduledAt = new Date(scheduleAt).toISOString();
+      payload.confirmedFactCheck = confirmed;
+    }
+    const result = await call(
+      `/api/admin/posts/${post.id}/status`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      },
+      action
+    );
+    if (result) {
+      setPost((current) => ({
+        ...current,
+        status: result.status || (action === "schedule" ? "scheduled" : "draft"),
+        rejectionReason:
+          action === "reject" ? String(payload.rejectionReason || "") : "",
+        scheduledAt: result.scheduledAt || (action === "schedule" ? scheduleAt : "")
+      }));
+      setMessage(`${action} complete.`);
+      router.refresh();
+    }
+  }
+
   async function copyFacebook() {
     const hook =
       post.facebookCaption.length > 180
@@ -280,11 +367,15 @@ export default function AdminPostEditor({
   const placeholderPattern =
     /\b(lorem ipsum|placeholder|sample draft|demonstration draft|todo)\b/i;
   const hasPlaceholderText = placeholderPattern.test(
-    `${post.title}\n${post.excerpt}\n${post.content}\n${post.seoTitle}\n${post.seoDescription}`
+    `${post.title}\n${post.subtitle}\n${post.excerpt}\n${post.summary}\n${post.content}\n${post.seoTitle}\n${post.seoDescription}`
   );
   const publishChecklist: { label: string; done: boolean }[] = [
     { label: "Headline is present", done: Boolean(post.title.trim()) },
+    { label: "Subtitle is present", done: Boolean(post.subtitle.trim()) },
     { label: "Excerpt is present", done: Boolean(post.excerpt.trim()) },
+    { label: "Summary is present", done: Boolean(post.summary.trim()) },
+    { label: "At least three tags are attached", done: post.tags.length >= 3 },
+    { label: "FAQ has at least three entries", done: post.faq.length >= 3 },
     { label: "Source URLs are attached", done: post.sourceUrls.length > 0 },
     { label: "Fact-check notes are attached", done: post.factCheckNotes.length > 0 },
     { label: "Placeholder text has been removed", done: !hasPlaceholderText },
@@ -299,6 +390,10 @@ export default function AdminPostEditor({
     },
     { label: "SEO title is present", done: Boolean(post.seoTitle.trim()) },
     { label: "Meta description is present", done: Boolean(post.seoDescription.trim()) },
+    {
+      label: "OpenGraph description is present",
+      done: Boolean(post.openGraphDescription.trim())
+    },
     {
       label: "Article length is 500–900 words",
       done: contentWordCount >= 500 && contentWordCount <= 900
@@ -325,11 +420,28 @@ export default function AdminPostEditor({
             <input value={post.title} onChange={(event) => field("title", event.target.value)} />
           </label>
           <label>
+            Subtitle
+            <input
+              value={post.subtitle}
+              onChange={(event) => field("subtitle", event.target.value)}
+              placeholder="One precise sentence below the headline"
+            />
+          </label>
+          <label>
             Excerpt
             <textarea
               rows={3}
               value={post.excerpt}
               onChange={(event) => field("excerpt", event.target.value)}
+            />
+          </label>
+          <label>
+            Summary
+            <textarea
+              rows={4}
+              value={post.summary}
+              onChange={(event) => field("summary", event.target.value)}
+              placeholder="Short editor-facing summary for homepage, SEO and reader context"
             />
           </label>
           <label>
@@ -358,6 +470,15 @@ export default function AdminPostEditor({
               />
             </label>
           </div>
+          <label>
+            OpenGraph description
+            <textarea
+              rows={3}
+              value={post.openGraphDescription}
+              onChange={(event) => field("openGraphDescription", event.target.value)}
+              placeholder="Description used for Facebook, X and rich previews"
+            />
+          </label>
           <label>
             Facebook caption
             <textarea
@@ -397,9 +518,50 @@ export default function AdminPostEditor({
             <input
               value={post.imageDisclosure}
               onChange={(event) => field("imageDisclosure", event.target.value)}
-              placeholder="AI-generated editorial illustration"
+              placeholder="AI-generated editorial image."
             />
           </label>
+          <div className="two-col">
+            <label>
+              Tags, one per line
+              <textarea
+                rows={6}
+                value={post.tags.join("\n")}
+                onChange={(event) =>
+                  field(
+                    "tags",
+                    event.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            </label>
+            <label>
+              FAQ
+              <textarea
+                rows={6}
+                value={post.faq
+                  .map((item) => `${item.question}\n${item.answer}`)
+                  .join("\n\n")}
+                onChange={(event) => {
+                  const faq = event.target.value
+                    .split(/\n{2,}/)
+                    .map((block) => {
+                      const [question = "", ...answerLines] = block
+                        .split("\n")
+                        .map((item) => item.trim())
+                        .filter(Boolean);
+                      return { question, answer: answerLines.join(" ") };
+                    })
+                    .filter((item) => item.question && item.answer);
+                  field("faq", faq);
+                }}
+                placeholder={"Question one?\nAnswer one.\n\nQuestion two?\nAnswer two."}
+              />
+            </label>
+          </div>
           <div className="two-col">
             <label>
               Fact-check notes, one per line
@@ -586,6 +748,13 @@ export default function AdminPostEditor({
         </button>
         <button
           className="button button-secondary"
+          onClick={regenerateArticle}
+          disabled={Boolean(busy) || !aiConfigured || post.status === "published"}
+        >
+          {busy === "regenerate article" ? "Regenerating…" : "Regenerate Article"}
+        </button>
+        <button
+          className="button button-secondary"
           onClick={() => image("generate")}
           disabled={Boolean(busy) || !aiConfigured}
         >
@@ -638,6 +807,43 @@ export default function AdminPostEditor({
             />
             <span>I completed the source, quote, copyright, SEO and image review.</span>
           </label>
+        )}
+        {post.status !== "published" && (
+          <label className="schedule-control">
+            Schedule
+            <input
+              type="datetime-local"
+              value={scheduleAt}
+              onChange={(event) => setScheduleAt(event.target.value)}
+            />
+          </label>
+        )}
+        {post.status !== "published" && (
+          <button
+            className="button button-secondary"
+            onClick={() => statusAction("schedule")}
+            disabled={Boolean(busy) || !confirmed}
+          >
+            Schedule
+          </button>
+        )}
+        {post.status !== "published" && post.status !== "rejected" && (
+          <button
+            className="button button-secondary"
+            onClick={() => statusAction("reject")}
+            disabled={Boolean(busy)}
+          >
+            Reject
+          </button>
+        )}
+        {post.status === "rejected" && (
+          <button
+            className="button button-secondary"
+            onClick={() => statusAction("approve")}
+            disabled={Boolean(busy)}
+          >
+            Approve Draft
+          </button>
         )}
         {post.status !== "published" && (
           <button

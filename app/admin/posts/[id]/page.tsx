@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminPostEditor from "@/components/AdminPostEditor";
-import { parseStringArray } from "@/lib/json";
+import { parseJsonArray, parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 
 export default async function AdminPostEditPage({
@@ -37,11 +37,16 @@ export default async function AdminPostEditPage({
           id: post.id,
           slug: post.slug,
           title: post.title,
+          subtitle: post.subtitle || "",
           excerpt: post.excerpt,
+          summary: post.summary || "",
           content: post.content,
           seoTitle: post.seoTitle,
           seoDescription: post.seoDescription,
+          openGraphDescription: post.openGraphDescription || "",
           facebookCaption: post.facebookCaption,
+          tags: parseStringArray(post.tags),
+          faq: parseJsonArray<{ question: string; answer: string }>(post.faq),
           imagePrompt: post.imagePrompt || "",
           imageStatus: post.imageStatus,
           imageError: post.imageError || "",
@@ -59,7 +64,13 @@ export default async function AdminPostEditPage({
           imageCredit: post.imageCredit || "",
           factCheckNotes: parseStringArray(post.factCheckNotes),
           sourceUrls: parseStringArray(post.sourceUrls),
-          status: post.status
+          status: post.status,
+          scheduledAt: post.scheduledAt
+            ? new Date(post.scheduledAt.getTime() - post.scheduledAt.getTimezoneOffset() * 60000)
+                .toISOString()
+                .slice(0, 16)
+            : "",
+          rejectionReason: post.rejectionReason || ""
         }}
       />
     </>

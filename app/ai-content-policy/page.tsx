@@ -43,7 +43,7 @@ export default function AiContentPolicyPage() {
         {
           title: "AI-generated images",
           body:
-            "AI visuals are treated as editorial illustrations. They must not mislead readers into believing an illustration is a real photograph of a sensitive event, crime scene, disaster or live news incident."
+            "AI visuals are treated as editorial images. They must not mislead readers into believing a generated image is a real photograph of a sensitive event, crime scene, disaster or live news incident."
         },
         {
           title: "Corrections",

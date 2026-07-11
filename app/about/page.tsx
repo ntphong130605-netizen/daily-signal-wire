@@ -21,12 +21,12 @@ export default function AboutPage() {
         {
           title: "What we build",
           body:
-            "The newsroom tracks public-interest signals, collects source links and helps editors prepare original drafts, SEO metadata, social captions and editorial illustrations."
+            "The newsroom tracks public-interest signals, collects source links and helps editors prepare original drafts, SEO metadata, social captions and editorial images."
         },
         {
           title: "What we do not do",
           body:
-            "Trends are treated as story ideas, not facts. AI drafts are never published automatically, and generated images are labeled as illustrations rather than documentary photos."
+            "Trends are treated as story ideas, not facts. AI drafts are never published automatically, and generated images are labeled so readers do not confuse them with documentary photos."
         },
         {
           title: "Editorial standard",

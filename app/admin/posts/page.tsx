@@ -9,9 +9,15 @@ export default async function AdminPostsPage({
 }) {
   const { status = "all", q = "" } = await searchParams;
   const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
-  const { posts, draftCount, publishedCount } = await safeDbQuery(
+  const { posts, draftCount, publishedCount, rejectedCount, scheduledCount } = await safeDbQuery(
     "admin_posts_query_failed",
-    { posts: [], draftCount: 0, publishedCount: 0 },
+    {
+      posts: [],
+      draftCount: 0,
+      publishedCount: 0,
+      rejectedCount: 0,
+      scheduledCount: 0
+    },
     async () => {
       const posts = await prisma.post.findMany({
         where: {
@@ -30,14 +36,17 @@ export default async function AdminPostsPage({
         orderBy: { updatedAt: "desc" },
         take: 200
       });
-      const [draftCount, publishedCount] = await Promise.all([
+      const [draftCount, publishedCount, rejectedCount, scheduledCount] = await Promise.all([
         prisma.post.count({ where: { status: "draft" } }),
-        prisma.post.count({ where: { status: "published" } })
+        prisma.post.count({ where: { status: "published" } }),
+        prisma.post.count({ where: { status: "rejected" } }),
+        prisma.post.count({ where: { status: "scheduled" } })
       ]);
 
-      return { posts, draftCount, publishedCount };
+      return { posts, draftCount, publishedCount, rejectedCount, scheduledCount };
     }
   );
+  const totalCount = draftCount + publishedCount + rejectedCount + scheduledCount;
 
   return (
     <>
@@ -53,7 +62,7 @@ export default async function AdminPostsPage({
         <section className="admin-post-stats">
           <Link href="/admin/posts?status=all">
             <span>All posts</span>
-            <strong>{draftCount + publishedCount}</strong>
+            <strong>{totalCount}</strong>
           </Link>
           <Link href="/admin/posts?status=draft">
             <span>Drafts</span>
@@ -62,6 +71,14 @@ export default async function AdminPostsPage({
           <Link href="/admin/posts?status=published">
             <span>Published</span>
             <strong>{publishedCount}</strong>
+          </Link>
+          <Link href="/admin/posts?status=rejected">
+            <span>Rejected</span>
+            <strong>{rejectedCount}</strong>
+          </Link>
+          <Link href="/admin/posts?status=scheduled">
+            <span>Scheduled</span>
+            <strong>{scheduledCount}</strong>
           </Link>
           <form action="/admin/posts">
             <input type="search" name="q" defaultValue={q} placeholder="Search posts…" />

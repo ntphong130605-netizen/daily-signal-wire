@@ -207,17 +207,17 @@ export async function POST(
           imageCaption:
             post.imageCaption ||
             (post.imageModel
-              ? "AI-generated editorial illustration."
+              ? "AI-generated editorial image."
               : "Editorial image."),
           imageDisclosure:
             post.imageDisclosure ||
-            (post.imageModel ? "AI-generated editorial illustration" : null),
+            (post.imageModel ? "AI-generated editorial image." : null),
           imageSourceType:
             post.imageSourceType === "placeholder"
               ? "placeholder"
               : post.imageSourceType || (post.imageModel ? "ai" : "upload"),
-          imageLicense: post.imageLicense || "Illustration generated with AI.",
-          imageCredit: post.imageCredit || "AI illustration / Daily Signal Wire"
+          imageLicense: post.imageLicense || "Image generated with AI.",
+          imageCredit: post.imageCredit || "AI image generation / Daily Signal Wire"
         }
       });
       return Response.json({ ok: true, ...imagePayload(updated) });
