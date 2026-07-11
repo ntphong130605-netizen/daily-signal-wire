@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
-import { placeholderImageForCategory } from "@/lib/aiImage";
+import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
@@ -76,12 +76,14 @@ export default async function TagPage({
         slug: post.slug,
         title: post.title,
         excerpt: post.excerpt,
-        imageUrl:
+        imageUrl: normalizeEditorialImageUrl(
           post.featuredImageUrl ||
-          post.featuredImage ||
-          post.imageUrl ||
-          post.thumbnailImage ||
-          placeholderImageForCategory(category),
+            post.featuredImage ||
+            post.imageUrl ||
+            post.thumbnailImage ||
+            placeholderImageForCategory(category),
+          category
+        ),
         imageAlt: post.imageAlt || "",
         category,
         publishedAt: post.publishedAt,

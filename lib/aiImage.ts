@@ -3,8 +3,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 import sharp from "sharp";
+import { placeholderImageForCategory } from "@/lib/editorialImages";
 import { prisma } from "@/lib/prisma";
 import { logError, logInfo } from "@/lib/logger";
+export { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 
 const FEATURED_SIZE = { width: 1600, height: 900 };
 const THUMBNAIL_SIZE = { width: 1200, height: 675 };
@@ -111,25 +113,6 @@ function articleCategory(post: ImageContext) {
 
 function compactText(value: string, max = 900) {
   return value.replace(/\s+/g, " ").trim().slice(0, max);
-}
-
-export function placeholderImageForCategory(category?: string | null) {
-  const value = (category || "").toLowerCase();
-  if (value.includes("sport")) return "/editorial/sports-desk.svg";
-  if (value.includes("money") || value.includes("business")) {
-    return "/editorial/money-context.svg";
-  }
-  if (value.includes("tech") || value.includes("ai")) {
-    return "/editorial/responsible-ai.svg";
-  }
-  if (value.includes("entertain") || value.includes("culture")) {
-    return "/editorial/culture-wire.svg";
-  }
-  if (value.includes("science")) return "/editorial/science-context.svg";
-  if (value.includes("world") || value.includes("us news")) {
-    return "/editorial/developing-story.svg";
-  }
-  return "/editorial/source-first-newsroom.svg";
 }
 
 function imageAltFor(title: string) {

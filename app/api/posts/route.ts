@@ -1,5 +1,5 @@
 import { prisma, safeDbQuery } from "@/lib/prisma";
-import { placeholderImageForCategory } from "@/lib/aiImage";
+import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -32,12 +32,14 @@ export async function GET(request: Request) {
         slug: post.slug,
         title: post.title,
         excerpt: post.excerpt,
-        imageUrl:
+        imageUrl: normalizeEditorialImageUrl(
           post.featuredImageUrl ||
-          post.featuredImage ||
-          post.imageUrl ||
-          post.thumbnailImage ||
-          placeholderImageForCategory(category),
+            post.featuredImage ||
+            post.imageUrl ||
+            post.thumbnailImage ||
+            placeholderImageForCategory(category),
+          category
+        ),
         imageAlt: post.imageAlt || "",
         category,
         source: post.sourceStory?.feed?.title || "Daily Signal Wire",

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { normalizeEditorialImageUrl } from "@/lib/editorialImages";
 
 export type ReaderPost = {
   id: string;
@@ -30,12 +31,13 @@ export function ArticleImage({
   post: ReaderPost;
   className?: string;
 }) {
+  const imageUrl = normalizeEditorialImageUrl(post.imageUrl, post.category);
   return (
     <div className={`article-image ${className}`}>
-      {post.imageUrl ? (
+      {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={post.imageUrl}
+          src={imageUrl}
           alt={post.imageAlt || post.title}
           loading="lazy"
           decoding="async"

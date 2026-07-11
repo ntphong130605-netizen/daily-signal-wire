@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReaderShell from "@/components/ReaderShell";
+import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { absoluteUrl, siteName } from "@/lib/site";
@@ -71,17 +72,27 @@ export default async function CategoryPage({
       const categorySlug = post.category?.slug || slugify(categoryName);
       return categorySlug === slug;
     })
-    .map((post) => ({
-      id: post.id,
-      slug: post.slug,
-      title: post.title,
-      excerpt: post.excerpt,
-      imageUrl: post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage,
-      imageAlt: post.imageAlt || "",
-      category: post.category?.name || post.trend?.category || categoryTitle,
-      publishedAt: post.publishedAt,
-      createdAt: post.createdAt
-    }));
+    .map((post) => {
+      const category = post.category?.name || post.trend?.category || categoryTitle;
+      return {
+        id: post.id,
+        slug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt,
+        imageUrl: normalizeEditorialImageUrl(
+          post.featuredImageUrl ||
+            post.featuredImage ||
+            post.imageUrl ||
+            post.thumbnailImage ||
+            placeholderImageForCategory(category),
+          category
+        ),
+        imageAlt: post.imageAlt || "",
+        category,
+        publishedAt: post.publishedAt,
+        createdAt: post.createdAt
+      };
+    });
 
   return (
     <ReaderShell>

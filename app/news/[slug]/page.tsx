@@ -7,7 +7,7 @@ import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import ReaderShell from "@/components/ReaderShell";
 import ShareButtons from "@/components/ShareButtons";
-import { placeholderImageForCategory } from "@/lib/aiImage";
+import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { isAdmin } from "@/lib/auth";
 import { parseJsonArray, parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
@@ -50,10 +50,12 @@ export async function generateMetadata({
       }
     };
   }
-  const ogImage =
-    post.openGraphImage || post.featuredImageUrl || post.featuredImage || post.imageUrl;
-  const twitterImage =
-    post.twitterImage || post.openGraphImage || post.featuredImageUrl || post.imageUrl;
+  const ogImage = normalizeEditorialImageUrl(
+    post.openGraphImage || post.featuredImageUrl || post.featuredImage || post.imageUrl
+  );
+  const twitterImage = normalizeEditorialImageUrl(
+    post.twitterImage || post.openGraphImage || post.featuredImageUrl || post.imageUrl
+  );
   const canonical = absoluteUrl(`/news/${slug}`);
   return {
     title: post.seoTitle,
@@ -162,12 +164,14 @@ export default async function NewsArticlePage({
     slug: item.slug,
     title: item.title,
     excerpt: item.excerpt,
-    imageUrl:
+    imageUrl: normalizeEditorialImageUrl(
       item.featuredImageUrl ||
-      item.featuredImage ||
-      item.imageUrl ||
-      item.thumbnailImage ||
-      placeholderImageForCategory(item.category?.name || item.trend?.category || "Latest"),
+        item.featuredImage ||
+        item.imageUrl ||
+        item.thumbnailImage ||
+        placeholderImageForCategory(item.category?.name || item.trend?.category || "Latest"),
+      item.category?.name || item.trend?.category || "Latest"
+    ),
     imageAlt: item.imageAlt || "",
     category: item.category?.name || item.trend?.category || "Latest",
     publishedAt: item.publishedAt,
@@ -182,12 +186,14 @@ export default async function NewsArticlePage({
   }).format(post.publishedAt || post.updatedAt);
   const categoryLabel = post.category?.name || post.trend?.category || "Latest";
   const sourceLabel = post.sourceStory?.feed?.title || "Daily Signal Wire";
-  const coverImage =
+  const coverImage = normalizeEditorialImageUrl(
     post.featuredImageUrl ||
-    post.featuredImage ||
-    post.imageUrl ||
-    post.thumbnailImage ||
-    placeholderImageForCategory(categoryLabel);
+      post.featuredImage ||
+      post.imageUrl ||
+      post.thumbnailImage ||
+      placeholderImageForCategory(categoryLabel),
+    categoryLabel
+  );
   const storedTags = parseStringArray(post.tags);
   const tags = storedTags.length
     ? storedTags

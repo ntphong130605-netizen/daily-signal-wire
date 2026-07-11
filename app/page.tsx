@@ -5,7 +5,7 @@ import NewsReaderLayout, {
   type ReaderStory
 } from "@/components/NewsReaderLayout";
 import type { ReaderPost } from "@/components/ArticleCard";
-import { placeholderImageForCategory } from "@/lib/aiImage";
+import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { absoluteUrl, siteDescription, siteName } from "@/lib/site";
 
@@ -222,12 +222,14 @@ export default async function HomePage({
             slug: post.slug,
             title: post.title,
             excerpt: post.excerpt,
-            imageUrl:
+            imageUrl: normalizeEditorialImageUrl(
               post.featuredImageUrl ||
-              post.featuredImage ||
-              post.imageUrl ||
-              post.thumbnailImage ||
-              placeholderImageForCategory(category),
+                post.featuredImage ||
+                post.imageUrl ||
+                post.thumbnailImage ||
+                placeholderImageForCategory(category),
+              category
+            ),
             imageAlt: post.imageAlt || "",
             category,
             source: post.sourceStory?.feed?.title || "Daily Signal Wire",
