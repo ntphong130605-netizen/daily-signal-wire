@@ -193,7 +193,9 @@ export default async function NewsArticlePage({
     : [
         categoryLabel,
         sourceLabel,
-        "Daily Signal Wire"
+        "Daily Signal Wire",
+        "Source Review",
+        "AI Newsroom"
       ].filter((item, index, list) => item && list.indexOf(item) === index);
   const storedFaq = parseJsonArray<{ question: string; answer: string }>(post.faq);
   const faq = storedFaq.length
