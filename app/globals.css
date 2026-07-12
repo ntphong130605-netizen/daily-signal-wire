@@ -5080,12 +5080,19 @@ html[data-theme="light"],
 }
 
 .breaking-news-track {
+  position: relative;
+  height: 22px;
   min-width: 0;
   overflow: hidden;
 }
 
 .breaking-news-marquee {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
+  height: 100%;
+  align-items: center;
   width: max-content;
   min-width: 100%;
   gap: 28px;
