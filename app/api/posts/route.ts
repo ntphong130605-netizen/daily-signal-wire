@@ -1,23 +1,17 @@
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
-
-function parseStringArray(value: string | null | undefined) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((item): item is string => typeof item === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
+import { matchesCategorySlug } from "@/lib/categoryLanding";
+import { parseStringArray } from "@/lib/json";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
   const take = Math.min(12, Math.max(3, Number(searchParams.get("limit") || 6)));
   const skip = (page - 1) * take;
+  const category = searchParams.get("category")?.trim() || "";
+  const tag = searchParams.get("tag")?.trim() || "";
+  const query = searchParams.get("q")?.trim().toLowerCase() || "";
+  const hasClientFiltering = Boolean(category || tag || query);
 
   const posts = await safeDbQuery(
     "public_posts_query_failed",
@@ -27,17 +21,55 @@ export async function GET(request: Request) {
         where: { status: "published" },
         include: {
           trend: { select: { category: true } },
-          category: { select: { name: true } },
+          category: { select: { name: true, slug: true } },
           sourceStory: { include: { feed: { select: { title: true } } } }
         },
         orderBy: { publishedAt: "desc" },
-        skip,
-        take
+        skip: hasClientFiltering ? 0 : skip,
+        take: hasClientFiltering ? 240 : take
       })
   );
 
+  const filteredPosts = posts.filter((post) => {
+    const tags = parseStringArray(post.tags);
+    if (
+      category &&
+      !matchesCategorySlug({
+        slug: category,
+        categoryName: post.category?.name,
+        categorySlug: post.category?.slug,
+        trendCategory: post.trend?.category,
+        tags
+      })
+    ) {
+      return false;
+    }
+    if (tag && !tags.some((item) => item.toLowerCase() === tag.toLowerCase())) return false;
+    if (query) {
+      const haystack = [
+        post.title,
+        post.subtitle,
+        post.excerpt,
+        post.summary,
+        post.content,
+        post.category?.name,
+        post.trend?.category,
+        ...tags
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(query);
+    }
+    return true;
+  });
+
+  const pagedPosts = hasClientFiltering
+    ? filteredPosts.slice(skip, skip + take)
+    : filteredPosts;
+
   return Response.json({
-    posts: posts.map((post) => {
+    posts: pagedPosts.map((post) => {
       const category = post.category?.name || post.trend?.category || "Latest";
       return {
         id: post.id,
@@ -62,6 +94,13 @@ export async function GET(request: Request) {
         createdAt: post.createdAt.toISOString()
       };
     }),
-    nextPage: posts.length === take ? page + 1 : null
+    nextPage:
+      hasClientFiltering
+        ? filteredPosts.length > skip + take
+          ? page + 1
+          : null
+        : posts.length === take
+          ? page + 1
+          : null
   });
 }

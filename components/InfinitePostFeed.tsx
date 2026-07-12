@@ -17,9 +17,17 @@ function revive(post: SerializedPost): ReaderPost {
 }
 
 export default function InfinitePostFeed({
-  initialPosts
+  initialPosts,
+  endpointQuery = "",
+  kicker = "Latest news",
+  title = "More from Daily Signal Wire",
+  className = ""
 }: {
   initialPosts: SerializedPost[];
+  endpointQuery?: string;
+  kicker?: string;
+  title?: string;
+  className?: string;
 }) {
   const [posts, setPosts] = useState(initialPosts);
   const [page, setPage] = useState(2);
@@ -35,7 +43,8 @@ export default function InfinitePostFeed({
       if (!entries.some((entry) => entry.isIntersecting)) return;
       setLoading(true);
       try {
-        const response = await fetch(`/api/posts?page=${page}&limit=6`);
+        const query = endpointQuery ? `&${endpointQuery.replace(/^\?/, "")}` : "";
+        const response = await fetch(`/api/posts?page=${page}&limit=6${query}`);
         const data = (await response.json()) as {
           posts?: SerializedPost[];
           nextPage?: number | null;
@@ -56,16 +65,16 @@ export default function InfinitePostFeed({
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMore, loading, page]);
+  }, [endpointQuery, hasMore, loading, page]);
 
   if (!posts.length) return null;
 
   return (
-    <section className="infinite-news-section">
+    <section className={`infinite-news-section ${className}`.trim()}>
       <div className="reader-section-heading">
         <div>
-          <p className="reader-mini-label">Latest news</p>
-          <h2>More from Daily Signal Wire</h2>
+          <p className="reader-mini-label">{kicker}</p>
+          <h2>{title}</h2>
         </div>
       </div>
       <div className="infinite-news-grid">
