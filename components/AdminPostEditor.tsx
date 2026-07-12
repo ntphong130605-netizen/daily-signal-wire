@@ -34,11 +34,47 @@ type EditablePost = {
   imageSourceType: string;
   imageLicense: string;
   imageCredit: string;
+  generatedImages: GeneratedImageVersion[];
   factCheckNotes: string[];
   sourceUrls: string[];
   status: string;
   scheduledAt: string;
   rejectionReason: string;
+};
+
+type GeneratedImageVersion = {
+  id: string;
+  prompt: string;
+  finalPrompt: string;
+  generator: string;
+  model: string;
+  status: string;
+  url: string;
+  featuredUrl: string;
+  thumbnailUrl: string;
+  openGraphUrl: string;
+  twitterUrl: string;
+  webpUrl: string;
+  avifUrl: string;
+  width: number | null;
+  height: number | null;
+  format: string;
+  alt: string;
+  title: string;
+  description: string;
+  caption: string;
+  disclosure: string;
+  sourceType: string;
+  illustrative: boolean;
+  storage: string;
+  category: string;
+  metadata: string;
+  validationNotes: string[];
+  license: string;
+  credit: string;
+  error: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 async function copyText(value: string) {
@@ -203,7 +239,46 @@ export default function AdminPostEditor({
         imageDisclosure: result.imageDisclosure ?? "",
         imageSourceType: result.imageSourceType ?? current.imageSourceType,
         imageLicense: result.imageLicense ?? "",
-        imageCredit: result.imageCredit ?? ""
+        imageCredit: result.imageCredit ?? "",
+        generatedImages: result.generatedImageId
+          ? [
+              {
+                id: result.generatedImageId,
+                prompt: result.imagePrompt ?? current.imagePrompt,
+                finalPrompt: result.finalPrompt ?? result.imagePrompt ?? current.imagePrompt,
+                generator: "openai-images",
+                model: result.imageModel ?? "",
+                status: result.imageStatus ?? "completed",
+                url: result.imageUrl ?? "",
+                featuredUrl: result.featuredImageUrl ?? result.featuredImage ?? "",
+                thumbnailUrl: result.thumbnailImage ?? "",
+                openGraphUrl: result.openGraphImage ?? "",
+                twitterUrl: result.twitterImage ?? "",
+                webpUrl: "",
+                avifUrl: "",
+                width: 1600,
+                height: 900,
+                format: "jpeg",
+                alt: result.imageAlt ?? "",
+                title: result.imageAlt ?? current.title,
+                description: result.imageCaption ?? "",
+                caption: result.imageCaption ?? "",
+                disclosure: result.imageDisclosure ?? "",
+                sourceType: result.imageSourceType ?? "ai",
+                illustrative: result.imageSourceType === "ai",
+                storage: result.imageStorage ?? "",
+                category: "",
+                metadata: "{}",
+                validationNotes: [],
+                license: result.imageLicense ?? "",
+                credit: result.imageCredit ?? "",
+                error: result.imageError ?? "",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              },
+              ...current.generatedImages.filter((item) => item.id !== result.generatedImageId)
+            ]
+          : current.generatedImages
       }));
       setMessage(`${mode} complete.`);
       if (mode === "generate" || mode === "regenerate") {
@@ -212,6 +287,51 @@ export default function AdminPostEditor({
           mode
         });
       }
+      router.refresh();
+    }
+  }
+
+  async function imageVersion(mode: "use-version" | "delete-version", imageId: string) {
+    const result = await call(
+      `/api/admin/posts/${post.id}/image`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, imageId })
+      },
+      mode === "use-version" ? "use image version" : "delete image version"
+    );
+    if (result) {
+      if (mode === "delete-version") {
+        setPost((current) => ({
+          ...current,
+          generatedImages: current.generatedImages.filter((item) => item.id !== imageId)
+        }));
+        setMessage("Image version removed from history.");
+        return;
+      }
+      setPost((current) => ({
+        ...current,
+        imagePrompt: result.imagePrompt ?? current.imagePrompt,
+        imageStatus: result.imageStatus ?? current.imageStatus,
+        imageError: result.imageError ?? "",
+        imageUrl: result.imageUrl ?? "",
+        featuredImageUrl: result.featuredImageUrl ?? "",
+        featuredImage: result.featuredImage ?? "",
+        thumbnailImage: result.thumbnailImage ?? "",
+        openGraphImage: result.openGraphImage ?? "",
+        twitterImage: result.twitterImage ?? "",
+        imageAlt: result.imageAlt ?? "",
+        imageCaption: result.imageCaption ?? "",
+        imageDisclosure: result.imageDisclosure ?? "",
+        imageSourceType: result.imageSourceType ?? current.imageSourceType,
+        imageLicense: result.imageLicense ?? "",
+        imageCredit: result.imageCredit ?? "",
+        generatedImages: current.generatedImages.map((item) =>
+          item.id === imageId ? { ...item, status: "accepted" } : item
+        )
+      }));
+      setMessage("Image version selected.");
       router.refresh();
     }
   }
@@ -399,6 +519,9 @@ export default function AdminPostEditor({
       done: contentWordCount >= 500 && contentWordCount <= 900
     }
   ];
+  const imagePipelineBusy = ["queued", "generating", "retrying", "upscaling", "optimizing"].includes(
+    post.imageStatus
+  );
 
   return (
     <main className="admin-content">
@@ -619,9 +742,26 @@ export default function AdminPostEditor({
                   ? "Licensed URL"
                   : "Placeholder"}
           </span>
-          {post.imageStatus === "generating" && <span>Generating…</span>}
+          {imagePipelineBusy && <span>Pipeline running…</span>}
           {post.imageStatus === "failed" && <span>Failed · retry available</span>}
         </div>
+        {imagePipelineBusy && (
+          <ol className="image-progress-steps" aria-label="Image generation progress">
+            {["queued", "generating", "upscaling", "optimizing", "completed"].map((step) => (
+              <li
+                key={step}
+                className={
+                  step === post.imageStatus ||
+                  (post.imageStatus === "accepted" && step === "completed")
+                    ? "active"
+                    : ""
+                }
+              >
+                {step}
+              </li>
+            ))}
+          </ol>
+        )}
         {!aiConfigured && (
           <div className="warning-banner">
             AI image generation is not configured.
@@ -659,6 +799,96 @@ export default function AdminPostEditor({
           {post.imageLicense || "License not set"}
           {post.imageCredit ? ` · ${post.imageCredit}` : ""}
         </p>
+        {post.generatedImages.length > 0 && (
+          <section className="image-version-panel" aria-labelledby="image-version-heading">
+            <div className="panel-heading compact">
+              <div>
+                <p className="eyebrow">Image pipeline</p>
+                <h3 id="image-version-heading">Generated versions</h3>
+              </div>
+              <span>{post.generatedImages.length} saved</span>
+            </div>
+            <div className="image-version-list">
+              {post.generatedImages.map((image) => {
+                const imageUrl = image.thumbnailUrl || image.featuredUrl || image.url;
+                const downloadUrl = image.featuredUrl || image.url || image.thumbnailUrl;
+                return (
+                  <article className="image-version-card" key={image.id}>
+                    <div className="image-version-thumb">
+                      {imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={imageUrl} alt={image.alt || image.caption || "Image version"} />
+                      ) : (
+                        <span>No preview</span>
+                      )}
+                    </div>
+                    <div className="image-version-body">
+                      <div className="image-badge-row">
+                        <span className={`image-source-badge image-source-${image.sourceType}`}>
+                          {image.sourceType}
+                        </span>
+                        <span className={`status status-${image.status}`}>{image.status}</span>
+                        {image.illustrative && <span className="image-source-badge">Illustrative</span>}
+                      </div>
+                      <strong>{image.title || image.caption || "Editorial image version"}</strong>
+                      <small>
+                        {image.width && image.height ? `${image.width}×${image.height}` : "Size pending"}
+                        {image.format ? ` · ${image.format.toUpperCase()}` : ""}
+                        {image.model ? ` · ${image.model}` : ""}
+                      </small>
+                      <p>{image.description || image.caption || "No description recorded."}</p>
+                      {image.validationNotes.length > 0 && (
+                        <ul>
+                          {image.validationNotes.slice(0, 3).map((note) => (
+                            <li key={note}>{note}</li>
+                          ))}
+                        </ul>
+                      )}
+                      <details>
+                        <summary>Prompt and metadata</summary>
+                        <p>{image.finalPrompt || image.prompt}</p>
+                        {image.webpUrl && <code>WebP: {image.webpUrl}</code>}
+                        {image.avifUrl && <code>AVIF: {image.avifUrl}</code>}
+                      </details>
+                      {image.error && <div className="error-banner">{image.error}</div>}
+                      <div className="image-version-actions">
+                        {downloadUrl && (
+                          <a className="button button-secondary" href={downloadUrl} download>
+                            Download
+                          </a>
+                        )}
+                        {downloadUrl && (
+                          <a
+                            className="button button-secondary"
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Preview
+                          </a>
+                        )}
+                        <button
+                          className="button button-publish"
+                          onClick={() => imageVersion("use-version", image.id)}
+                          disabled={Boolean(busy) || !downloadUrl}
+                        >
+                          Use version
+                        </button>
+                        <button
+                          className="button button-secondary"
+                          onClick={() => imageVersion("delete-version", image.id)}
+                          disabled={Boolean(busy)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <label className="upload-button">
           Replace / Upload image
           <input
@@ -756,14 +986,14 @@ export default function AdminPostEditor({
         <button
           className="button button-secondary"
           onClick={() => image("generate")}
-          disabled={Boolean(busy) || !aiConfigured}
+          disabled={Boolean(busy) || !aiConfigured || imagePipelineBusy}
         >
-          Generate Image
+          {imagePipelineBusy ? "Image pipeline running…" : "Generate Image"}
         </button>
         <button
           className="button button-secondary"
           onClick={() => image("regenerate")}
-          disabled={Boolean(busy) || !aiConfigured || !previewImageUrl()}
+          disabled={Boolean(busy) || !aiConfigured || !previewImageUrl() || imagePipelineBusy}
         >
           Regenerate Image
         </button>

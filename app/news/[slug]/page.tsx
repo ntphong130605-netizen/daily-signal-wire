@@ -403,7 +403,28 @@ export default async function NewsArticlePage({
         dateModified: post.updatedAt.toISOString(),
         mainEntityOfPage: articleUrl,
         url: articleUrl,
-        image: coverImage ? [absoluteUrl(coverImage)] : undefined,
+        image: coverImage
+          ? [
+              {
+                "@type": "ImageObject",
+                url: absoluteUrl(coverImage),
+                width: 1600,
+                height: 900,
+                caption: post.imageCaption || imageDisclosure || undefined,
+                creditText: post.imageCredit || undefined,
+                license: post.imageLicense || undefined,
+                description: post.imageAlt || post.title
+              }
+            ]
+          : undefined,
+        associatedMedia: coverImage
+          ? {
+              "@type": "ImageObject",
+              url: absoluteUrl(coverImage),
+              caption: post.imageCaption || imageDisclosure || undefined,
+              creditText: post.imageCredit || undefined
+            }
+          : undefined,
         thumbnailUrl: coverImage ? absoluteUrl(coverImage) : undefined,
         author: {
           "@type": "Organization",

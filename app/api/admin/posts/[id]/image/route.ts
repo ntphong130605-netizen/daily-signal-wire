@@ -16,8 +16,20 @@ const allowedImageHosts = [
 
 const ImageActionSchema = z.object({
   mode: z
-    .enum(["generate", "regenerate", "retry", "url", "prompt", "accept", "reject", "remove"])
+    .enum([
+      "generate",
+      "regenerate",
+      "retry",
+      "url",
+      "prompt",
+      "accept",
+      "reject",
+      "remove",
+      "use-version",
+      "delete-version"
+    ])
     .default("generate"),
+  imageId: z.string().optional(),
   imagePrompt: z.string().max(4000).optional(),
   imageUrl: z.string().optional(),
   imageAlt: z.string().max(300).optional(),
@@ -67,6 +79,119 @@ function imagePayload(post: {
     imageLicense: post.imageLicense,
     imageCredit: post.imageCredit
   };
+}
+
+async function recordImageVersion({
+  postId,
+  prompt,
+  status,
+  url,
+  featuredUrl,
+  thumbnailUrl,
+  openGraphUrl,
+  twitterUrl,
+  alt,
+  caption,
+  disclosure,
+  sourceType,
+  license,
+  credit,
+  storage,
+  model,
+  width,
+  height,
+  format,
+  title,
+  description,
+  illustrative = sourceType === "ai",
+  metadata = {},
+  validationNotes = []
+}: {
+  postId: string;
+  prompt: string;
+  status: string;
+  url?: string | null;
+  featuredUrl?: string | null;
+  thumbnailUrl?: string | null;
+  openGraphUrl?: string | null;
+  twitterUrl?: string | null;
+  alt?: string | null;
+  caption?: string | null;
+  disclosure?: string | null;
+  sourceType: string;
+  license?: string | null;
+  credit?: string | null;
+  storage?: string | null;
+  model?: string | null;
+  width?: number | null;
+  height?: number | null;
+  format?: string | null;
+  title?: string | null;
+  description?: string | null;
+  illustrative?: boolean;
+  metadata?: Record<string, unknown>;
+  validationNotes?: string[];
+}) {
+  return prisma.generatedImage.create({
+    data: {
+      postId,
+      prompt,
+      finalPrompt: prompt,
+      generator: sourceType === "ai" ? "openai-images" : "publisher",
+      model,
+      status,
+      url,
+      featuredUrl,
+      thumbnailUrl,
+      openGraphUrl,
+      twitterUrl,
+      alt,
+      title,
+      description,
+      caption,
+      disclosure,
+      sourceType,
+      illustrative,
+      storage,
+      width,
+      height,
+      format,
+      metadata: JSON.stringify(metadata),
+      validationNotes: JSON.stringify(validationNotes),
+      license,
+      credit
+    }
+  });
+}
+
+async function markCurrentImageVersion(postId: string, status: string) {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: {
+      imageUrl: true,
+      featuredImageUrl: true,
+      featuredImage: true,
+      thumbnailImage: true
+    }
+  });
+  const urls = [
+    post?.imageUrl,
+    post?.featuredImageUrl,
+    post?.featuredImage,
+    post?.thumbnailImage
+  ].filter(Boolean) as string[];
+  if (!urls.length) return;
+  await prisma.generatedImage.updateMany({
+    where: {
+      postId,
+      OR: [
+        { url: { in: urls } },
+        { featuredUrl: { in: urls } },
+        { thumbnailUrl: { in: urls } }
+      ]
+    },
+    data: { status }
+  });
 }
 
 export const maxDuration = 180;
@@ -124,6 +249,31 @@ export async function POST(
           imageLicense: String(form.get("license") || "Owned/uploaded by publisher"),
           imageCredit: String(form.get("credit") || "Daily Signal Wire")
         }
+      });
+      await recordImageVersion({
+        postId: id,
+        prompt: "Manual upload replacement",
+        status: "accepted",
+        url: imageUrl,
+        featuredUrl: featuredImage,
+        thumbnailUrl: thumbnailImage,
+        openGraphUrl: featuredImage,
+        twitterUrl: thumbnailImage,
+        alt: updated.imageAlt,
+        caption: updated.imageCaption,
+        disclosure: updated.imageDisclosure,
+        sourceType: "upload",
+        license: updated.imageLicense,
+        credit: updated.imageCredit,
+        storage: stored.imageStorage,
+        width: stored.width,
+        height: stored.height,
+        format: stored.format,
+        title: `Uploaded editorial image for ${post.title}`,
+        description: updated.imageCaption,
+        illustrative: false,
+        metadata: { responsiveImages: stored.responsiveImages },
+        validationNotes: ["Manual upload accepted by editor.", "Responsive variants generated."]
       });
       return Response.json({ ok: true, ...imagePayload(updated) });
     }
@@ -191,7 +341,85 @@ export async function POST(
           imageCredit: body.imageCredit.trim()
         }
       });
+      await recordImageVersion({
+        postId: id,
+        prompt: "Licensed image URL",
+        status: "accepted",
+        url,
+        featuredUrl: url,
+        thumbnailUrl: url,
+        openGraphUrl: url,
+        twitterUrl: url,
+        alt: updated.imageAlt,
+        caption: updated.imageCaption,
+        disclosure: updated.imageDisclosure,
+        sourceType: "licensed_url",
+        license: updated.imageLicense,
+        credit: updated.imageCredit,
+        storage: "url",
+        title: `Licensed editorial image for ${post.title}`,
+        description: updated.imageCaption,
+        illustrative: false,
+        validationNotes: ["Licensed URL saved by editor.", "Host allowlist verified."]
+      });
       return Response.json({ ok: true, ...imagePayload(updated) });
+    }
+
+    if (body.mode === "use-version") {
+      if (!body.imageId) {
+        return Response.json({ error: "Image version is required." }, { status: 400 });
+      }
+      const version = await prisma.generatedImage.findFirst({
+        where: { id: body.imageId, postId: id }
+      });
+      if (!version || !(version.featuredUrl || version.url)) {
+        return Response.json({ error: "Image version was not found." }, { status: 404 });
+      }
+      const featuredImage = version.featuredUrl || version.url || "";
+      const thumbnailImage = version.thumbnailUrl || version.url || featuredImage;
+      const updated = await prisma.post.update({
+        where: { id },
+        data: {
+          imageUrl: version.url || thumbnailImage,
+          featuredImageUrl: featuredImage,
+          featuredImage,
+          thumbnailImage,
+          openGraphImage: version.openGraphUrl || featuredImage,
+          twitterImage: version.twitterUrl || thumbnailImage,
+          imageStorage: version.storage || "url",
+          featuredImageData: null,
+          thumbnailImageData: null,
+          imageStatus: "accepted",
+          imageError: null,
+          imageAlt: version.alt || `Editorial image for “${post.title}”`,
+          imageCaption: version.caption || "Editorial image.",
+          imageDisclosure: version.disclosure,
+          imageSourceType: version.sourceType || "ai",
+          imageLicense: version.license,
+          imageCredit: version.credit,
+          imageModel: version.model || post.imageModel,
+          imagePrompt: version.finalPrompt || version.prompt || post.imagePrompt
+        }
+      });
+      await prisma.generatedImage.update({
+        where: { id: version.id },
+        data: { status: "accepted" }
+      });
+      return Response.json({ ok: true, ...imagePayload(updated) });
+    }
+
+    if (body.mode === "delete-version") {
+      if (!body.imageId) {
+        return Response.json({ error: "Image version is required." }, { status: 400 });
+      }
+      const version = await prisma.generatedImage.findFirst({
+        where: { id: body.imageId, postId: id }
+      });
+      if (!version) {
+        return Response.json({ error: "Image version was not found." }, { status: 404 });
+      }
+      await prisma.generatedImage.delete({ where: { id: version.id } });
+      return Response.json({ ok: true, deletedImageId: version.id, ...imagePayload(post) });
     }
 
     if (body.mode === "accept") {
@@ -220,10 +448,12 @@ export async function POST(
           imageCredit: post.imageCredit || "AI image generation / Daily Signal Wire"
         }
       });
+      await markCurrentImageVersion(id, "accepted");
       return Response.json({ ok: true, ...imagePayload(updated) });
     }
 
     if (body.mode === "reject" || body.mode === "remove") {
+      await markCurrentImageVersion(id, body.mode === "reject" ? "rejected" : "deleted");
       const updated = await prisma.post.update({
         where: { id },
         data: {
@@ -268,7 +498,10 @@ export async function POST(
     }
 
     const promptOverride = body.imagePrompt?.trim() || undefined;
-    const result = await generateImageForPost(id, { promptOverride });
+    const result = await generateImageForPost(id, {
+      promptOverride,
+      force: body.mode === "regenerate" || body.mode === "retry"
+    });
     return Response.json({ ok: true, ...result });
   } catch (error) {
     logError("post_image_operation_failed", error);

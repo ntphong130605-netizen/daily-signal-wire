@@ -339,6 +339,9 @@ export default function TrendEditor({
     if (!draft) return "";
     return draft.featuredImageUrl || draft.featuredImage || draft.imageUrl || draft.thumbnailImage || "";
   }
+  const imagePipelineBusy = draft
+    ? ["queued", "generating", "retrying", "upscaling", "optimizing"].includes(draft.imageStatus)
+    : false;
 
   return (
     <>
@@ -610,6 +613,15 @@ export default function TrendEditor({
                     </small>
                   )}
                 </div>
+                {imagePipelineBusy && (
+                  <ol className="image-progress-steps" aria-label="Image generation progress">
+                    {["queued", "generating", "upscaling", "optimizing", "completed"].map((step) => (
+                      <li key={step} className={step === draft.imageStatus ? "active" : ""}>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                )}
                 {draft.imageError && (
                   <div className="error-banner image-error">{draft.imageError}</div>
                 )}
@@ -647,14 +659,18 @@ export default function TrendEditor({
                   <button
                     className="button button-secondary"
                     onClick={generateImage}
-                    disabled={Boolean(busy) || !aiConfigured}
+                    disabled={Boolean(busy) || !aiConfigured || imagePipelineBusy}
                   >
-                    {busy === "image" ? "Generating…" : "Generate Image"}
+                    {imagePipelineBusy
+                      ? "Image pipeline running…"
+                      : busy === "image"
+                        ? "Generating…"
+                        : "Generate Image"}
                   </button>
                   <button
                     className="button button-secondary"
                     onClick={() => imageMode("regenerate")}
-                    disabled={Boolean(busy) || !aiConfigured || !previewImageUrl()}
+                    disabled={Boolean(busy) || !aiConfigured || !previewImageUrl() || imagePipelineBusy}
                   >
                     {busy === "regenerate" ? "Regenerating…" : "Regenerate"}
                   </button>

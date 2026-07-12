@@ -44,6 +44,9 @@ export default function AdminPostActions({
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const imageBusy = ["queued", "generating", "retrying", "upscaling", "optimizing"].includes(
+    imageStatus
+  );
 
   function articleUrl() {
     return `${window.location.origin}/news/${slug}`;
@@ -167,14 +170,14 @@ export default function AdminPostActions({
       )}
       <button
         onClick={() => imageAction("generate")}
-        disabled={busy || !aiConfigured || imageStatus === "generating"}
+        disabled={busy || !aiConfigured || imageBusy}
         title={!aiConfigured ? "OPENAI_API_KEY is not configured" : undefined}
       >
-        {imageStatus === "generating" ? "Generating image…" : "Generate Image"}
+        {imageBusy ? "Image pipeline running…" : "Generate Image"}
       </button>
       <button
         onClick={() => imageAction("regenerate")}
-        disabled={busy || !aiConfigured || !hasImage || imageStatus === "generating"}
+        disabled={busy || !aiConfigured || !hasImage || imageBusy}
         title={!aiConfigured ? "OPENAI_API_KEY is not configured" : undefined}
       >
         Regenerate Image

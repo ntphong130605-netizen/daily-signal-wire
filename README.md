@@ -237,10 +237,24 @@ After an AI article draft is created from Google Trends or an RSS story, the app
 attempts to generate an editorial image automatically when `OPENAI_API_KEY` is
 configured.
 
-Generated images are resized into two landscape 16:9 assets:
+Generated images now run through the full editorial image pipeline:
+
+```text
+AI article → topic/category/entities/location/time analysis → prompt builder
+→ image generation → quality validation → responsive variants
+→ storage → SEO metadata → draft attachment → admin review
+```
+
+The prompt builder analyzes headline, subtitle, summary, category, tags,
+entities, country, time period and tone, then applies category-specific
+composition rules for Business, Politics, Technology, Science, Health, Finance,
+Climate, Education, Sports, World, Culture, Lifestyle and Travel.
+
+Generated images are resized into responsive landscape 16:9 assets:
 
 - `1200x675` for thumbnail/Twitter image
 - `1600x900` for featured/OpenGraph image
+- WebP and AVIF sidecar variants for CDN/browser optimization
 
 Local development defaults to filesystem storage under `public/generated`.
 Production should use Vercel Blob so generated images are stored as public URLs
@@ -259,6 +273,7 @@ and lets an editor retry after storage is configured.
 Each post stores:
 
 - `imagePrompt`
+- final prompt in `GeneratedImage.finalPrompt`
 - `imageModel`
 - `imageGeneratedAt`
 - `imageStatus`
@@ -273,6 +288,8 @@ Each post stores:
 - `imageCaption`
 - `imageDisclosure`
 - `imageSourceType`
+- image width/height/format, source type, illustrative flag and validation
+  notes in `GeneratedImage`
 
 The admin visual desk supports:
 
@@ -281,10 +298,15 @@ The admin visual desk supports:
 - Edit Prompt
 - Preview
 - Accept Image
+- Reject / remove current image
 - Remove Image
 - Upload / replace image
 - Paste licensed image URL
 - Retry after failure
+- Compare generated/uploaded/licensed image versions
+- Use version
+- Delete version history record
+- Download image
 
 The Prisma model also includes `GeneratedImage` for image generation audit
 metadata and `SiteSetting` for future runtime configuration records.
@@ -301,10 +323,25 @@ Editorial image policy:
 - landscape 16:9
 - realistic editorial news photography style
 - do not create fake documentary photos of real events
+- for real-world events, public figures, disasters, elections, wars or ongoing
+  news, use a clearly illustrative/symbolic editorial visual and store the
+  illustrative flag/disclosure
 
 Published article pages show this disclosure below generated images:
 
 > AI-generated editorial image.
+
+Validate prompt/safeguard behavior without spending image credits:
+
+```bash
+npm run images:validate-pipeline
+```
+
+This checks Technology, Business, Health, Sports and World fixtures for prompt
+quality, constraints, alt text, caption and factual safeguards. To test real
+image generation, configure `OPENAI_API_KEY`, `IMAGE_STORAGE=blob` and
+`BLOB_READ_WRITE_TOKEN`, then generate a draft from `/admin/trends` or convert
+an RSS story from `/admin/stories`.
 
 ## Admin
 

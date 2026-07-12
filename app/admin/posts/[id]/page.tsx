@@ -13,7 +13,16 @@ export default async function AdminPostEditPage({
   const post = await safeDbQuery(
     "admin_post_edit_query_failed",
     null,
-    () => prisma.post.findUnique({ where: { id } })
+    () =>
+      prisma.post.findUnique({
+        where: { id },
+        include: {
+          generatedImages: {
+            orderBy: { createdAt: "desc" },
+            take: 16
+          }
+        }
+      })
   );
 
   if (!post) notFound();
@@ -62,6 +71,40 @@ export default async function AdminPostEditPage({
           imageSourceType: post.imageSourceType || "placeholder",
           imageLicense: post.imageLicense || "",
           imageCredit: post.imageCredit || "",
+          generatedImages: post.generatedImages.map((image) => ({
+            id: image.id,
+            prompt: image.prompt,
+            finalPrompt: image.finalPrompt || "",
+            generator: image.generator || "",
+            model: image.model || "",
+            status: image.status,
+            url: image.url || "",
+            featuredUrl: image.featuredUrl || "",
+            thumbnailUrl: image.thumbnailUrl || "",
+            openGraphUrl: image.openGraphUrl || "",
+            twitterUrl: image.twitterUrl || "",
+            webpUrl: image.webpUrl || "",
+            avifUrl: image.avifUrl || "",
+            width: image.width,
+            height: image.height,
+            format: image.format || "",
+            alt: image.alt || "",
+            title: image.title || "",
+            description: image.description || "",
+            caption: image.caption || "",
+            disclosure: image.disclosure || "",
+            sourceType: image.sourceType,
+            illustrative: image.illustrative,
+            storage: image.storage || "",
+            category: image.category || "",
+            metadata: image.metadata,
+            validationNotes: parseStringArray(image.validationNotes),
+            license: image.license || "",
+            credit: image.credit || "",
+            error: image.error || "",
+            createdAt: image.createdAt.toISOString(),
+            updatedAt: image.updatedAt.toISOString()
+          })),
           factCheckNotes: parseStringArray(post.factCheckNotes),
           sourceUrls: parseStringArray(post.sourceUrls),
           status: post.status,

@@ -3,6 +3,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { put } from "@vercel/blob";
 import sharp from "sharp";
+import {
+  buildEditorialImagePlan,
+  type EditorialImagePlan,
+  type EditorialImagePromptInput
+} from "@/lib/editorialImagePrompt";
 import { placeholderImageForCategory } from "@/lib/editorialImages";
 import { prisma } from "@/lib/prisma";
 import { logError, logInfo } from "@/lib/logger";
@@ -10,19 +15,33 @@ export { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/e
 
 const FEATURED_SIZE = { width: 1600, height: 900 };
 const THUMBNAIL_SIZE = { width: 1200, height: 675 };
-const AI_DISCLOSURE = "AI-generated editorial image.";
 const IMAGE_API_TIMEOUT_MS = 120_000;
 
 type ImageContext = {
   id: string;
   title: string;
+  subtitle?: string | null;
   excerpt: string;
+  summary?: string | null;
   content: string;
+  tags?: string | null;
   imagePrompt: string | null;
   imageUrl?: string | null;
   featuredImage?: string | null;
   featuredImageUrl?: string | null;
   thumbnailImage?: string | null;
+  openGraphImage?: string | null;
+  twitterImage?: string | null;
+  imageAlt?: string | null;
+  imageCaption?: string | null;
+  imageDisclosure?: string | null;
+  imageSourceType?: string | null;
+  imageLicense?: string | null;
+  imageCredit?: string | null;
+  imageStatus?: string | null;
+  imageStorage?: string | null;
+  imageModel?: string | null;
+  imageGeneratedAt?: Date | null;
   trend?: { category: string | null } | null;
   category?: { name: string | null } | null;
   sourceStory?: { feed?: { category?: { name: string | null } | null } | null } | null;
@@ -30,9 +49,12 @@ type ImageContext = {
 
 export type ArticleImageRequest = {
   title: string;
+  subtitle?: string | null;
   excerpt: string;
   category?: string | null;
   contentSummary: string;
+  summary?: string | null;
+  keywords?: string[] | string | null;
   imagePrompt?: string | null;
 };
 
@@ -53,6 +75,24 @@ export type StoredImageAssets = {
   imageLicense: string;
   imageCredit: string;
   imageStorage: string;
+  imagePrompt?: string;
+  imageError?: string | null;
+  generatedImageId?: string;
+  finalPrompt?: string;
+};
+
+type StoredVariantFiles = {
+  imageStorage: string;
+  featuredImage: string;
+  thumbnailImage: string;
+  webpImage?: string;
+  avifImage?: string;
+  featuredImageData: null;
+  thumbnailImageData: null;
+  width: number;
+  height: number;
+  format: string;
+  responsiveImages: Record<string, string | undefined>;
 };
 
 function imageModel() {
@@ -70,8 +110,6 @@ function normalizedImageStorageMode() {
   if (configured === "local") return "local";
   if (configured === "blob" || configured === "vercel-blob") return "blob";
 
-  // `database` existed in an older build. Keep the app safe, but do not write
-  // new image files into database columns anymore.
   if (configured === "database") {
     return process.env.VERCEL || process.env.NODE_ENV === "production"
       ? "blob"
@@ -111,74 +149,84 @@ function articleCategory(post: ImageContext) {
   );
 }
 
+function hasReusableImage(post: ImageContext) {
+  return Boolean(
+    (post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage) &&
+      ["accepted", "completed"].includes(post.imageStatus || "")
+  );
+}
+
 function compactText(value: string, max = 900) {
   return value.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-function imageAltFor(title: string) {
-  return `Editorial news image for “${title}”`;
+function planInputFromPost(post: ImageContext, promptOverride?: string): EditorialImagePromptInput {
+  return {
+    headline: post.title,
+    subtitle: post.subtitle,
+    excerpt: post.excerpt,
+    summary: post.summary,
+    content: post.content,
+    category: articleCategory(post),
+    keywords: post.tags,
+    basePrompt: promptOverride?.trim() || post.imagePrompt
+  };
 }
 
-function imageCaptionFor(sourceType: StoredImageAssets["imageSourceType"]) {
-  if (sourceType === "ai") return "AI-generated editorial image.";
+function imageAltFor(title: string, plan?: EditorialImagePlan) {
+  return plan?.alt || `Editorial news image for “${title}”`;
+}
+
+function imageCaptionFor(
+  sourceType: StoredImageAssets["imageSourceType"],
+  plan?: EditorialImagePlan
+) {
+  if (sourceType === "ai") return plan?.caption || "AI-generated editorial image.";
   if (sourceType === "upload") return "Publisher-uploaded editorial image.";
   if (sourceType === "licensed_url") return "Licensed editorial image.";
   return "Daily Signal Wire fallback editorial image.";
 }
 
-export function buildArticleImagePrompt({
+function stringifyJson(value: unknown) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "{}";
+  }
+}
+
+export function buildArticleImagePlan({
   title,
+  subtitle,
   excerpt,
   category,
   contentSummary,
+  summary,
+  keywords,
   imagePrompt
 }: ArticleImageRequest) {
-  const base =
-    imagePrompt?.trim() ||
-    `A realistic editorial news image about: ${title}.`;
-  const categoryLabel = category || "Editorial";
-  const summary = compactText(`${excerpt}\n${contentSummary}`, 1100);
+  return buildEditorialImagePlan({
+    headline: title,
+    subtitle,
+    excerpt,
+    summary,
+    content: compactText(`${summary || ""}\n${contentSummary}`, 2200),
+    category,
+    keywords,
+    basePrompt: imagePrompt
+  });
+}
 
-  return `${base}
+export function buildArticleImagePrompt(request: ArticleImageRequest) {
+  return buildArticleImagePlan(request).prompt;
+}
 
-Use the following article-specific context. The visual concept must be based directly on this story, not a generic newsroom image:
-- Article title: ${title}
-- Category: ${categoryLabel}
-- Article summary: ${summary}
-- Main event or issue: infer only from the supplied article summary
-- Important people, objects, setting, or location: include only when clearly implied by the title or summary
-- Visual mood: professional, modern, source-first news coverage
-- Editorial context: a realistic editorial image for a US-facing digital newspaper
-
-Create a realistic editorial news photography-style image with professional AP/Reuters-style composition, natural lighting, high detail, natural skin tones where people are shown, and a landscape 16:9 crop suitable for 1600x900 cover use.
-
-Hard constraints:
-- not cartoon
-- not illustration
-- not painting
-- not anime
-- not 3D render
-- not fantasy art
-- no readable text
-- no watermark
-- no logo
-- no border
-- no frame
-- no fake screenshot
-- no brand marks
-
-Editorial safety:
-If this story concerns a real event, celebrity, public figure, crime, disaster, court matter, political controversy, accident, war, or developing report, DO NOT make the image look like a real documentary photo, eyewitness photo, evidence image, mugshot, press photo, or actual event capture. Make it a staged, generic, photorealistic editorial news image instead, so readers are not misled about what the image depicts.`;
+export function buildEditorialImagePlanForPost(post: ImageContext, promptOverride?: string) {
+  return buildEditorialImagePlan(planInputFromPost(post, promptOverride));
 }
 
 export function buildEditorialImagePrompt(post: ImageContext, promptOverride?: string) {
-  return buildArticleImagePrompt({
-    title: post.title,
-    excerpt: post.excerpt,
-    category: articleCategory(post),
-    contentSummary: post.content,
-    imagePrompt: promptOverride?.trim() || post.imagePrompt
-  });
+  return buildEditorialImagePlanForPost(post, promptOverride).prompt;
 }
 
 export async function generateEditorialImage(prompt: string) {
@@ -214,8 +262,7 @@ export async function generateEditorialImage(prompt: string) {
     result = text ? JSON.parse(text) : {};
     if (!response.ok) {
       throw new Error(
-        result.error?.message ||
-          `Image API failed with HTTP ${response.status}.`
+        result.error?.message || `Image API failed with HTTP ${response.status}.`
       );
     }
   } catch (error) {
@@ -243,27 +290,64 @@ export async function generateEditorialImage(prompt: string) {
   throw new Error("Image API returned no image data.");
 }
 
-async function renderImageVariants(sourceBytes: Buffer) {
-  const featuredBuffer = await sharp(sourceBytes)
-    .resize(FEATURED_SIZE.width, FEATURED_SIZE.height, {
-      fit: "cover",
-      position: "attention"
-    })
-    .jpeg({ quality: 92, mozjpeg: true })
-    .toBuffer();
-
-  const thumbnailBuffer = await sharp(sourceBytes)
-    .resize(THUMBNAIL_SIZE.width, THUMBNAIL_SIZE.height, {
-      fit: "cover",
-      position: "attention"
-    })
-    .jpeg({ quality: 92, mozjpeg: true })
-    .toBuffer();
-
-  return { featuredBuffer, thumbnailBuffer };
+async function validateSourceImage(sourceBytes: Buffer) {
+  const metadata = await sharp(sourceBytes).metadata();
+  if (!metadata.width || !metadata.height) {
+    throw new Error("Generated image metadata could not be read.");
+  }
+  if (metadata.width < 768 || metadata.height < 512) {
+    throw new Error("Generated image is too small for editorial use.");
+  }
+  return [
+    `Source image validated at ${metadata.width}x${metadata.height}.`,
+    "Image will be center-cropped to 16:9 and optimized into responsive assets."
+  ];
 }
 
-async function uploadToVercelBlob(postId: string, stamp: string, featuredBuffer: Buffer, thumbnailBuffer: Buffer) {
+async function renderImageVariants(sourceBytes: Buffer) {
+  const validationNotes = await validateSourceImage(sourceBytes);
+  const base = sharp(sourceBytes).rotate();
+  const featuredSharp = base.clone().resize(FEATURED_SIZE.width, FEATURED_SIZE.height, {
+    fit: "cover",
+    position: "attention"
+  });
+  const thumbnailSharp = base.clone().resize(THUMBNAIL_SIZE.width, THUMBNAIL_SIZE.height, {
+    fit: "cover",
+    position: "attention"
+  });
+
+  const [
+    featuredBuffer,
+    thumbnailBuffer,
+    featuredWebpBuffer,
+    thumbnailWebpBuffer,
+    featuredAvifBuffer,
+    thumbnailAvifBuffer
+  ] = await Promise.all([
+    featuredSharp.clone().jpeg({ quality: 90, mozjpeg: true }).toBuffer(),
+    thumbnailSharp.clone().jpeg({ quality: 88, mozjpeg: true }).toBuffer(),
+    featuredSharp.clone().webp({ quality: 84 }).toBuffer(),
+    thumbnailSharp.clone().webp({ quality: 82 }).toBuffer(),
+    featuredSharp.clone().avif({ quality: 58 }).toBuffer(),
+    thumbnailSharp.clone().avif({ quality: 56 }).toBuffer()
+  ]);
+
+  return {
+    featuredBuffer,
+    thumbnailBuffer,
+    featuredWebpBuffer,
+    thumbnailWebpBuffer,
+    featuredAvifBuffer,
+    thumbnailAvifBuffer,
+    validationNotes
+  };
+}
+
+async function uploadToVercelBlob(
+  postId: string,
+  stamp: string,
+  buffers: Awaited<ReturnType<typeof renderImageVariants>>
+): Promise<StoredVariantFiles> {
   if (!isBlobStorageConfigured()) {
     throw new Error(
       "AI image storage is not configured. Connect Vercel Blob or add BLOB_READ_WRITE_TOKEN."
@@ -271,66 +355,99 @@ async function uploadToVercelBlob(postId: string, stamp: string, featuredBuffer:
   }
 
   const folder = `daily-signal-wire/posts/${postId}`;
-  const [featured, thumbnail] = await Promise.all([
-    put(
-      `${folder}/${stamp}-1600x900.jpg`,
-      new Blob([new Uint8Array(featuredBuffer)], { type: "image/jpeg" }),
-      {
-        access: "public",
-        addRandomSuffix: false,
-        contentType: "image/jpeg",
-        cacheControlMaxAge: 60 * 60 * 24 * 365
-      }
-    ),
-    put(
-      `${folder}/${stamp}-1200x675.jpg`,
-      new Blob([new Uint8Array(thumbnailBuffer)], { type: "image/jpeg" }),
-      {
-        access: "public",
-        addRandomSuffix: false,
-        contentType: "image/jpeg",
-        cacheControlMaxAge: 60 * 60 * 24 * 365
-      }
-    )
-  ]);
+  const upload = (name: string, buffer: Buffer, contentType: string) =>
+    put(`${folder}/${stamp}-${name}`, new Blob([new Uint8Array(buffer)], { type: contentType }), {
+      access: "public",
+      addRandomSuffix: false,
+      contentType,
+      cacheControlMaxAge: 60 * 60 * 24 * 365
+    });
+  const [featured, thumbnail, featuredWebp, thumbnailWebp, featuredAvif, thumbnailAvif] =
+    await Promise.all([
+      upload("1600x900.jpg", buffers.featuredBuffer, "image/jpeg"),
+      upload("1200x675.jpg", buffers.thumbnailBuffer, "image/jpeg"),
+      upload("1600x900.webp", buffers.featuredWebpBuffer, "image/webp"),
+      upload("1200x675.webp", buffers.thumbnailWebpBuffer, "image/webp"),
+      upload("1600x900.avif", buffers.featuredAvifBuffer, "image/avif"),
+      upload("1200x675.avif", buffers.thumbnailAvifBuffer, "image/avif")
+    ]);
 
   return {
     imageStorage: "vercel-blob",
     featuredImage: featured.url,
     thumbnailImage: thumbnail.url,
+    webpImage: featuredWebp.url,
+    avifImage: featuredAvif.url,
     featuredImageData: null,
-    thumbnailImageData: null
+    thumbnailImageData: null,
+    width: FEATURED_SIZE.width,
+    height: FEATURED_SIZE.height,
+    format: "jpeg",
+    responsiveImages: {
+      featuredJpeg: featured.url,
+      thumbnailJpeg: thumbnail.url,
+      featuredWebp: featuredWebp.url,
+      thumbnailWebp: thumbnailWebp.url,
+      featuredAvif: featuredAvif.url,
+      thumbnailAvif: thumbnailAvif.url
+    }
   };
 }
 
-export async function storePostImageVariants(postId: string, sourceBytes: Buffer) {
+export async function storePostImageVariants(
+  postId: string,
+  sourceBytes: Buffer
+): Promise<StoredVariantFiles> {
   const stamp = `${Date.now()}-${randomUUID().slice(0, 8)}`;
-  const { featuredBuffer, thumbnailBuffer } = await renderImageVariants(sourceBytes);
+  const buffers = await renderImageVariants(sourceBytes);
   const mode = normalizedImageStorageMode();
 
   if (mode === "blob") {
-    return uploadToVercelBlob(postId, stamp, featuredBuffer, thumbnailBuffer);
+    return uploadToVercelBlob(postId, stamp, buffers);
   }
 
   if (mode === "local" && !process.env.VERCEL) {
     const directory = imageDirectory();
     await mkdir(directory, { recursive: true });
-    const featuredName = `${postId}-${stamp}-1600x900.jpg`;
-    const thumbnailName = `${postId}-${stamp}-1200x675.jpg`;
-    const featuredPath = path.join(directory, featuredName);
-    const thumbnailPath = path.join(directory, thumbnailName);
+    const names = {
+      featured: `${postId}-${stamp}-1600x900.jpg`,
+      thumbnail: `${postId}-${stamp}-1200x675.jpg`,
+      featuredWebp: `${postId}-${stamp}-1600x900.webp`,
+      thumbnailWebp: `${postId}-${stamp}-1200x675.webp`,
+      featuredAvif: `${postId}-${stamp}-1600x900.avif`,
+      thumbnailAvif: `${postId}-${stamp}-1200x675.avif`
+    };
 
     await Promise.all([
-      writeFile(featuredPath, featuredBuffer),
-      writeFile(thumbnailPath, thumbnailBuffer)
+      writeFile(path.join(directory, names.featured), buffers.featuredBuffer),
+      writeFile(path.join(directory, names.thumbnail), buffers.thumbnailBuffer),
+      writeFile(path.join(directory, names.featuredWebp), buffers.featuredWebpBuffer),
+      writeFile(path.join(directory, names.thumbnailWebp), buffers.thumbnailWebpBuffer),
+      writeFile(path.join(directory, names.featuredAvif), buffers.featuredAvifBuffer),
+      writeFile(path.join(directory, names.thumbnailAvif), buffers.thumbnailAvifBuffer)
     ]);
+
+    const urls = {
+      featuredJpeg: `/generated/${names.featured}`,
+      thumbnailJpeg: `/generated/${names.thumbnail}`,
+      featuredWebp: `/generated/${names.featuredWebp}`,
+      thumbnailWebp: `/generated/${names.thumbnailWebp}`,
+      featuredAvif: `/generated/${names.featuredAvif}`,
+      thumbnailAvif: `/generated/${names.thumbnailAvif}`
+    };
 
     return {
       imageStorage: "local",
-      featuredImage: `/generated/${featuredName}`,
-      thumbnailImage: `/generated/${thumbnailName}`,
+      featuredImage: urls.featuredJpeg,
+      thumbnailImage: urls.thumbnailJpeg,
+      webpImage: urls.featuredWebp,
+      avifImage: urls.featuredAvif,
       featuredImageData: null,
-      thumbnailImageData: null
+      thumbnailImageData: null,
+      width: FEATURED_SIZE.width,
+      height: FEATURED_SIZE.height,
+      format: "jpeg",
+      responsiveImages: urls
     };
   }
 
@@ -342,32 +459,87 @@ export async function storePostImageVariants(postId: string, sourceBytes: Buffer
 export async function generateArticleImage({
   postId,
   title,
+  subtitle,
   excerpt,
   category,
   contentSummary,
+  summary,
+  keywords,
   imagePrompt
 }: ArticleImageRequest & { postId: string }) {
-  const finalPrompt = buildArticleImagePrompt({
+  const plan = buildArticleImagePlan({
     title,
+    subtitle,
     excerpt,
     category,
     contentSummary,
+    summary,
+    keywords,
     imagePrompt
   });
-  const sourceBytes = await generateEditorialImage(finalPrompt);
+  const sourceBytes = await generateEditorialImage(plan.prompt);
   const variants = await storePostImageVariants(postId, sourceBytes);
-  return { finalPrompt, variants };
+  return { finalPrompt: plan.prompt, plan, variants };
+}
+
+async function createGeneratedImageAudit(
+  postId: string,
+  plan: EditorialImagePlan,
+  model: string,
+  status: string,
+  prompt: string,
+  storage?: string
+) {
+  return prisma.generatedImage.create({
+    data: {
+      postId,
+      prompt,
+      finalPrompt: plan.prompt,
+      generator: "openai-images",
+      model,
+      status,
+      alt: plan.alt,
+      title: plan.title,
+      description: plan.description,
+      caption: plan.caption,
+      disclosure: plan.disclosure,
+      sourceType: "ai",
+      illustrative: plan.illustrative,
+      storage: storage || configuredImageStorageLabel(),
+      category: plan.category,
+      width: FEATURED_SIZE.width,
+      height: FEATURED_SIZE.height,
+      format: "jpeg",
+      metadata: stringifyJson(plan.metadata),
+      validationNotes: stringifyJson(plan.validationNotes),
+      license: plan.license,
+      credit: plan.credit
+    }
+  });
+}
+
+async function markAuditStatus(
+  id: string | undefined,
+  status: string,
+  data: Record<string, unknown> = {}
+) {
+  if (!id) return;
+  await prisma.generatedImage.update({
+    where: { id },
+    data: { status, ...data }
+  });
 }
 
 async function applyPlaceholderImageForPost(
   postId: string,
   post: ImageContext,
   reason: string,
-  status: "failed" | "idle" = "failed"
+  status: "failed" | "idle" = "failed",
+  plan?: EditorialImagePlan
 ) {
   const category = articleCategory(post);
   const placeholder = placeholderImageForCategory(category);
-  return prisma.post.update({
+  const updated = await prisma.post.update({
     where: { id: postId },
     data: {
       imageUrl: placeholder,
@@ -379,7 +551,7 @@ async function applyPlaceholderImageForPost(
       imageStorage: "url",
       featuredImageData: null,
       thumbnailImageData: null,
-      imageAlt: imageAltFor(post.title),
+      imageAlt: imageAltFor(post.title, plan),
       imageCaption: imageCaptionFor("placeholder"),
       imageDisclosure: null,
       imageSourceType: "placeholder",
@@ -387,11 +559,48 @@ async function applyPlaceholderImageForPost(
       imageError: reason
     }
   });
+  return updated;
+}
+
+function assetsFromExisting(post: ImageContext, plan: EditorialImagePlan): StoredImageAssets {
+  const category = articleCategory(post);
+  const featured =
+    post.featuredImageUrl ||
+    post.featuredImage ||
+    post.imageUrl ||
+    placeholderImageForCategory(category);
+  const thumbnail = post.thumbnailImage || post.imageUrl || featured;
+  const now = post.imageGeneratedAt || new Date();
+  return {
+    imageUrl: post.imageUrl || thumbnail,
+    featuredImageUrl: post.featuredImageUrl || featured,
+    featuredImage: post.featuredImage || featured,
+    thumbnailImage: thumbnail,
+    openGraphImage: post.openGraphImage || featured,
+    twitterImage: post.twitterImage || thumbnail,
+    imageModel: post.imageModel || imageModel(),
+    imageGeneratedAt: now,
+    imageStatus: post.imageStatus || "completed",
+    imageAlt: post.imageAlt || imageAltFor(post.title, plan),
+    imageCaption: post.imageCaption || imageCaptionFor("ai", plan),
+    imageDisclosure: post.imageDisclosure || plan.disclosure,
+    imageSourceType: (post.imageSourceType as StoredImageAssets["imageSourceType"]) || "ai",
+    imageLicense: post.imageLicense || plan.license,
+    imageCredit: post.imageCredit || plan.credit,
+    imageStorage: post.imageStorage || "url",
+    imagePrompt: post.imagePrompt || plan.prompt,
+    imageError: null,
+    finalPrompt: plan.prompt
+  };
 }
 
 export async function generateImageForPost(
   postId: string,
-  options: { promptOverride?: string; statusWhenDone?: "completed" | "accepted" } = {}
+  options: {
+    promptOverride?: string;
+    statusWhenDone?: "completed" | "accepted";
+    force?: boolean;
+  } = {}
 ) {
   const post = await prisma.post.findUniqueOrThrow({
     where: { id: postId },
@@ -405,36 +614,89 @@ export async function generateImageForPost(
       }
     }
   });
-  const finalPrompt = buildEditorialImagePrompt(post, options.promptOverride);
+  const plan = buildEditorialImagePlanForPost(post, options.promptOverride);
   const model = imageModel();
   const category = articleCategory(post);
+  const prompt = options.promptOverride?.trim() || post.imagePrompt || plan.prompt;
+
+  if (!options.force && !options.promptOverride && hasReusableImage(post)) {
+    logInfo("post_image_reused", { postId, category, status: post.imageStatus });
+    return assetsFromExisting(post, plan);
+  }
+
+  await prisma.post.update({
+    where: { id: postId },
+    data: {
+      imagePrompt: plan.prompt,
+      imageModel: model,
+      imageStatus: "queued",
+      imageError: null,
+      imageAlt: plan.alt,
+      imageCaption: plan.caption,
+      imageDisclosure: plan.disclosure,
+      imageSourceType: "ai",
+      imageLicense: plan.license,
+      imageCredit: plan.credit
+    }
+  });
+
+  const audit = await createGeneratedImageAudit(postId, plan, model, "queued", prompt);
 
   if (!process.env.OPENAI_API_KEY) {
     const reason = "AI image generation is not configured.";
-    await applyPlaceholderImageForPost(postId, post, reason);
+    await applyPlaceholderImageForPost(postId, post, reason, "failed", plan);
+    await markAuditStatus(audit.id, "failed", { error: reason });
     throw new Error(reason);
   }
 
   if (!isGeneratedImageStorageConfigured()) {
     const reason =
       "AI image storage is not configured. Connect Vercel Blob before generating production images.";
-    await applyPlaceholderImageForPost(postId, post, reason);
+    await applyPlaceholderImageForPost(postId, post, reason, "failed", plan);
+    await markAuditStatus(audit.id, "failed", { error: reason });
     throw new Error(reason);
   }
 
-  await prisma.post.update({
-    where: { id: postId },
-    data: {
-      imagePrompt: finalPrompt,
-      imageModel: model,
-      imageStatus: "generating",
-      imageError: null
-    }
-  });
-
   try {
-    const sourceBytes = await generateEditorialImage(finalPrompt);
+    await prisma.post.update({
+      where: { id: postId },
+      data: { imageStatus: "generating", imageError: null }
+    });
+    await markAuditStatus(audit.id, "generating");
+
+    let sourceBytes: Buffer;
+    const validationNotes = [...plan.validationNotes];
+    try {
+      sourceBytes = await generateEditorialImage(plan.prompt);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message.slice(0, 700) : "Initial image generation failed.";
+      validationNotes.push(`Initial prompt failed: ${message}`);
+      await markAuditStatus(audit.id, "retrying", {
+        error: message,
+        validationNotes: stringifyJson(validationNotes)
+      });
+      sourceBytes = await generateEditorialImage(plan.simplifiedPrompt);
+      validationNotes.push("Retry succeeded with simplified prompt.");
+    }
+
+    await prisma.post.update({
+      where: { id: postId },
+      data: { imageStatus: "upscaling" }
+    });
+    await markAuditStatus(audit.id, "upscaling");
+
+    await prisma.post.update({
+      where: { id: postId },
+      data: { imageStatus: "optimizing" }
+    });
     const variants = await storePostImageVariants(postId, sourceBytes);
+    validationNotes.push("Responsive JPEG, WebP and AVIF variants generated.");
+    await markAuditStatus(audit.id, "optimizing", {
+      storage: variants.imageStorage,
+      validationNotes: stringifyJson(validationNotes)
+    });
+
     const now = new Date();
     const imageUrl = variants.thumbnailImage;
     const assets: StoredImageAssets = {
@@ -447,13 +709,17 @@ export async function generateImageForPost(
       imageModel: model,
       imageGeneratedAt: now,
       imageStatus: options.statusWhenDone || "completed",
-      imageAlt: imageAltFor(post.title),
-      imageCaption: imageCaptionFor("ai"),
-      imageDisclosure: AI_DISCLOSURE,
+      imageAlt: plan.alt,
+      imageCaption: plan.caption,
+      imageDisclosure: plan.disclosure,
       imageSourceType: "ai",
-      imageLicense: "AI-generated editorial image.",
-      imageCredit: "Daily Signal Wire / AI image generation",
-      imageStorage: variants.imageStorage
+      imageLicense: plan.license,
+      imageCredit: plan.credit,
+      imageStorage: variants.imageStorage,
+      imagePrompt: plan.prompt,
+      imageError: null,
+      generatedImageId: audit.id,
+      finalPrompt: plan.prompt
     };
 
     await prisma.post.update({
@@ -465,19 +731,43 @@ export async function generateImageForPost(
         thumbnailImageData: null
       }
     });
+    await markAuditStatus(audit.id, assets.imageStatus, {
+      url: imageUrl,
+      featuredUrl: variants.featuredImage,
+      thumbnailUrl: variants.thumbnailImage,
+      openGraphUrl: variants.featuredImage,
+      twitterUrl: variants.thumbnailImage,
+      webpUrl: variants.webpImage,
+      avifUrl: variants.avifImage,
+      width: variants.width,
+      height: variants.height,
+      format: variants.format,
+      storage: variants.imageStorage,
+      alt: assets.imageAlt,
+      caption: assets.imageCaption,
+      disclosure: assets.imageDisclosure,
+      validationNotes: stringifyJson(validationNotes),
+      metadata: stringifyJson({
+        ...plan.metadata,
+        responsiveImages: variants.responsiveImages
+      }),
+      error: null
+    });
     logInfo("post_image_generated", {
       postId,
       model,
       category,
-      imageStorage: variants.imageStorage
+      imageStorage: variants.imageStorage,
+      generatedImageId: audit.id
     });
     return assets;
   } catch (error) {
     const message =
       error instanceof Error ? error.message.slice(0, 1000) : "Image generation failed.";
-    const hasExistingImage =
-      Boolean(post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage);
-    if (hasExistingImage) {
+    const hasExisting = Boolean(
+      post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage
+    );
+    if (hasExisting) {
       await prisma.post.update({
         where: { id: postId },
         data: {
@@ -487,8 +777,9 @@ export async function generateImageForPost(
         }
       });
     } else {
-      await applyPlaceholderImageForPost(postId, post, message);
+      await applyPlaceholderImageForPost(postId, post, message, "failed", plan);
     }
+    await markAuditStatus(audit.id, "failed", { error: message });
     logError("post_image_generation_failed", error, { postId, model });
     throw error;
   }
@@ -496,7 +787,7 @@ export async function generateImageForPost(
 
 export async function tryGenerateImageForPost(postId: string) {
   try {
-    return await generateImageForPost(postId, { statusWhenDone: "accepted" });
+    return await generateImageForPost(postId, { statusWhenDone: "completed" });
   } catch {
     return null;
   }
