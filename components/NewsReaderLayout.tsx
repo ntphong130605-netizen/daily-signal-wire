@@ -1,12 +1,16 @@
 import Link from "next/link";
-import AddFeedPanel from "@/components/AddFeedPanel";
 import AdSlot from "@/components/ads/AdSlot";
-import { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
+import type { ReaderPost } from "@/components/ArticleCard";
+import BreakingNewsTicker, { type BreakingNewsItem } from "@/components/BreakingNewsTicker";
+import HeroStory from "@/components/HeroStory";
 import InfinitePostFeed from "@/components/InfinitePostFeed";
 import Logo from "@/components/Logo";
+import MobileMenu, { type MobileMenuLink } from "@/components/MobileMenu";
+import MostRead from "@/components/MostRead";
+import NewsSection from "@/components/NewsSection";
 import NewsletterCard from "@/components/NewsletterCard";
+import ReaderFooter from "@/components/ReaderFooter";
 import ReaderThemeToggle from "@/components/ReaderThemeToggle";
-import StoryActions from "@/components/StoryActions";
 
 export type ReaderFolder = {
   id: string;
@@ -47,8 +51,22 @@ type ReaderFilters = {
   view: "list" | "grid" | "split" | "magazine";
 };
 
+const navLinks: MobileMenuLink[] = [
+  { label: "Trending", href: "/?sort=trending" },
+  { label: "Latest", href: "/?sort=latest" },
+  { label: "US", href: "/category/us-news" },
+  { label: "World", href: "/category/world" },
+  { label: "Business", href: "/category/business" },
+  { label: "Technology", href: "/category/technology" },
+  { label: "Sports", href: "/category/sports" },
+  { label: "Entertainment", href: "/category/entertainment" },
+  { label: "Lifestyle", href: "/category/lifestyle" }
+];
+
+const categoryBlocks = ["Technology", "Business", "Sports", "Entertainment"];
+
 function timeAgo(date: Date | null | undefined) {
-  if (!date) return "No date";
+  if (!date) return "Just now";
   const diff = Date.now() - date.getTime();
   const minutes = Math.max(1, Math.round(diff / 60_000));
   if (minutes < 60) return `${minutes}m ago`;
@@ -57,6 +75,22 @@ function timeAgo(date: Date | null | undefined) {
   const days = Math.round(hours / 24);
   if (days < 7) return `${days}d ago`;
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
+}
+
+function categorySlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function matchesCategory(post: ReaderPost, category: string) {
+  const value = post.category.toLowerCase();
+  const target = category.toLowerCase();
+  if (target === "business") return value.includes("business") || value.includes("money");
+  if (target === "technology") return value.includes("tech") || value.includes("ai");
+  return value.includes(target);
 }
 
 function withQuery(filters: ReaderFilters, patch: Partial<ReaderFilters>) {
@@ -93,385 +127,250 @@ export default function NewsReaderLayout({
   aiConfigured: boolean;
   publishedPosts: ReaderPost[];
 }) {
-  const folderOptions = folders.map((folder) => ({ id: folder.id, name: folder.name }));
-  const story = selectedStory || stories[0] || null;
-  const activeStoryId = story?.id;
   const featuredPost = publishedPosts[0] || null;
-  const secondaryPosts = publishedPosts.slice(1, 4);
-  const latestUpdates = stories.slice(0, 5);
-  const mostRead = publishedPosts.slice(0, 5);
-  const breakingItems = (publishedPosts.length
-    ? publishedPosts.slice(0, 5).map((post) => ({
-        id: post.id,
-        title: post.title,
-        href: `/news/${post.slug}`,
-        label: post.category
-      }))
-    : stories.slice(0, 5).map((item) => ({
-        id: item.id,
-        title: item.title,
-        href: withQuery(filters, { story: item.id }),
-        label: item.feedTitle
-      })));
-  const trendingTopics = [
-    ...new Set([
-      ...publishedPosts.map((post) => post.category),
-      ...stories.flatMap((item) => item.tags),
-      "US News",
-      "Technology",
-      "Business",
-      "World"
-    ])
-  ].filter(Boolean).slice(0, 14);
-  const categories = [
-    "US Trending",
-    "Technology",
-    "Business",
-    "Science",
-    "World",
-    "Sports",
-    "Entertainment"
-  ];
-  const categorySections = categories
-    .map((category) => ({
-      category,
-      posts: publishedPosts.filter((post) => {
-        const value = post.category.toLowerCase();
-        const target = category.toLowerCase();
-        if (target === "us trending") return value.includes("us") || value.includes("trend");
-        return value.includes(target);
-      })
-    }))
-    .filter((section) => section.posts.length > 0);
+  const heroRelated = publishedPosts.slice(1, 4);
+  const trendingPosts = publishedPosts.slice(1, 5);
+  const latestPosts = publishedPosts.slice(1, 11);
+  const mostReadPosts = publishedPosts.slice(0, 5);
+  const feedCount = folders.reduce((total, folder) => total + folder.feeds.length, 0);
+  const highlightedStory = selectedStory || stories[0] || null;
+  const latestFeedStories = stories.slice(0, 8);
   const serializedPublishedPosts = publishedPosts.map((post) => ({
     ...post,
     publishedAt: post.publishedAt?.toISOString() || null,
     createdAt: post.createdAt.toISOString()
   }));
+  const breakingItems: BreakingNewsItem[] = publishedPosts.slice(0, 5).map((post) => ({
+    id: post.id,
+    title: post.title,
+    href: `/news/${post.slug}`,
+    label: post.category
+  }));
+  const topics = [
+    ...new Set([
+      ...publishedPosts.map((post) => post.category),
+      ...stories.flatMap((story) => story.tags),
+      "US News",
+      "World",
+      "Business",
+      "Technology",
+      "Sports",
+      "Entertainment"
+    ])
+  ]
+    .filter(Boolean)
+    .slice(0, 14);
+  const categorySections = categoryBlocks.map((category) => ({
+    category,
+    posts: publishedPosts.filter((post) => matchesCategory(post, category)).slice(0, 4)
+  }));
 
   return (
-    <div className="news-reader-app">
-      <header className="reader-app-header">
-        <Logo href="/" />
-        <div className="reader-header-meta">
-          <span>US signals · RSS reader · AI drafts</span>
-          <strong>Source-first newsroom</strong>
-        </div>
-        <form className="reader-global-search" action="/">
-          <input type="search" name="q" defaultValue={filters.q || ""} placeholder="Search stories…" />
-          <input type="hidden" name="filter" value={filters.filter} />
-          <button>Search</button>
-        </form>
-        <ReaderThemeToggle />
-        <Link className="reader-admin-link" href="/admin">
-          Admin
-        </Link>
-      </header>
-
-      <AdSlot position="top" className="reader-top-ad" />
-
-      {breakingItems.length > 0 && (
-        <section className="breaking-ticker" aria-label="Breaking news ticker">
-          <strong>Breaking</strong>
-          <div className="breaking-track">
-            {[...breakingItems, ...breakingItems].map((item, index) => (
-              <Link key={`${item.id}-${index}`} href={item.href}>
-                <span>{item.label}</span>
-                {item.title}
+    <div className="news-home">
+      <header className="news-home-header">
+        <div className="news-home-header-inner">
+          <Logo href="/" />
+          <nav className="news-home-nav" aria-label="Primary navigation">
+            {navLinks.map((link) => (
+              <Link key={link.label} href={link.href}>
+                {link.label}
               </Link>
             ))}
-          </div>
-        </section>
-      )}
-
-      {featuredPost && (
-        <section className="published-wire-hero">
-          <div className="published-wire-copy">
-            <p className="reader-mini-label">Published AI Wire</p>
-            <h1>
-              <Link href={`/news/${featuredPost.slug}`}>{featuredPost.title}</Link>
-            </h1>
-            <div className="published-wire-meta">
-              <span>{featuredPost.source || "Daily Signal Wire"}</span>
-              <time>{timeAgo(featuredPost.publishedAt || featuredPost.createdAt)}</time>
-              <span>{featuredPost.relatedCount ?? secondaryPosts.length} related</span>
-            </div>
-            <p>{featuredPost.excerpt}</p>
-            <Link className="read-story-link" href={`/news/${featuredPost.slug}`}>
-              Read the full story <span>→</span>
-            </Link>
-          </div>
-          <Link className="published-wire-image-link" href={`/news/${featuredPost.slug}`}>
-            <ArticleImage post={featuredPost} className="published-wire-image" />
+          </nav>
+          <form className="news-home-search" action="/">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m16.5 16.5 4 4" />
+            </svg>
+            <input
+              type="search"
+              name="q"
+              defaultValue={filters.q || ""}
+              placeholder="Search Daily Signal Wire"
+              aria-label="Search Daily Signal Wire"
+            />
+          </form>
+          <ReaderThemeToggle />
+          <Link className="news-home-admin-link" href="/admin">
+            Admin
           </Link>
-          {secondaryPosts.length > 0 && (
-            <div className="published-wire-strip">
-              {secondaryPosts.map((post) => (
-                <Link key={post.id} href={`/news/${post.slug}`}>
-                  <span>{post.category}</span>
-                  <strong>{post.title}</strong>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="reader-news-sections">
-        <div className="reader-section-heading">
-          <div>
-            <p className="reader-mini-label">Trending section</p>
-            <h2>What readers are following</h2>
-          </div>
-          <Link href="/?filter=trending">View US trending</Link>
+          <MobileMenu links={navLinks} />
         </div>
-        <div className="trending-topic-carousel" aria-label="Trending topics">
-          {trendingTopics.map((topic) => (
-            <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
-              <span>#</span>
-              {topic}
-            </Link>
-          ))}
-        </div>
-        <div className="reader-topic-grid">
-          {(publishedPosts.length ? publishedPosts.slice(0, 6) : secondaryPosts).map((post) => (
-            <Link key={post.id} href={`/news/${post.slug}`} className="topic-card">
-              <span>{post.category}</span>
-              <strong>{post.title}</strong>
-              <small>{timeAgo(post.publishedAt || post.createdAt)}</small>
-            </Link>
-          ))}
-        </div>
-        {categorySections.map((section) => (
-          <div className="category-rail" key={section.category}>
-            <div className="reader-section-heading compact">
-              <h2>{section.category}</h2>
-              <Link href={`/category/${section.category.toLowerCase().replaceAll(" ", "-")}`}>
-                More
-              </Link>
-            </div>
-            <div className="category-rail-list">
-              {section.posts.slice(0, 4).map((post) => (
-                <Link key={post.id} href={`/news/${post.slug}`}>
-                  <ArticleImage post={post} />
-                  <strong>{post.title}</strong>
-                </Link>
-              ))}
-            </div>
-          </div>
-        ))}
-      </section>
+      </header>
 
-      <main className="news-reader-grid">
-        <aside className="reader-source-column">
-          <section className="reader-filter-card">
-            <p className="reader-mini-label">Filters</p>
-            <Link className={filters.filter === "all" ? "active" : ""} href={withQuery(filters, { filter: "all", feed: undefined, folder: undefined, story: undefined })}>
-              <span>All</span>
-              <strong>{counts.all}</strong>
-            </Link>
-            <Link className={filters.filter === "unread" ? "active" : ""} href={withQuery(filters, { filter: "unread", story: undefined })}>
-              <span>Unread</span>
-              <strong>{counts.unread}</strong>
-            </Link>
-            <Link className={filters.filter === "saved" ? "active" : ""} href={withQuery(filters, { filter: "saved", story: undefined })}>
-              <span>Saved</span>
-              <strong>{counts.saved}</strong>
-            </Link>
-            <Link className={filters.filter === "trending" ? "active" : ""} href={withQuery(filters, { filter: "trending", story: undefined })}>
-              <span>Trending</span>
-              <strong>{counts.trending}</strong>
-            </Link>
-            <Link href="/admin/posts?status=draft">
-              <span>AI Drafts</span>
-              <strong>{draftCount}</strong>
-            </Link>
-          </section>
+      <BreakingNewsTicker items={breakingItems} />
+      <AdSlot position="top" className="news-home-top-ad" />
 
-          <AddFeedPanel folders={folderOptions} />
+      <main className="news-home-shell">
+        {featuredPost ? (
+          <>
+            <HeroStory post={featuredPost} related={heroRelated} />
 
-          <section className="reader-folders">
-            <div className="reader-section-heading">
-              <p className="reader-mini-label">Folders & sources</p>
-              <Link href="/admin/feeds">Manage</Link>
-            </div>
-            {folders.length === 0 ? (
-              <div className="reader-empty-mini">No feeds yet. Add one above or run seed.</div>
-            ) : (
-              folders.map((folder) => (
-                <div className="reader-folder" key={folder.id}>
-                  <Link
-                    className={`reader-folder-name ${filters.folder === folder.id ? "active" : ""}`}
-                    href={withQuery(filters, { folder: folder.id, feed: undefined, story: undefined })}
-                  >
-                    <span style={{ background: folder.color || "#22a6b3" }} />
-                    {folder.name}
+            <section className="news-home-topic-carousel" aria-label="Trending topics">
+              <div>
+                <p className="news-home-kicker">Trending topics</p>
+                <h2>Signals readers are tracking</h2>
+              </div>
+              <div className="news-home-topic-track">
+                {topics.map((topic) => (
+                  <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+                    <span>#</span>
+                    {topic}
                   </Link>
-                  <div className="reader-feed-list">
-                    {folder.feeds.map((feed) => (
-                      <Link
-                        className={filters.feed === feed.id ? "active" : ""}
-                        href={withQuery(filters, { feed: feed.id, folder: undefined, story: undefined })}
-                        key={feed.id}
-                      >
-                        <span>{feed.title}</span>
-                        <small>{feed.unreadCount || feed.storyCount}</small>
+                ))}
+              </div>
+            </section>
+
+            <div className="news-home-layout">
+              <div className="news-home-primary">
+                <NewsSection title="Trending Now" posts={trendingPosts} href="/?sort=trending" />
+
+                <section className="news-home-section">
+                  <div className="news-home-section-heading">
+                    <div>
+                      <p className="news-home-kicker">Updated continuously</p>
+                      <h2>Latest news</h2>
+                    </div>
+                    <Link href="/?sort=latest">View all</Link>
+                  </div>
+                  <div className="news-home-latest-list">
+                    {latestPosts.length ? (
+                      latestPosts.slice(0, 10).map((post) => (
+                        <article key={post.id} className="news-home-latest-row">
+                          <div>
+                            <div className="news-home-meta">
+                              <span>{post.category}</span>
+                              <time dateTime={(post.publishedAt || post.createdAt).toISOString()}>
+                                {timeAgo(post.publishedAt || post.createdAt)}
+                              </time>
+                              <span>{post.source || "Daily Signal Wire"}</span>
+                            </div>
+                            <h3>
+                              <Link href={`/news/${post.slug}`}>{post.title}</Link>
+                            </h3>
+                            <p>{post.excerpt}</p>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <div className="news-home-empty">No additional published stories yet.</div>
+                    )}
+                  </div>
+                </section>
+
+                <div className="news-home-category-grid">
+                  {categorySections.map((section) => (
+                    <NewsSection
+                      key={section.category}
+                      title={section.category}
+                      posts={section.posts}
+                      href={`/category/${categorySlug(section.category)}`}
+                      compact
+                    />
+                  ))}
+                </div>
+
+                {latestFeedStories.length > 0 && (
+                  <section className="news-home-section news-home-feed-section">
+                    <div className="news-home-section-heading">
+                      <div>
+                        <p className="news-home-kicker">RSS reader</p>
+                        <h2>Latest source updates</h2>
+                      </div>
+                      <Link href="/admin/feeds">Manage feeds</Link>
+                    </div>
+                    <div className="news-home-feed-list">
+                      {latestFeedStories.map((story) => (
+                        <Link key={story.id} href={withQuery(filters, { story: story.id })}>
+                          <span>{story.feedTitle}</span>
+                          <strong>{story.title}</strong>
+                          <time>{timeAgo(story.publishedAt || story.fetchedAt)}</time>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </div>
+
+              <aside className="news-home-sidebar">
+                <MostRead posts={mostReadPosts} />
+                <section className="news-home-panel news-home-source-panel">
+                  <p className="news-home-kicker">Newsroom status</p>
+                  <div className="news-home-status-grid">
+                    <span>
+                      <strong>{counts.all}</strong>
+                      Stories
+                    </span>
+                    <span>
+                      <strong>{counts.unread}</strong>
+                      Unread
+                    </span>
+                    <span>
+                      <strong>{draftCount}</strong>
+                      AI drafts
+                    </span>
+                    <span>
+                      <strong>{feedCount}</strong>
+                      Sources
+                    </span>
+                  </div>
+                  <p className="news-home-muted">
+                    AI drafting is {aiConfigured ? "configured" : "waiting for API configuration"}.
+                    Admins review every AI story before publishing.
+                  </p>
+                </section>
+                <NewsletterCard />
+                <AdSlot position="sidebar" className="news-home-sidebar-ad" />
+                <section className="news-home-panel">
+                  <p className="news-home-kicker">Popular topics</p>
+                  <div className="news-home-topic-cloud">
+                    {topics.slice(0, 10).map((topic) => (
+                      <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+                        {topic}
                       </Link>
                     ))}
                   </div>
-                </div>
-              ))
-            )}
-          </section>
-        </aside>
-
-        <section className="reader-story-column">
-          <div className="story-column-toolbar">
-            <div>
-              <p className="reader-mini-label">Stories</p>
-              <h1>{filters.q ? `Search: ${filters.q}` : "Latest from your feeds"}</h1>
-            </div>
-            <div className="view-mode-tabs">
-              {(["list", "grid", "split", "magazine"] as const).map((view) => (
-                <Link
-                  className={filters.view === view ? "active" : ""}
-                  href={withQuery(filters, { view })}
-                  key={view}
-                >
-                  {view}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {stories.length === 0 ? (
-            <div className="reader-empty-state compact">
-              <div className="empty-signal">
-                <span />
-                <span />
-                <span />
-              </div>
-              <h2>No stories match this view.</h2>
-              <p>Add RSS feeds, import OPML, or clear the current filter.</p>
-            </div>
-          ) : (
-            <div className={`story-list story-list-${filters.view}`}>
-              {stories.map((item, index) => (
-                <div key={item.id} className="story-row-wrapper">
-                  {index === 6 && stories.length >= 9 && (
-                    <AdSlot position="feed" className="reader-feed-ad" />
-                  )}
-                  <Link
-                    className={`story-row ${item.id === activeStoryId ? "active" : ""} ${item.isRead ? "read" : "unread"}`}
-                    href={withQuery(filters, { story: item.id })}
-                  >
-                    <div className="story-row-image">
-                      {item.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.imageUrl} alt="" loading="lazy" decoding="async" />
-                      ) : (
-                        <span>DSW</span>
-                      )}
-                    </div>
-                    <div className="story-row-copy">
-                      <div className="story-row-meta">
-                        <span>{item.feedTitle}</span>
-                        <time>{timeAgo(item.publishedAt || item.fetchedAt)}</time>
-                      </div>
-                      <h2>{item.title}</h2>
-                      <p>{item.excerpt || "Open the original source for more context."}</p>
-                      <div className="story-row-tags">
-                        {!item.isRead && <small>Unread</small>}
-                        {item.isSaved && <small>Saved</small>}
-                        {item.tags.slice(0, 2).map((tag) => (
-                          <small key={tag}>{tag}</small>
-                        ))}
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <article className="reader-detail-column">
-          {!story ? (
-            <div className="reader-detail-empty">
-              <p className="reader-mini-label">Reader</p>
-              <h2>Select a story</h2>
-              <p>The full reading pane will appear here once a feed story is selected.</p>
-            </div>
-          ) : (
-            <>
-              <div className="reader-detail-source">
-                <span>{story.feedTitle}</span>
-                <time>{timeAgo(story.publishedAt || story.fetchedAt)}</time>
-              </div>
-              <h1>{story.title}</h1>
-              {story.imageUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  className="reader-detail-image"
-                  src={story.imageUrl}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                />
-              )}
-              <p className="reader-detail-excerpt">
-                {story.excerpt || "This feed supplied metadata only. Open the original story to read more."}
-              </p>
-              {story.content ? (
-                <div className="reader-detail-content">{story.content}</div>
-              ) : (
-                <div className="reader-copyright-note">
-                  Full article text is not stored unless the feed clearly allows redistribution.
-                  Daily Signal Wire keeps source metadata and sends readers to the original publisher.
-                </div>
-              )}
-              <a className="original-link" href={story.sourceUrl} target="_blank" rel="noreferrer">
-                Open original story →
-              </a>
-              <StoryActions
-                storyId={story.id}
-                title={story.title}
-                hook={story.excerpt || story.feedTitle}
-                sourceUrl={story.sourceUrl}
-                isSaved={story.isSaved}
-                aiConfigured={aiConfigured}
-              />
-              <section className="reader-side-panel">
-                <p className="reader-mini-label">Most read</p>
-                {mostRead.length ? (
-                  mostRead.map((post, index) => (
-                    <Link key={post.id} href={`/news/${post.slug}`}>
-                      <span>{index + 1}</span>
-                      <strong>{post.title}</strong>
+                </section>
+                {highlightedStory && (
+                  <section className="news-home-panel news-home-source-panel">
+                    <p className="news-home-kicker">Source watch</p>
+                    <h3>{highlightedStory.title}</h3>
+                    <p className="news-home-muted">
+                      {highlightedStory.excerpt || "Metadata-only feed update from a source."}
+                    </p>
+                    <Link className="news-home-read-link" href={highlightedStory.sourceUrl}>
+                      Original source <span>↗</span>
                     </Link>
-                  ))
-                ) : (
-                  <p>No published stories yet.</p>
+                  </section>
                 )}
-              </section>
-              <section className="reader-side-panel">
-                <p className="reader-mini-label">Latest updates</p>
-                {latestUpdates.map((item) => (
-                  <Link key={item.id} href={withQuery(filters, { story: item.id })}>
-                    <span>{timeAgo(item.publishedAt || item.fetchedAt)}</span>
-                    <strong>{item.title}</strong>
-                  </Link>
-                ))}
-              </section>
-              <section className="newsletter-panel">
-                <NewsletterCard />
-              </section>
-              <AdSlot position="sidebar" className="reader-detail-ad" />
-            </>
-          )}
-        </article>
+              </aside>
+            </div>
+          </>
+        ) : (
+          <section className="news-home-empty-state">
+            <div className="empty-signal">
+              <span />
+              <span />
+              <span />
+            </div>
+            <p className="news-home-kicker">The wire is quiet</p>
+            <h1>No published stories yet.</h1>
+            <p>
+              Editors are reviewing sourced drafts. Published reporting will appear here
+              as soon as it clears the newsroom.
+            </p>
+            <Link className="news-home-primary-button" href="/admin">
+              Open newsroom
+            </Link>
+          </section>
+        )}
       </main>
-      <InfinitePostFeed initialPosts={serializedPublishedPosts} />
+
+      {publishedPosts.length > 0 && (
+        <InfinitePostFeed initialPosts={serializedPublishedPosts.slice(10)} />
+      )}
+
+      <ReaderFooter />
     </div>
   );
 }

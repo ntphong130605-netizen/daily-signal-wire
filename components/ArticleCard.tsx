@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { normalizeEditorialImageUrl } from "@/lib/editorialImages";
 
 export type ReaderPost = {
@@ -26,21 +27,26 @@ function relativeTime(date: Date | null) {
 
 export function ArticleImage({
   post,
-  className = ""
+  className = "",
+  priority = false,
+  sizes = "(max-width: 768px) 100vw, 33vw"
 }: {
   post: ReaderPost;
   className?: string;
+  priority?: boolean;
+  sizes?: string;
 }) {
   const imageUrl = normalizeEditorialImageUrl(post.imageUrl, post.category);
   return (
     <div className={`article-image ${className}`}>
       {imageUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={imageUrl}
           alt={post.imageAlt || post.title}
-          loading="lazy"
-          decoding="async"
+          fill
+          sizes={sizes}
+          priority={priority}
+          loading={priority ? "eager" : "lazy"}
         />
       ) : (
         <div className="article-image-fallback" aria-label="No article image">
