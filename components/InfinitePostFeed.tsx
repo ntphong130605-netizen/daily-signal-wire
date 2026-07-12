@@ -69,8 +69,19 @@ export default function InfinitePostFeed({
         </div>
       </div>
       <div className="infinite-news-grid">
-        {posts.map((post) => (
-          <ArticleCard key={post.id} post={revive(post)} />
+        {posts.map((post, index) => (
+          <div
+            className={
+              index % 9 === 0
+                ? "infinite-news-item infinite-news-item-wide"
+                : index % 7 === 0
+                  ? "infinite-news-item infinite-news-item-tall"
+                  : "infinite-news-item"
+            }
+            key={post.id}
+          >
+            <ArticleCard post={revive(post)} />
+          </div>
         ))}
       </div>
       <div ref={sentinelRef} className="infinite-sentinel">

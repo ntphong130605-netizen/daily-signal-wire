@@ -6,11 +6,14 @@ export type ReaderPost = {
   id: string;
   slug: string;
   title: string;
+  subtitle?: string | null;
   excerpt: string;
+  summary?: string | null;
   imageUrl: string | null;
   imageAlt?: string | null;
   category: string;
   source?: string;
+  tags?: string[];
   relatedCount?: number;
   publishedAt: Date | null;
   createdAt: Date;
@@ -23,6 +26,11 @@ function relativeTime(date: Date | null) {
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.round(hours / 24)}d ago`;
+}
+
+export function estimateReadingTime(text?: string | null) {
+  const words = (text || "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 220));
 }
 
 export function ArticleImage({
@@ -47,6 +55,7 @@ export function ArticleImage({
           sizes={sizes}
           priority={priority}
           loading={priority ? "eager" : "lazy"}
+          quality={priority ? 88 : 78}
         />
       ) : (
         <div className="article-image-fallback" aria-label="No article image">
@@ -75,9 +84,13 @@ export default function ArticleCard({
       <div className="news-card-body">
         <div className="story-meta">
           <span>{post.category}</span>
-          <time dateTime={(post.publishedAt || post.createdAt).toISOString()}>
+          <time
+            dateTime={(post.publishedAt || post.createdAt).toISOString()}
+            suppressHydrationWarning
+          >
             {relativeTime(post.publishedAt || post.createdAt)}
           </time>
+          <span>{estimateReadingTime(`${post.title} ${post.excerpt}`)} min read</span>
         </div>
         <h3>
           <Link href={`/news/${post.slug}`}>{post.title}</Link>

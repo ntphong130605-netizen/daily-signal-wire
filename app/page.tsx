@@ -12,22 +12,41 @@ import { absoluteUrl, siteDescription, siteName } from "@/lib/site";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: siteName,
+  title: `${siteName} | AI-assisted US news, trends and source-first reporting`,
   description: siteDescription(),
+  keywords: [
+    "Daily Signal Wire",
+    "AI newsroom",
+    "US news",
+    "Google Trends news",
+    "RSS reader",
+    "breaking news",
+    "technology news",
+    "business news"
+  ],
   alternates: {
     canonical: absoluteUrl("/")
   },
   openGraph: {
-    title: siteName,
+    title: `${siteName} | Source-first AI newsroom`,
     description: siteDescription(),
     url: absoluteUrl("/"),
     siteName,
-    type: "website"
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/editorial/ai/newsroom.jpg"),
+        width: 1600,
+        height: 900,
+        alt: "Daily Signal Wire newsroom"
+      }
+    ]
   },
   twitter: {
     card: "summary_large_image",
-    title: siteName,
-    description: siteDescription()
+    title: `${siteName} | Source-first AI newsroom`,
+    description: siteDescription(),
+    images: [absoluteUrl("/editorial/ai/newsroom.jpg")]
   }
 };
 
@@ -43,6 +62,18 @@ function normalizeView(value: string | undefined) {
   return ["list", "grid", "split", "magazine"].includes(value || "")
     ? (value as "list" | "grid" | "split" | "magazine")
     : "list";
+}
+
+function parseStringArray(value: string | null | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function toReaderStory(story: StoryRecord): ReaderStory {
@@ -221,7 +252,9 @@ export default async function HomePage({
             id: post.id,
             slug: post.slug,
             title: post.title,
+            subtitle: post.subtitle,
             excerpt: post.excerpt,
+            summary: post.summary,
             imageUrl: normalizeEditorialImageUrl(
               post.featuredImageUrl ||
                 post.featuredImage ||
@@ -233,6 +266,7 @@ export default async function HomePage({
             imageAlt: post.imageAlt || "",
             category,
             source: post.sourceStory?.feed?.title || "Daily Signal Wire",
+            tags: parseStringArray(post.tags),
             relatedCount: Math.max(0, publishedPosts.length - 1),
             publishedAt: post.publishedAt,
             createdAt: post.createdAt
@@ -242,40 +276,72 @@ export default async function HomePage({
     }
   );
 
+  const homepageJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: siteName,
+      url: absoluteUrl("/"),
+      description: siteDescription(),
+      isPartOf: {
+        "@type": "WebSite",
+        name: siteName,
+        url: absoluteUrl("/")
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      name: "Latest Daily Signal Wire reports",
+      itemListElement: publishedPosts.slice(0, 10).map((post, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: absoluteUrl(`/news/${post.slug}`),
+        name: post.title
+      }))
+    }
+  ];
+
   return (
-    <NewsReaderLayout
-      folders={folders.map((folder): ReaderFolder => ({
-        id: folder.id,
-        name: folder.name,
-        color: folder.color,
-        feeds: folder.feeds.map((feed) => ({
-          id: feed.id,
-          title: feed.title,
-          fetchStatus: feed.fetchStatus,
-          storyCount: feed._count.stories,
-          unreadCount:
-            unreadByFeed.find((item) => item.feedId === feed.id)?._count._all || 0
-        }))
-      }))}
-      stories={stories.map(toReaderStory)}
-      selectedStory={(selected && toReaderStory(selected)) || null}
-      filters={{
-        filter,
-        feed: params.feed,
-        folder: params.folder,
-        story: params.story,
-        q: params.q,
-        view
-      }}
-      counts={{
-        all: allCount,
-        unread: unreadCount,
-        saved: savedCount,
-        trending: trendingCount
-      }}
-      draftCount={draftCount}
-      aiConfigured={Boolean(process.env.OPENAI_API_KEY)}
-      publishedPosts={publishedPosts}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageJsonLd) }}
+      />
+      <NewsReaderLayout
+        folders={folders.map((folder): ReaderFolder => ({
+          id: folder.id,
+          name: folder.name,
+          color: folder.color,
+          feeds: folder.feeds.map((feed) => ({
+            id: feed.id,
+            title: feed.title,
+            fetchStatus: feed.fetchStatus,
+            storyCount: feed._count.stories,
+            unreadCount:
+              unreadByFeed.find((item) => item.feedId === feed.id)?._count._all || 0
+          }))
+        }))}
+        stories={stories.map(toReaderStory)}
+        selectedStory={(selected && toReaderStory(selected)) || null}
+        filters={{
+          filter,
+          feed: params.feed,
+          folder: params.folder,
+          story: params.story,
+          q: params.q,
+          view
+        }}
+        counts={{
+          all: allCount,
+          unread: unreadCount,
+          saved: savedCount,
+          trending: trendingCount
+        }}
+        draftCount={draftCount}
+        aiConfigured={Boolean(process.env.OPENAI_API_KEY)}
+        publishedPosts={publishedPosts}
+      />
+    </>
   );
 }

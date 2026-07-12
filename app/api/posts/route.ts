@@ -1,6 +1,18 @@
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 
+function parseStringArray(value: string | null | undefined) {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
@@ -31,7 +43,9 @@ export async function GET(request: Request) {
         id: post.id,
         slug: post.slug,
         title: post.title,
+        subtitle: post.subtitle,
         excerpt: post.excerpt,
+        summary: post.summary,
         imageUrl: normalizeEditorialImageUrl(
           post.featuredImageUrl ||
             post.featuredImage ||
@@ -43,6 +57,7 @@ export async function GET(request: Request) {
         imageAlt: post.imageAlt || "",
         category,
         source: post.sourceStory?.feed?.title || "Daily Signal Wire",
+        tags: parseStringArray(post.tags),
         publishedAt: (post.publishedAt || post.createdAt).toISOString(),
         createdAt: post.createdAt.toISOString()
       };

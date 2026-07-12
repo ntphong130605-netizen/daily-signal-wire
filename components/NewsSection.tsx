@@ -1,5 +1,9 @@
 import Link from "next/link";
-import ArticleCard, { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
+import ArticleCard, {
+  ArticleImage,
+  estimateReadingTime,
+  type ReaderPost
+} from "@/components/ArticleCard";
 
 function categorySlug(category: string) {
   return category.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -38,11 +42,13 @@ export default function NewsSection({
               post={featured}
               sizes="(max-width: 768px) 100vw, 24vw"
             />
+            <span>{featured.category} · {estimateReadingTime(featured.excerpt)} min read</span>
             <strong>{featured.title}</strong>
           </Link>
           <div className="news-home-category-list">
-            {rest.slice(0, 3).map((post) => (
+            {rest.slice(0, 4).map((post) => (
               <Link key={post.id} href={`/news/${post.slug}`}>
+                <span>{post.category}</span>
                 {post.title}
               </Link>
             ))}

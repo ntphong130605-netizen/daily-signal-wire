@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { ArticleImage, type ReaderPost } from "@/components/ArticleCard";
+import {
+  ArticleImage,
+  estimateReadingTime,
+  type ReaderPost
+} from "@/components/ArticleCard";
 
 function timeAgo(date: Date | null | undefined) {
   if (!date) return "Just now";
@@ -20,21 +24,28 @@ export default function HeroStory({
   post: ReaderPost;
   related?: ReaderPost[];
 }) {
+  const storyDate = post.publishedAt || post.createdAt;
+  const subtitle = post.subtitle || post.summary || post.excerpt;
+
   return (
     <section className="news-home-hero" aria-labelledby="top-story-heading">
       <article className="news-home-hero-copy">
-        <p className="news-home-kicker">{post.category}</p>
+        <div className="news-home-hero-badges">
+          <p className="news-home-kicker">{post.category}</p>
+          <span>Top story</span>
+        </div>
         <h1 id="top-story-heading">
           <Link href={`/news/${post.slug}`}>{post.title}</Link>
         </h1>
         <div className="news-home-meta">
           <span>{post.source || "Daily Signal Wire"}</span>
-          <time dateTime={(post.publishedAt || post.createdAt).toISOString()}>
-            {timeAgo(post.publishedAt || post.createdAt)}
+          <time dateTime={storyDate.toISOString()} suppressHydrationWarning>
+            {timeAgo(storyDate)}
           </time>
+          <span>{estimateReadingTime(`${post.title} ${post.excerpt}`)} min read</span>
           <span>{post.relatedCount ?? related.length} related</span>
         </div>
-        <p>{post.excerpt}</p>
+        <p>{subtitle}</p>
         <Link className="news-home-read-link" href={`/news/${post.slug}`}>
           Read full story <span>→</span>
         </Link>
@@ -47,6 +58,9 @@ export default function HeroStory({
           priority
           sizes="(max-width: 768px) 100vw, 66vw"
         />
+        <span className="news-home-hero-image-label">
+          Premium editorial image
+        </span>
       </Link>
 
       {related.length > 0 && (
@@ -55,6 +69,7 @@ export default function HeroStory({
             <Link key={item.id} href={`/news/${item.slug}`}>
               <span>{item.category}</span>
               <strong>{item.title}</strong>
+              <small>{estimateReadingTime(`${item.title} ${item.excerpt}`)} min read</small>
             </Link>
           ))}
         </div>

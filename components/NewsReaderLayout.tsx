@@ -1,8 +1,9 @@
 import Link from "next/link";
 import AdSlot from "@/components/ads/AdSlot";
-import type { ReaderPost } from "@/components/ArticleCard";
+import { estimateReadingTime, type ReaderPost } from "@/components/ArticleCard";
 import BreakingNewsTicker, { type BreakingNewsItem } from "@/components/BreakingNewsTicker";
 import HeroStory from "@/components/HeroStory";
+import HomepageSearchBox from "@/components/HomepageSearchBox";
 import InfinitePostFeed from "@/components/InfinitePostFeed";
 import Logo from "@/components/Logo";
 import MobileMenu, { type MobileMenuLink } from "@/components/MobileMenu";
@@ -63,7 +64,16 @@ const navLinks: MobileMenuLink[] = [
   { label: "Lifestyle", href: "/category/lifestyle" }
 ];
 
-const categoryBlocks = ["Technology", "Business", "Sports", "Entertainment"];
+const categoryBlocks = [
+  "Technology",
+  "Business",
+  "Politics",
+  "Health",
+  "Science",
+  "Sports",
+  "World",
+  "Lifestyle"
+];
 
 function timeAgo(date: Date | null | undefined) {
   if (!date) return "Just now";
@@ -89,8 +99,17 @@ function matchesCategory(post: ReaderPost, category: string) {
   const value = post.category.toLowerCase();
   const target = category.toLowerCase();
   if (target === "business") return value.includes("business") || value.includes("money");
+  if (target === "politics") return value.includes("politic") || value.includes("election");
+  if (target === "health") return value.includes("health") || value.includes("medical");
+  if (target === "science") return value.includes("science") || value.includes("climate");
   if (target === "technology") return value.includes("tech") || value.includes("ai");
+  if (target === "world") return value.includes("world") || value.includes("global");
+  if (target === "lifestyle") return value.includes("life") || value.includes("travel") || value.includes("food");
   return value.includes(target);
+}
+
+function sourceLabel(post: ReaderPost) {
+  return post.source || "Daily Signal Wire";
 }
 
 function withQuery(filters: ReaderFilters, patch: Partial<ReaderFilters>) {
@@ -129,12 +148,14 @@ export default function NewsReaderLayout({
 }) {
   const featuredPost = publishedPosts[0] || null;
   const heroRelated = publishedPosts.slice(1, 4);
-  const trendingPosts = publishedPosts.slice(1, 5);
-  const latestPosts = publishedPosts.slice(1, 11);
-  const mostReadPosts = publishedPosts.slice(0, 5);
+  const trendingPosts = publishedPosts.slice(1, 7);
+  const editorPicks = publishedPosts.slice(4, 8);
+  const latestPosts = publishedPosts.slice(1, 13);
+  const mostReadPosts = publishedPosts.slice(0, 10);
   const feedCount = folders.reduce((total, folder) => total + folder.feeds.length, 0);
   const highlightedStory = selectedStory || stories[0] || null;
-  const latestFeedStories = stories.slice(0, 8);
+  const latestFeedStories = stories.slice(0, 10);
+  const liveUpdates = stories.slice(0, 6);
   const serializedPublishedPosts = publishedPosts.map((post) => ({
     ...post,
     publishedAt: post.publishedAt?.toISOString() || null,
@@ -160,9 +181,14 @@ export default function NewsReaderLayout({
   ]
     .filter(Boolean)
     .slice(0, 14);
+  const searchSuggestions = publishedPosts.slice(0, 12).map((post) => ({
+    label: post.title,
+    href: `/news/${post.slug}`,
+    meta: `${post.category} · ${sourceLabel(post)}`
+  }));
   const categorySections = categoryBlocks.map((category) => ({
     category,
-    posts: publishedPosts.filter((post) => matchesCategory(post, category)).slice(0, 4)
+    posts: publishedPosts.filter((post) => matchesCategory(post, category)).slice(0, 5)
   }));
 
   return (
@@ -177,19 +203,11 @@ export default function NewsReaderLayout({
               </Link>
             ))}
           </nav>
-          <form className="news-home-search" action="/">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m16.5 16.5 4 4" />
-            </svg>
-            <input
-              type="search"
-              name="q"
-              defaultValue={filters.q || ""}
-              placeholder="Search Daily Signal Wire"
-              aria-label="Search Daily Signal Wire"
-            />
-          </form>
+          <HomepageSearchBox
+            defaultQuery={filters.q || ""}
+            suggestions={searchSuggestions}
+            topics={topics}
+          />
           <ReaderThemeToggle />
           <Link className="news-home-admin-link" href="/admin">
             Admin
@@ -199,12 +217,19 @@ export default function NewsReaderLayout({
       </header>
 
       <BreakingNewsTicker items={breakingItems} />
+      <section className="news-home-trust-strip" aria-label="Newsroom trust signals">
+        <span>AI-assisted drafts require editor approval</span>
+        <span>{publishedPosts.length} published reports</span>
+        <span>{feedCount} monitored sources</span>
+        <span>{draftCount} drafts in review</span>
+      </section>
       <AdSlot position="top" className="news-home-top-ad" />
 
       <main className="news-home-shell">
         {featuredPost ? (
           <>
             <HeroStory post={featuredPost} related={heroRelated} />
+            <AdSlot position="feed" className="news-home-between-ad" />
 
             <section className="news-home-topic-carousel" aria-label="Trending topics">
               <div>
@@ -223,7 +248,45 @@ export default function NewsReaderLayout({
 
             <div className="news-home-layout">
               <div className="news-home-primary">
-                <NewsSection title="Trending Now" posts={trendingPosts} href="/?sort=trending" />
+                <section className="news-home-section news-home-trending-rank">
+                  <div className="news-home-section-heading">
+                    <div>
+                      <p className="news-home-kicker">Trending Now</p>
+                      <h2>What readers are opening first</h2>
+                    </div>
+                    <Link href="/?sort=trending">View all</Link>
+                  </div>
+                  {trendingPosts.length ? (
+                    <ol>
+                      {trendingPosts.map((post, index) => (
+                        <li key={post.id}>
+                          <span>{String(index + 1).padStart(2, "0")}</span>
+                          <div>
+                            <div className="news-home-meta">
+                              <span>{post.category}</span>
+                              <time
+                                dateTime={(post.publishedAt || post.createdAt).toISOString()}
+                                suppressHydrationWarning
+                              >
+                                {timeAgo(post.publishedAt || post.createdAt)}
+                              </time>
+                              <span>{estimateReadingTime(`${post.title} ${post.excerpt}`)} min read</span>
+                            </div>
+                            <h3>
+                              <Link href={`/news/${post.slug}`}>{post.title}</Link>
+                            </h3>
+                            <p>{post.excerpt}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <div className="news-home-empty">No trending published stories yet.</div>
+                  )}
+                </section>
+
+                <NewsSection title="Editor's Picks" posts={editorPicks} href="/?sort=editors" />
+                <AdSlot position="feed" className="news-home-between-ad" />
 
                 <section className="news-home-section">
                   <div className="news-home-section-heading">
@@ -235,15 +298,19 @@ export default function NewsReaderLayout({
                   </div>
                   <div className="news-home-latest-list">
                     {latestPosts.length ? (
-                      latestPosts.slice(0, 10).map((post) => (
-                        <article key={post.id} className="news-home-latest-row">
-                          <div>
-                            <div className="news-home-meta">
-                              <span>{post.category}</span>
-                              <time dateTime={(post.publishedAt || post.createdAt).toISOString()}>
+                        latestPosts.slice(0, 10).map((post) => (
+                          <article key={post.id} className="news-home-latest-row">
+                            <div>
+                              <div className="news-home-meta">
+                                <span>{post.category}</span>
+                              <time
+                                dateTime={(post.publishedAt || post.createdAt).toISOString()}
+                                suppressHydrationWarning
+                              >
                                 {timeAgo(post.publishedAt || post.createdAt)}
                               </time>
-                              <span>{post.source || "Daily Signal Wire"}</span>
+                              <span>{sourceLabel(post)}</span>
+                              <span>{estimateReadingTime(`${post.title} ${post.excerpt}`)} min read</span>
                             </div>
                             <h3>
                               <Link href={`/news/${post.slug}`}>{post.title}</Link>
@@ -257,6 +324,36 @@ export default function NewsReaderLayout({
                     )}
                   </div>
                 </section>
+
+                {liveUpdates.length > 0 && (
+                  <section className="news-home-section news-home-live-updates">
+                    <div className="news-home-section-heading">
+                      <div>
+                        <p className="news-home-kicker">Live desk</p>
+                        <h2>Latest source updates</h2>
+                      </div>
+                      <Link href="/admin/stories">Open reader</Link>
+                    </div>
+                    <ol>
+                      {liveUpdates.map((story) => (
+                        <li key={story.id}>
+                          <time
+                            dateTime={(story.publishedAt || story.fetchedAt).toISOString()}
+                            suppressHydrationWarning
+                          >
+                            {timeAgo(story.publishedAt || story.fetchedAt)}
+                          </time>
+                          <div>
+                            <span>{story.feedTitle}</span>
+                            <Link href={withQuery(filters, { story: story.id })}>
+                              {story.title}
+                            </Link>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
 
                 <div className="news-home-category-grid">
                   {categorySections.map((section) => (
@@ -294,6 +391,22 @@ export default function NewsReaderLayout({
 
               <aside className="news-home-sidebar">
                 <MostRead posts={mostReadPosts} />
+                {latestFeedStories.length > 0 && (
+                  <section className="news-home-panel news-home-latest-updates-panel">
+                    <div className="news-home-panel-heading">
+                      <p className="news-home-kicker">Latest updates</p>
+                      <span>RSS</span>
+                    </div>
+                    <div>
+                      {latestFeedStories.slice(0, 5).map((story) => (
+                        <Link key={story.id} href={withQuery(filters, { story: story.id })}>
+                          <strong>{story.title}</strong>
+                          <span>{story.feedTitle} · {timeAgo(story.publishedAt || story.fetchedAt)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                )}
                 <section className="news-home-panel news-home-source-panel">
                   <p className="news-home-kicker">Newsroom status</p>
                   <div className="news-home-status-grid">
@@ -369,6 +482,8 @@ export default function NewsReaderLayout({
       {publishedPosts.length > 0 && (
         <InfinitePostFeed initialPosts={serializedPublishedPosts.slice(10)} />
       )}
+
+      <AdSlot position="bottom" className="news-home-bottom-ad" />
 
       <ReaderFooter />
     </div>
