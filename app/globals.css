@@ -5700,6 +5700,33 @@ html[data-theme="light"],
     display: block;
   }
 
+  .breaking-news-track {
+    height: auto;
+  }
+
+  .breaking-news-marquee {
+    position: static;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    overflow: hidden;
+    animation: none;
+    white-space: nowrap;
+  }
+
+  .breaking-news-marquee a {
+    display: none;
+  }
+
+  .breaking-news-marquee a:first-child {
+    display: inline-flex;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+  }
+
   .news-home-admin-link {
     display: none;
   }
