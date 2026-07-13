@@ -77,7 +77,23 @@ export async function PATCH(
         imageCaption: data.imageCaption,
         imageDisclosure: data.imageDisclosure,
         factCheckNotes: JSON.stringify(data.factCheckNotes),
-        sourceUrls: JSON.stringify(data.sourceUrls)
+        sourceUrls: JSON.stringify(data.sourceUrls),
+        factCheckStatus: "Needs Review",
+        factCheckSummary:
+          "Draft was edited after the last verification. Run Fact Check before publishing.",
+        trustScore: null,
+        evidenceScore: null,
+        sourceDiversityScore: null,
+        freshnessScore: null,
+        confidenceLevel: null,
+        factCheckEvidence: "[]",
+        factCheckWarnings: "[]",
+        riskyParagraphs: "[]",
+        verificationMetadata: JSON.stringify({
+          event: "manual_edit_requires_reverification",
+          at: new Date().toISOString()
+        }),
+        verifiedAt: null
       }
     });
     return Response.json({ ok: true });

@@ -16,8 +16,12 @@ type PublishablePost = {
   imageAlt?: string | null;
   imageSourceType?: string | null;
   imageDisclosure?: string | null;
+  aiGenerated: boolean;
   factCheckNotes: string;
   sourceUrls: string;
+  factCheckStatus?: string | null;
+  trustScore?: number | null;
+  factCheckSummary?: string | null;
   category?: { name?: string | null } | null;
   trend?: { category?: string | null } | null;
   tags?: string | null;
@@ -40,6 +44,12 @@ export function validatePostForPublishing(
   if (!confirmedFactCheck) return "Fact-check confirmation is required.";
   if (sources.length === 0 || notes.length === 0) {
     return "Sources and fact-check notes are required.";
+  }
+  if (post.aiGenerated && post.factCheckStatus !== "Verified") {
+    return "AI-generated stories must pass the AI Fact Checker and be marked Verified before publishing.";
+  }
+  if (post.aiGenerated && (post.trustScore ?? 0) < 75) {
+    return "AI-generated stories need a trust score of at least 75 before publishing.";
   }
   if (!post.title.trim() || !post.excerpt.trim() || !post.content.trim()) {
     return "Title, excerpt and article content are required before publishing.";

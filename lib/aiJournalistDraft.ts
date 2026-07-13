@@ -3,6 +3,7 @@ import { parseJsonArray, parseStringArray } from "@/lib/json";
 import { logError, logInfo } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
+import { runFactCheckForPost } from "@/lib/aiFactChecker";
 import type { SourceContext } from "@/lib/trends";
 import {
   AI_JOURNALIST_PROMPT_VERSION,
@@ -218,6 +219,32 @@ async function createRevision({
   });
 }
 
+async function runDraftFactCheck(postId: string, context: Record<string, unknown>) {
+  try {
+    await runFactCheckForPost(postId);
+  } catch (error) {
+    logError("ai_fact_check_after_draft_failed", error, { postId, ...context });
+    await prisma.post
+      .update({
+        where: { id: postId },
+        data: {
+          factCheckStatus: "Low Confidence",
+          factCheckSummary:
+            "Automated fact-checking failed. Run Fact Check manually before publication.",
+          verificationMetadata: json({
+            promptVersion: "ai-fact-checker-v1.0",
+            generatedAt: new Date().toISOString(),
+            method: "failed_after_draft_generation"
+          }),
+          verifiedAt: new Date()
+        }
+      })
+      .catch((updateError) =>
+        logError("ai_fact_check_failure_status_update_failed", updateError, { postId })
+      );
+  }
+}
+
 export async function generateJournalistDraftFromTrend(
   trendId: string,
   toneInput: JournalistTone = "Neutral"
@@ -284,6 +311,11 @@ export async function generateJournalistDraftFromTrend(
     metadata: result.metadata,
     tokenUsage: result.tokenUsage,
     generationTimeMs: result.generationTimeMs
+  });
+  await runDraftFactCheck(post.id, {
+    trendId,
+    version,
+    source: "trend"
   });
   return post;
 }
@@ -401,6 +433,11 @@ export async function generateJournalistDraftFromResearch(
     metadata: result.metadata,
     tokenUsage: result.tokenUsage,
     generationTimeMs: result.generationTimeMs
+  });
+  await runDraftFactCheck(post.id, {
+    researchCandidateId,
+    version,
+    source: "research"
   });
 
   logInfo("journalist_research_draft_generated", {
@@ -524,6 +561,11 @@ export async function rewritePostSection({
     metadata: result.metadata,
     tokenUsage: result.tokenUsage,
     generationTimeMs: result.generationTimeMs
+  });
+  await runDraftFactCheck(postId, {
+    version: nextVersion,
+    source: "rewrite",
+    section
   });
 
   logInfo("journalist_section_rewritten", { postId, section, version: nextVersion });

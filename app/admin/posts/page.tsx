@@ -123,7 +123,10 @@ export default async function AdminPostsPage({
                     <div>
                       <span>{post.trend?.category || "Latest"}</span>
                       <strong>{post.title}</strong>
-                      <small>{post.slug}</small>
+                      <small>
+                        {post.slug} · Fact-check: {post.factCheckStatus}
+                        {post.trustScore !== null ? ` · ${post.trustScore}` : ""}
+                      </small>
                     </div>
                   </div>
                   <span className={`post-status post-status-${post.status}`}>

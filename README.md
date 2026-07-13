@@ -486,6 +486,45 @@ Story actions include:
 - Image prompts require realistic editorial images, not fake event photos
 - Publishing requires admin approval
 
+## AI Fact Checker
+
+Daily Signal Wire includes a pre-publication fact-checking layer for AI
+newsroom drafts.
+
+Workflow:
+
+1. AI Writer creates a source-first draft from Research, Trends or RSS context.
+2. The Fact Checker extracts important claims from the draft.
+3. Claims are checked against saved source URLs, research source packets and
+   fact-check notes.
+4. The system stores trust score, evidence score, source diversity score,
+   freshness score, warnings, risky paragraphs and verification metadata.
+5. Editors review the report at `/admin/fact-checker` or inside the post editor.
+6. AI-generated articles cannot be published or scheduled until the fact-check
+   status is `Verified` and the trust score is at least 75.
+
+Admin routes:
+
+- `/admin/fact-checker`
+- `/api/ai/fact-check`
+- `/api/ai/verify`
+
+The checker never invents evidence. If source support is weak, single-source,
+conflicting or missing, it flags the draft as `Needs Review`, `Low Confidence`
+or `Rejected`. Regenerating failed sections requires `OPENAI_API_KEY`; running
+the source-based verification report does not crash when the key is missing.
+
+Statuses:
+
+- `Verified`
+- `Needs Review`
+- `Low Confidence`
+- `Rejected`
+
+Preferred evidence domains include Reuters, AP News, BBC, Bloomberg, CNBC,
+Financial Times, government websites, WHO, NASA and official company press or
+investor pages.
+
 ## AdSense
 
 Daily Signal Wire has production-ready Google AdSense slots and an `/ads.txt`

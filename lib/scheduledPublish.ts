@@ -6,7 +6,8 @@ export async function publishDueScheduledPosts(limit = 20) {
   const due = await prisma.post.findMany({
     where: {
       status: "scheduled",
-      scheduledAt: { lte: now }
+      scheduledAt: { lte: now },
+      OR: [{ aiGenerated: false }, { aiGenerated: true, factCheckStatus: "Verified", trustScore: { gte: 75 } }]
     },
     select: { id: true },
     take: limit

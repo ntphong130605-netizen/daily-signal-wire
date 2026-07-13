@@ -47,8 +47,21 @@ type EditablePost = {
   imageLicense: string;
   imageCredit: string;
   generatedImages: GeneratedImageVersion[];
+  aiGenerated: boolean;
   factCheckNotes: string[];
   sourceUrls: string[];
+  factCheckStatus: string;
+  trustScore: number | null;
+  evidenceScore: number | null;
+  sourceDiversityScore: number | null;
+  freshnessScore: number | null;
+  confidenceLevel: string;
+  factCheckSummary: string;
+  factCheckEvidence: FactCheckEvidence[];
+  factCheckWarnings: FactCheckWarning[];
+  riskyParagraphs: RiskyParagraph[];
+  verificationMetadata: string;
+  verifiedAt: string;
   status: string;
   scheduledAt: string;
   rejectionReason: string;
@@ -87,6 +100,49 @@ type GeneratedImageVersion = {
   error: string;
   createdAt: string;
   updatedAt: string;
+};
+
+type FactCheckEvidence = {
+  claim: string;
+  verdict: string;
+  sources: Array<{
+    url: string;
+    title?: string | null;
+    publisher?: string | null;
+    domain: string;
+    trusted: boolean;
+  }>;
+  notes: string[];
+};
+
+type FactCheckWarning = {
+  type: string;
+  severity: "low" | "medium" | "high";
+  message: string;
+  paragraphIndex?: number;
+  claim?: string;
+};
+
+type RiskyParagraph = {
+  index: number;
+  paragraph: string;
+  reason: string;
+  severity: "low" | "medium" | "high";
+  suggestedAction: string;
+};
+
+type FactCheckResult = {
+  status: string;
+  trustScore: number;
+  evidenceScore: number;
+  sourceDiversityScore: number;
+  freshnessScore: number;
+  confidenceLevel: string;
+  summary: string;
+  evidence: FactCheckEvidence[];
+  warnings: FactCheckWarning[];
+  riskyParagraphs: RiskyParagraph[];
+  metadata: Record<string, unknown>;
 };
 
 async function copyText(value: string) {
@@ -150,6 +206,24 @@ export default function AdminPostEditor({
 
   function field<K extends keyof EditablePost>(key: K, value: EditablePost[K]) {
     setPost((current) => ({ ...current, [key]: value }));
+  }
+
+  function applyFactCheckResult(result: FactCheckResult) {
+    setPost((current) => ({
+      ...current,
+      factCheckStatus: result.status,
+      trustScore: result.trustScore,
+      evidenceScore: result.evidenceScore,
+      sourceDiversityScore: result.sourceDiversityScore,
+      freshnessScore: result.freshnessScore,
+      confidenceLevel: result.confidenceLevel,
+      factCheckSummary: result.summary,
+      factCheckEvidence: result.evidence,
+      factCheckWarnings: result.warnings,
+      riskyParagraphs: result.riskyParagraphs,
+      verificationMetadata: JSON.stringify(result.metadata || {}),
+      verifiedAt: new Date().toISOString()
+    }));
   }
 
   async function call(url: string, init: RequestInit, label: string) {
@@ -318,6 +392,58 @@ export default function AdminPostEditor({
       }));
       setMessage(`${section} rewritten. Review before saving or publishing.`);
       trackEvent("generate_ai_article", { post_id: post.id, mode: `rewrite_${section}` });
+      router.refresh();
+    }
+  }
+
+  async function runFactCheck(action: "run" | "regenerate_failed_sections") {
+    const result = await call(
+      "/api/ai/fact-check",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id, action, tone: rewriteTone })
+      },
+      action === "run" ? "fact-check" : "regenerate flagged sections"
+    );
+    if (result?.result) {
+      applyFactCheckResult(result.result);
+      setMessage(
+        action === "run"
+          ? "Fact check complete."
+          : "Flagged sections regenerated and fact-checked."
+      );
+      trackEvent("generate_ai_article", {
+        post_id: post.id,
+        mode: action === "run" ? "fact_check" : "regenerate_failed_sections"
+      });
+      router.refresh();
+    }
+  }
+
+  async function verifyFactCheck(action: "approve" | "reject" | "needs_review" | "low_confidence") {
+    const result = await call(
+      "/api/ai/verify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id, action })
+      },
+      action
+    );
+    if (result) {
+      setPost((current) => ({
+        ...current,
+        factCheckStatus: result.factCheckStatus || current.factCheckStatus,
+        trustScore: result.trustScore ?? current.trustScore,
+        verifiedAt: result.verifiedAt || current.verifiedAt,
+        status: action === "reject" ? "rejected" : current.status,
+        rejectionReason:
+          action === "reject"
+            ? "Rejected by fact-check workflow. Resolve unsupported or conflicting claims before publication."
+            : current.rejectionReason
+      }));
+      setMessage(`${action.replace("_", " ")} saved.`);
       router.refresh();
     }
   }
@@ -608,6 +734,14 @@ export default function AdminPostEditor({
     { label: "FAQ has at least three entries", done: post.faq.length >= 3 },
     { label: "Source URLs are attached", done: post.sourceUrls.length > 0 },
     { label: "Fact-check notes are attached", done: post.factCheckNotes.length > 0 },
+    {
+      label: "AI Fact Checker is verified",
+      done: !post.aiGenerated || post.factCheckStatus === "Verified"
+    },
+    {
+      label: "Trust score is at least 75",
+      done: !post.aiGenerated || (post.trustScore ?? 0) >= 75
+    },
     { label: "Placeholder text has been removed", done: !hasPlaceholderText },
     { label: "No fabricated quotes or unsupported numbers", done: confirmed },
     { label: "Article is original and not copied verbatim", done: confirmed },
@@ -631,6 +765,16 @@ export default function AdminPostEditor({
   ];
   const imagePipelineBusy = ["queued", "generating", "retrying", "upscaling", "optimizing"].includes(
     post.imageStatus
+  );
+  const factCheckBlocksPublish =
+    post.aiGenerated && (post.factCheckStatus !== "Verified" || (post.trustScore ?? 0) < 75);
+  const factCheckStatusClass = post.factCheckStatus.toLowerCase().replace(/\s+/g, "-");
+  const evidenceSources = Array.from(
+    new Map(
+      post.factCheckEvidence
+        .flatMap((item) => item.sources)
+        .map((source) => [source.url, source] as const)
+    ).values()
   );
 
   return (
@@ -967,6 +1111,151 @@ export default function AdminPostEditor({
         </div>
       </section>
 
+      <section className="panel fact-check-detail-panel">
+        <div className="panel-heading compact">
+          <div>
+            <p className="eyebrow">AI Fact Checker</p>
+            <h2>Verification report</h2>
+          </div>
+          <span className={`fact-status fact-status-${factCheckStatusClass}`}>
+            {post.factCheckStatus}
+          </span>
+        </div>
+        <div className="fact-check-score-grid">
+          <div className="fact-score-card">
+            <span>Trust score</span>
+            <strong>{post.trustScore ?? "—"}</strong>
+            <small>{post.confidenceLevel || "Pending"}</small>
+          </div>
+          <div className="fact-score-card">
+            <span>Evidence</span>
+            <strong>{post.evidenceScore ?? "—"}</strong>
+            <small>{post.factCheckEvidence.length} claims</small>
+          </div>
+          <div className="fact-score-card">
+            <span>Source diversity</span>
+            <strong>{post.sourceDiversityScore ?? "—"}</strong>
+            <small>{evidenceSources.length || post.sourceUrls.length} sources</small>
+          </div>
+          <div className="fact-score-card">
+            <span>Freshness</span>
+            <strong>{post.freshnessScore ?? "—"}</strong>
+            <small>{post.verifiedAt ? new Date(post.verifiedAt).toLocaleString() : "Not checked"}</small>
+          </div>
+        </div>
+        <p className="fact-check-summary">
+          {post.factCheckSummary ||
+            "Run the AI Fact Checker to verify important claims against saved source URLs before publishing."}
+        </p>
+        <div className="fact-check-actions">
+          <button
+            className="button button-secondary"
+            onClick={() => runFactCheck("run")}
+            disabled={Boolean(busy)}
+          >
+            {busy === "fact-check" ? "Checking…" : "Run Fact Check"}
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={() => runFactCheck("regenerate_failed_sections")}
+            disabled={Boolean(busy) || !aiConfigured || post.status === "published"}
+          >
+            {busy === "regenerate flagged sections" ? "Regenerating…" : "Regenerate Failed Sections"}
+          </button>
+          <button
+            className="button button-publish"
+            onClick={() => verifyFactCheck("approve")}
+            disabled={Boolean(busy)}
+          >
+            Approve
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={() => verifyFactCheck("needs_review")}
+            disabled={Boolean(busy)}
+          >
+            Needs Review
+          </button>
+          <button
+            className="button button-secondary"
+            onClick={() => verifyFactCheck("reject")}
+            disabled={Boolean(busy)}
+          >
+            Reject
+          </button>
+        </div>
+        {!aiConfigured && (
+          <p className="settings-help-text">
+            Source-based fact-checking is available. Regenerating failed sections needs{" "}
+            <code>OPENAI_API_KEY</code>.
+          </p>
+        )}
+        {post.factCheckWarnings.length > 0 && (
+          <section className="fact-warning-panel">
+            <h3>Warnings</h3>
+            <ul className="fact-warning-list">
+              {post.factCheckWarnings.map((warning, index) => (
+                <li className={`severity-${warning.severity}`} key={`${warning.type}-${index}`}>
+                  <span>{warning.severity}</span>
+                  <div>
+                    <strong>{warning.type.replaceAll("_", " ")}</strong>
+                    <p>{warning.message}</p>
+                    {warning.claim && <small>{warning.claim}</small>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {post.riskyParagraphs.length > 0 && (
+          <section className="fact-warning-panel">
+            <h3>Highlighted risky paragraphs</h3>
+            <div className="risky-paragraph-list">
+              {post.riskyParagraphs.map((paragraph) => (
+                <article className={`risky-paragraph severity-${paragraph.severity}`} key={paragraph.index}>
+                  <strong>Paragraph {paragraph.index + 1}</strong>
+                  <p>{paragraph.paragraph}</p>
+                  <small>{paragraph.reason}</small>
+                  <em>{paragraph.suggestedAction}</em>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+        {post.factCheckEvidence.length > 0 && (
+          <section className="fact-warning-panel">
+            <h3>Evidence list</h3>
+            <div className="fact-evidence-list">
+              {post.factCheckEvidence.map((item, index) => (
+                <details key={`${item.claim}-${index}`}>
+                  <summary>
+                    <span className={`fact-verdict fact-verdict-${item.verdict}`}>{item.verdict}</span>
+                    {item.claim}
+                  </summary>
+                  {item.sources.length > 0 ? (
+                    <ul>
+                      {item.sources.map((source) => (
+                        <li key={source.url}>
+                          <a href={source.url} target="_blank" rel="noreferrer">
+                            {source.publisher || source.domain}
+                          </a>
+                          {source.trusted && <span> trusted</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No matching source in saved source packet.</p>
+                  )}
+                  {item.notes.length > 0 && (
+                    <small>{item.notes.slice(0, 3).join(" · ")}</small>
+                  )}
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
+      </section>
+
       <section className="panel admin-editor-panel">
         <div className="panel-heading compact">
           <div>
@@ -1297,7 +1586,7 @@ export default function AdminPostEditor({
           <button
             className="button button-secondary"
             onClick={() => statusAction("schedule")}
-            disabled={Boolean(busy) || !confirmed}
+            disabled={Boolean(busy) || !confirmed || factCheckBlocksPublish}
           >
             Schedule
           </button>
@@ -1324,7 +1613,7 @@ export default function AdminPostEditor({
           <button
             className="button button-publish"
             onClick={publish}
-            disabled={Boolean(busy) || !confirmed}
+            disabled={Boolean(busy) || !confirmed || factCheckBlocksPublish}
           >
             Publish
           </button>

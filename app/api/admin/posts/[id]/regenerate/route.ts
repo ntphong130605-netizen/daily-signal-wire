@@ -7,6 +7,7 @@ import {
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 import { logError } from "@/lib/logger";
 import { parseJsonArray, parseStringArray } from "@/lib/json";
+import { runFactCheckForPost } from "@/lib/aiFactChecker";
 
 export async function POST(
   request: Request,
@@ -88,12 +89,19 @@ export async function POST(
           rejectionReason: null
         }
       });
+      await runFactCheckForPost(id);
       return Response.json({ ok: true, article });
     }
     const value = await regenerateArticleField(body.field, post);
     await prisma.post.update({
       where: { id },
-      data: { [body.field]: value }
+      data: {
+        [body.field]: value,
+        factCheckStatus: "Needs Review",
+        factCheckSummary:
+          "A generated field changed after the last verification. Run Fact Check before publishing.",
+        verifiedAt: null
+      }
     });
     return Response.json({ ok: true, value });
   } catch (error) {

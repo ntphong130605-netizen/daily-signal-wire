@@ -149,9 +149,13 @@ export default async function AdminWriterPage() {
                     <small>
                       SEO {quality?.seoScore ?? "—"} · {quality?.wordCount ?? "—"} words · {post.promptVersion || "manual"}
                     </small>
+                    <small>
+                      Fact-check {post.factCheckStatus} · Trust {post.trustScore ?? "—"}
+                    </small>
                   </div>
                   <div className="admin-writer-actions">
                     <Link href={`/admin/posts/${post.id}`}>Edit</Link>
+                    <Link href="/admin/fact-checker">Fact-check</Link>
                     <Link href={`/news/${post.slug}?preview=1`} target="_blank">Preview</Link>
                   </div>
                 </article>

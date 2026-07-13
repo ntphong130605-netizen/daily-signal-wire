@@ -121,8 +121,21 @@ export default async function AdminPostEditPage({
             createdAt: image.createdAt.toISOString(),
             updatedAt: image.updatedAt.toISOString()
           })),
+          aiGenerated: post.aiGenerated,
           factCheckNotes: parseStringArray(post.factCheckNotes),
           sourceUrls: parseStringArray(post.sourceUrls),
+          factCheckStatus: post.factCheckStatus,
+          trustScore: post.trustScore,
+          evidenceScore: post.evidenceScore,
+          sourceDiversityScore: post.sourceDiversityScore,
+          freshnessScore: post.freshnessScore,
+          confidenceLevel: post.confidenceLevel || "",
+          factCheckSummary: post.factCheckSummary || "",
+          factCheckEvidence: parseJsonArray(post.factCheckEvidence),
+          factCheckWarnings: parseJsonArray(post.factCheckWarnings),
+          riskyParagraphs: parseJsonArray(post.riskyParagraphs),
+          verificationMetadata: post.verificationMetadata,
+          verifiedAt: post.verifiedAt?.toISOString() || "",
           status: post.status,
           scheduledAt: post.scheduledAt
             ? new Date(post.scheduledAt.getTime() - post.scheduledAt.getTimezoneOffset() * 60000)

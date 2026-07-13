@@ -66,6 +66,22 @@ export async function GET() {
         .filter(([, status]) => status.status === "failed")
         .map(([source]) => source)
     : [];
+  const factChecker =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.post
+          .groupBy({
+            by: ["factCheckStatus"],
+            where: { aiGenerated: true },
+            _count: { _all: true }
+          })
+          .then((rows) =>
+            rows.reduce<Record<string, number>>((accumulator, row) => {
+              accumulator[row.factCheckStatus] = row._count._all;
+              return accumulator;
+            }, {})
+          )
+          .catch(() => ({}))
+      : {};
 
   const ok = checks.app && (!checks.databaseConfigured || checks.databaseReachable);
 
@@ -80,7 +96,8 @@ export async function GET() {
         ...researchReadiness,
         lastRun: lastResearchRun,
         failedSources: failedResearchSources
-      }
+      },
+      factChecker
     },
     {
       status: ok ? 200 : 503,
