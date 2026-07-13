@@ -1,8 +1,17 @@
 import { isDatabaseConfigured, prisma } from "@/lib/prisma";
 import { configuredImageStorageLabel } from "@/lib/aiImage";
 import { adsenseClientId, hasAdsTxtConfiguration } from "@/lib/ads";
+import { getResearchEngineReadiness } from "@/lib/research/engine";
 
 export const dynamic = "force-dynamic";
+
+function parseSourceStatuses(value: string | null | undefined) {
+  try {
+    return JSON.parse(value || "{}") as Record<string, { status?: string }>;
+  } catch {
+    return {};
+  }
+}
 
 export async function GET() {
   const checks = {
@@ -33,6 +42,31 @@ export async function GET() {
     }
   }
 
+  const researchReadiness = getResearchEngineReadiness();
+  const lastResearchRun =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.researchRun
+          .findFirst({
+            orderBy: { startedAt: "desc" },
+            select: {
+              id: true,
+              status: true,
+              startedAt: true,
+              completedAt: true,
+              candidatesFound: true,
+              candidatesCreated: true,
+              candidatesMerged: true,
+              sourceStatuses: true
+            }
+          })
+          .catch(() => null)
+      : null;
+  const failedResearchSources = lastResearchRun
+    ? Object.entries(parseSourceStatuses(lastResearchRun.sourceStatuses))
+        .filter(([, status]) => status.status === "failed")
+        .map(([source]) => source)
+    : [];
+
   const ok = checks.app && (!checks.databaseConfigured || checks.databaseReachable);
 
   return Response.json(
@@ -41,7 +75,12 @@ export async function GET() {
       status: ok ? "ok" : "degraded",
       service: "daily-signal-wire",
       checkedAt: new Date().toISOString(),
-      checks
+      checks,
+      research: {
+        ...researchReadiness,
+        lastRun: lastResearchRun,
+        failedSources: failedResearchSources
+      }
     },
     {
       status: ok ? 200 : 503,

@@ -76,6 +76,17 @@ GOOGLE_SITE_VERIFICATION=
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
 MAX_TRENDS_PER_RUN=5
+
+RESEARCH_REGION=US
+RESEARCH_LANGUAGE=en-US
+RESEARCH_MAX_CANDIDATES_PER_RUN=25
+RESEARCH_MAX_SOURCES_PER_CANDIDATE=8
+RESEARCH_MIN_TREND_SCORE=55
+RESEARCH_AI_ENRICHMENT_LIMIT=10
+RESEARCH_SOURCE_TIMEOUT_MS=10000
+REDDIT_CLIENT_ID=
+REDDIT_CLIENT_SECRET=
+YOUTUBE_API_KEY=
 ```
 
 Never commit `.env` or expose server secrets in client components.
@@ -180,6 +191,47 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 `vercel.json` uses a once-per-day RSS cron schedule so Hobby deployments pass
 Vercel's cron limits. If the project is on Vercel Pro, you can change the
 schedule back to `*/30 * * * *`.
+
+## AI research engine
+
+The Step 3.1 research engine creates source-first Research Candidates and
+Research Briefs before the article-writing workflow starts.
+
+Admin route:
+
+```text
+/admin/research
+```
+
+Protected cron endpoint:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/research
+```
+
+The engine reads from adapter sources:
+
+- Google Trends US
+- Google News RSS
+- saved RSS feed stories
+- Reddit, only when `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` are present
+- YouTube, only when `YOUTUBE_API_KEY` is present
+- internal published Daily Signal Wire content signals
+
+Disabled adapters never throw. Failed adapters are isolated per run and appear
+in `/api/health`. The engine deduplicates by external ID, normalized topic,
+canonical URL and title similarity, with optional semantic similarity when
+`OPENAI_API_KEY` is configured.
+
+Research output is not an article. It stores topic, angles, why the topic is
+trending, verified/uncertain claims, timeline, entities, related queries, source
+URLs, credibility tiers, score breakdown, fact-check notes, risk level and a
+recommended action. Blocked candidates cannot be sent to draft generation.
+
+Clicking `Generate Article Draft` from `/admin/research` only transfers the
+brief into the existing `/admin/trends` draft workflow. It does not write the
+article immediately and never auto-publishes.
 
 ## Google Trends and AI drafts
 

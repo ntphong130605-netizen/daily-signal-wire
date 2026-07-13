@@ -341,3 +341,103 @@ model SiteSetting {
   @@index([group])
   @@index([isPublic])
 }
+
+model ResearchCandidate {
+  id                String           @id @default(cuid())
+  clusterKey        String           @unique
+  topic             String
+  normalizedTopic   String
+  category          String
+  region            String           @default("US")
+  language          String           @default("en-US")
+  trendScore        Float            @default(0)
+  freshnessScore    Float            @default(0)
+  opportunityScore  Float            @default(0)
+  riskLevel         String           @default("low")
+  factCheckRequired Boolean          @default(false)
+  status            String           @default("new")
+  recommendedAction String           @default("monitor")
+  firstSeenAt       DateTime         @default(now())
+  lastSeenAt        DateTime         @default(now())
+  sources           ResearchSource[]
+  brief             ResearchBrief?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([normalizedTopic])
+  @@index([category])
+  @@index([riskLevel])
+  @@index([status])
+  @@index([recommendedAction])
+  @@index([trendScore])
+  @@index([lastSeenAt])
+}
+
+model ResearchSource {
+  id              String            @id @default(cuid())
+  candidateId     String
+  candidate       ResearchCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  source          String
+  publisher       String?
+  sourceUrl       String
+  canonicalUrl    String
+  externalId      String?
+  headline        String
+  summary         String?
+  credibilityTier String            @default("C")
+  publishedAt     DateTime?
+  rawMetadata     String            @default("{}")
+  createdAt       DateTime          @default(now())
+
+  @@unique([candidateId, canonicalUrl])
+  @@unique([source, externalId])
+  @@index([candidateId])
+  @@index([source])
+  @@index([publisher])
+  @@index([credibilityTier])
+  @@index([publishedAt])
+}
+
+model ResearchBrief {
+  id                String            @id @default(cuid())
+  candidateId       String            @unique
+  candidate         ResearchCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  whyTrending       String
+  readerValue       String
+  verifiedFacts     String            @default("[]")
+  uncertainClaims   String            @default("[]")
+  timeline          String            @default("[]")
+  keyEntities       String            @default("[]")
+  relatedQueries    String            @default("[]")
+  suggestedAngles   String            @default("[]")
+  suggestedKeywords String            @default("[]")
+  factCheckNotes    String            @default("[]")
+  intent            String?
+  sourceUrls        String            @default("[]")
+  sourceCredibility String            @default("[]")
+  scoreBreakdown    String            @default("{}")
+  riskLevel         String            @default("low")
+  recommendedAction String            @default("monitor")
+  factCheckRequired Boolean           @default(false)
+  generatedAt       DateTime          @default(now())
+  model             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([generatedAt])
+}
+
+model ResearchRun {
+  id                String    @id @default(cuid())
+  startedAt         DateTime  @default(now())
+  completedAt       DateTime?
+  status            String    @default("running")
+  sourceStatuses    String    @default("{}")
+  candidatesFound   Int       @default(0)
+  candidatesCreated Int       @default(0)
+  candidatesMerged  Int       @default(0)
+  errorSummary      String?
+
+  @@index([status])
+  @@index([startedAt])
+}
