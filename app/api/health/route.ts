@@ -23,8 +23,9 @@ export async function GET() {
     adsenseConfigured: Boolean(adsenseClientId()),
     adsTxtConfigured: hasAdsTxtConfiguration(),
     consentModeReady: true,
-    gaConfigured: Boolean(
-      process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.GOOGLE_ANALYTICS_ID
+    gaConfigured: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID),
+    gscVerificationConfigured: Boolean(
+      process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION
     ),
     siteUrlConfigured: Boolean(
       process.env.NEXT_PUBLIC_SITE_URL ||

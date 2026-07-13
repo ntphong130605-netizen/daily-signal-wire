@@ -6,6 +6,7 @@ import ArticleBody, { extractArticleHeadings } from "@/components/ArticleBody";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ArticleComments from "@/components/ArticleComments";
 import ArticleImageFrame from "@/components/ArticleImageFrame";
+import ArticleNewsletterSignup from "@/components/ArticleNewsletterSignup";
 import ArticleRecommendations from "@/components/ArticleRecommendations";
 import ArticleShareTools from "@/components/ArticleShareTools";
 import ArticleToc from "@/components/ArticleToc";
@@ -786,21 +787,7 @@ export default async function NewsArticlePage({
 
             <ArticleComments />
 
-            <section className="article-newsletter-card" aria-labelledby="article-newsletter-heading">
-              <p className="section-kicker">Daily briefing</p>
-              <h2 id="article-newsletter-heading">Get the newsroom brief before the noise</h2>
-              <p>
-                Source-first updates, trend context and editor-reviewed AI newsroom drafts — sent
-                when there is something worth reading.
-              </p>
-              <form action="/api/newsletter" method="post">
-                <label htmlFor="article-newsletter-email">Email address</label>
-                <div>
-                  <input id="article-newsletter-email" name="email" type="email" placeholder="you@example.com" required />
-                  <button type="submit">Subscribe</button>
-                </div>
-              </form>
-            </section>
+            <ArticleNewsletterSignup />
 
             <AdSlot position="bottom" />
 

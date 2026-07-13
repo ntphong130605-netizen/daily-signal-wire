@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { newsroomCategories } from "@/lib/categoryLanding";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackSearch } from "@/lib/analytics";
 import type { SearchFilters, SearchResponse, SearchResult, SearchSuggestion } from "@/lib/searchEngine";
 
 const recentSearchKey = "dsw-recent-searches";
@@ -172,7 +172,7 @@ export default function SearchExperience({
         const trackedQuery = normalized.q?.trim() || "";
         if (trackedQuery.length > 1 && trackedQuery !== lastTrackedSearchRef.current) {
           lastTrackedSearchRef.current = trackedQuery;
-          trackEvent("search", {
+          trackSearch({
             query: trackedQuery,
             result_count: data.total,
             category: normalized.category || "",

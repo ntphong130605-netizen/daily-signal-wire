@@ -4,7 +4,12 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ConsentState } from "@/components/consent/CookieConsent";
-import { analyticsIdentity } from "@/lib/client/analytics";
+import {
+  trackArticleView,
+  trackCustom,
+  trackOutbound,
+  trackPageView
+} from "@/lib/analytics";
 
 declare global {
   interface Window {
@@ -26,52 +31,27 @@ function currentConsent() {
   return window.__dswConsent || deniedConsent;
 }
 
-function sendInternalEvent(
-  eventName: string,
-  pathname: string,
-  metadata: Record<string, string | number | boolean | null | undefined> = {}
-) {
-  const search = window.location.search || "";
-  const pagePath = `${pathname}${search}`;
-  const identity = analyticsIdentity();
-  const payload = JSON.stringify({
-    eventName,
-    path: pagePath,
-    articleSlug: pathname.startsWith("/news/")
-      ? pathname.split("/").filter(Boolean).pop()
-      : undefined,
-    visitorId: identity.visitorId,
-    sessionId: identity.sessionId,
-    source: document.referrer ? new URL(document.referrer).hostname : "direct",
-    scrollDepth:
-      typeof metadata.percent_scrolled === "number" ? metadata.percent_scrolled : undefined,
-    metadata
-  });
-  if (navigator.sendBeacon) {
-    navigator.sendBeacon(
-      "/api/analytics/event",
-      new Blob([payload], { type: "application/json" })
-    );
-    return;
+function ensureGtagRuntime() {
+  window.dataLayer = window.dataLayer || [];
+  if (typeof window.gtag !== "function") {
+    window.gtag = function gtag(...args: unknown[]) {
+      window.dataLayer?.push(args);
+    };
   }
-  fetch("/api/analytics/event", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: payload,
-    keepalive: true
-  }).catch(() => null);
 }
 
 export default function GoogleScripts({
   adsenseClientId,
   gaMeasurementId,
   gtmId,
-  clarityProjectId
+  clarityProjectId,
+  isProduction
 }: {
   adsenseClientId: string;
   gaMeasurementId: string;
   gtmId?: string;
   clarityProjectId?: string;
+  isProduction: boolean;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -93,7 +73,9 @@ export default function GoogleScripts({
 
   useEffect(() => {
     if (consent.analytics_storage !== "granted") return;
-    const canSendGa = Boolean(gaMeasurementId) && typeof window.gtag === "function";
+    if (isProduction && gaMeasurementId) ensureGtagRuntime();
+    const canSendGa =
+      isProduction && Boolean(gaMeasurementId) && typeof window.gtag === "function";
 
     if (canSendGa && !gaConfigured) {
       window.gtag?.("config", gaMeasurementId, { send_page_view: false });
@@ -102,47 +84,30 @@ export default function GoogleScripts({
 
     const search = searchParams.toString();
     const pagePath = search ? `${pathname}?${search}` : pathname;
-    if (canSendGa) {
-      window.gtag?.("event", "page_view", {
-        page_path: pagePath,
-        page_location: window.location.href,
-        page_title: document.title
-      });
-    }
-    sendInternalEvent("page_view", pathname, {
+    trackPageView({
       page_path: pagePath,
+      page_location: window.location.href,
       page_title: document.title
     });
 
     if (pathname.startsWith("/news/")) {
-      if (canSendGa) {
-        window.gtag?.("event", "article_view", {
-          page_path: pagePath,
-          article_slug: pathname.split("/").filter(Boolean).pop()
-        });
-      }
-      sendInternalEvent("article_view", pathname, {
+      trackArticleView({
         page_path: pagePath,
         article_slug: pathname.split("/").filter(Boolean).pop()
       });
     }
-  }, [consent.analytics_storage, gaConfigured, gaMeasurementId, pathname, searchParams]);
+  }, [consent.analytics_storage, gaConfigured, gaMeasurementId, isProduction, pathname, searchParams]);
 
   useEffect(() => {
     if (consent.analytics_storage !== "granted") return;
     try {
       if (window.sessionStorage.getItem("dsw_session_started") === "true") return;
       window.sessionStorage.setItem("dsw_session_started", "true");
-      sendInternalEvent("session_start", pathname, { page_path: window.location.pathname });
-      if (typeof window.gtag === "function") {
-        window.gtag("event", "session_start", {
-          page_path: window.location.pathname + window.location.search
-        });
-      }
+      trackCustom("session_start", { page_path: window.location.pathname });
     } catch {
-      sendInternalEvent("session_start", pathname, { page_path: window.location.pathname });
+      trackCustom("session_start", { page_path: window.location.pathname });
     }
-  }, [consent.analytics_storage, pathname]);
+  }, [consent.analytics_storage]);
 
   useEffect(() => {
     if (consent.analytics_storage !== "granted") return;
@@ -153,13 +118,10 @@ export default function GoogleScripts({
       for (const threshold of [25, 50, 75, 90]) {
         if (percent >= threshold && !fired.has(threshold)) {
           fired.add(threshold);
-          if (typeof window.gtag === "function") {
-            window.gtag("event", "scroll_depth", {
-              percent_scrolled: threshold,
-              page_path: window.location.pathname + window.location.search
-            });
-          }
-          sendInternalEvent("scroll_depth", pathname, { percent_scrolled: threshold });
+          trackCustom("scroll_depth", {
+            percent_scrolled: threshold,
+            page_path: window.location.pathname + window.location.search
+          });
         }
       }
     }
@@ -173,31 +135,35 @@ export default function GoogleScripts({
     const startedAt = Date.now();
     function sendDuration() {
       const durationSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
-      const identity = analyticsIdentity();
-      const payload = JSON.stringify({
-        eventName: "time_on_page",
-        path: window.location.pathname + window.location.search,
-        articleSlug: window.location.pathname.startsWith("/news/")
-          ? window.location.pathname.split("/").filter(Boolean).pop()
-          : undefined,
-        visitorId: identity.visitorId,
-        sessionId: identity.sessionId,
-        source: document.referrer ? new URL(document.referrer).hostname : "direct",
-        durationSeconds,
-        metadata: { duration_seconds: durationSeconds }
+      trackCustom("session_time", {
+        page_path: window.location.pathname + window.location.search,
+        duration_seconds: durationSeconds
       });
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(
-          "/api/analytics/event",
-          new Blob([payload], { type: "application/json" })
-        );
-      }
     }
     window.addEventListener("pagehide", sendDuration, { once: true });
     return () => window.removeEventListener("pagehide", sendDuration);
   }, [consent.analytics_storage]);
 
   useEffect(() => {
+    if (consent.analytics_storage !== "granted") return;
+    function handleOutboundClick(event: MouseEvent) {
+      const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(target instanceof HTMLAnchorElement)) return;
+      const url = new URL(target.href, window.location.href);
+      if (url.origin === window.location.origin) return;
+      trackOutbound({
+        outbound_url: url.href,
+        outbound_domain: url.hostname,
+        link_text: target.textContent?.trim().slice(0, 120) || "",
+        page_path: window.location.pathname + window.location.search
+      });
+    }
+    document.addEventListener("click", handleOutboundClick, { capture: true });
+    return () => document.removeEventListener("click", handleOutboundClick, { capture: true });
+  }, [consent.analytics_storage]);
+
+  useEffect(() => {
+    if (!isProduction) return;
     if (!adsenseClientId || consent.ad_storage !== "granted") return;
 
     function markAdsenseReady() {
@@ -235,14 +201,18 @@ export default function GoogleScripts({
       { once: true }
     );
     document.head.appendChild(script);
-  }, [adsenseClientId, consent.ad_storage]);
+  }, [adsenseClientId, consent.ad_storage, isProduction]);
 
   const analyticsAllowed =
-    Boolean(gaMeasurementId) && consent.analytics_storage === "granted";
+    isProduction && Boolean(gaMeasurementId) && consent.analytics_storage === "granted";
+  const googleRuntimeEnabled = isProduction && Boolean(
+    gaMeasurementId || adsenseClientId || gtmId || clarityProjectId
+  );
 
   return (
     <>
-      <Script id="google-consent-default" strategy="afterInteractive">
+      {googleRuntimeEnabled && (
+        <Script id="google-consent-default" strategy="afterInteractive">
         {`
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
@@ -254,7 +224,8 @@ export default function GoogleScripts({
             ad_personalization: 'denied'
           });
         `}
-      </Script>
+        </Script>
+      )}
       {analyticsAllowed && (
         <Script
           id="google-analytics-src"

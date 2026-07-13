@@ -1,4 +1,5 @@
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { absoluteUrl } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,12 @@ function daysAgo(days: number) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
+}
+
+function maskId(value: string) {
+  if (!value) return "Not configured";
+  if (value.length <= 8) return value;
+  return `${value.slice(0, 5)}…${value.slice(-4)}`;
 }
 
 function parseMetadata(value: string) {
@@ -69,6 +76,17 @@ function RankedPanel({
 
 export default async function AdminAnalyticsPage() {
   const since = daysAgo(30);
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
+  const gscVerification =
+    process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION || "";
+  const sitemapUrls = [
+    absoluteUrl("/sitemap.xml"),
+    absoluteUrl("/news-sitemap.xml"),
+    absoluteUrl("/image-sitemap.xml"),
+    absoluteUrl("/video-sitemap.xml"),
+    absoluteUrl("/rss.xml"),
+    absoluteUrl("/robots.txt")
+  ];
   const data = await safeDbQuery(
     "admin_analytics_query_failed",
     {
@@ -80,6 +98,8 @@ export default async function AdminAnalyticsPage() {
       timeEvents: [] as { durationSeconds: number | null }[],
       searches: [] as { metadata: string }[],
       copyEvents: 0,
+      outboundEvents: 0,
+      newsletterEvents: 0,
       publishEvents: 0,
       aiArticleEvents: 0,
       aiImageEvents: 0,
@@ -99,6 +119,8 @@ export default async function AdminAnalyticsPage() {
         timeEvents,
         searches,
         copyEvents,
+        outboundEvents,
+        newsletterEvents,
         publishEvents,
         aiArticleEvents,
         aiImageEvents,
@@ -144,7 +166,7 @@ export default async function AdminAnalyticsPage() {
         }),
         prisma.analyticsEvent.findMany({
           where: {
-            eventName: "time_on_page",
+            eventName: { in: ["session_time", "time_on_page"] },
             createdAt: { gte: since },
             durationSeconds: { not: null }
           },
@@ -160,13 +182,19 @@ export default async function AdminAnalyticsPage() {
           where: { eventName: "copy_facebook_post", createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.count({
-          where: { eventName: "publish_article", createdAt: { gte: since } }
+          where: { eventName: "outbound_click", createdAt: { gte: since } }
+        }),
+        prisma.analyticsEvent.count({
+          where: { eventName: "newsletter_signup", createdAt: { gte: since } }
+        }),
+        prisma.analyticsEvent.count({
+          where: { eventName: { in: ["ai_publish", "publish_article"] }, createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.count({
           where: { eventName: "generate_ai_article", createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.count({
-          where: { eventName: "generate_ai_image", createdAt: { gte: since } }
+          where: { eventName: { in: ["image_generation", "generate_ai_image"] }, createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.findMany({
           where: { eventName: "scroll_depth", createdAt: { gte: since } },
@@ -211,6 +239,8 @@ export default async function AdminAnalyticsPage() {
         timeEvents,
         searches,
         copyEvents,
+        outboundEvents,
+        newsletterEvents,
         publishEvents,
         aiArticleEvents,
         aiImageEvents,
@@ -253,10 +283,12 @@ export default async function AdminAnalyticsPage() {
     ["Bounce rate", bounceRate === null ? "—" : `${bounceRate}%`],
     ["Avg. time on page", averageTime === null ? "—" : `${averageTime}s`],
     ["Searches", data.searches.length],
+    ["Outbound clicks", data.outboundEvents],
+    ["Newsletter signups", data.newsletterEvents],
     ["Copy Facebook Post", data.copyEvents],
-    ["Published articles", data.publishEvents],
+    ["AI publish events", data.publishEvents],
     ["AI articles generated", data.aiArticleEvents],
-    ["AI images generated", data.aiImageEvents],
+    ["Image generation events", data.aiImageEvents],
     ["Avg. scroll depth", averageScroll === null ? "—" : `${averageScroll}%`]
   ] as const;
   const deviceRows = data.devices.map((row) => ({
@@ -275,6 +307,9 @@ export default async function AdminAnalyticsPage() {
     label: row.category || "unknown",
     count: row._count._all
   }));
+  const indexingStatus = gscVerification
+    ? "Ready for Search Console verification"
+    : "Add NEXT_PUBLIC_GSC_VERIFICATION";
 
   return (
     <>
@@ -287,9 +322,50 @@ export default async function AdminAnalyticsPage() {
             traffic sources, devices, scroll depth, searches and newsroom actions.
           </p>
         </div>
-        <div className="header-badge">Last 30 days</div>
+        <div className="header-badge">
+          {gaMeasurementId ? "GA4 configured" : "GA4 not configured"}
+        </div>
       </header>
       <main className="admin-content growth-dashboard">
+        <section className="growth-metric-grid compact">
+          <div>
+            <span>GA status</span>
+            <strong>{gaMeasurementId ? "Active" : "Missing"}</strong>
+            <small>Loads only in production after analytics consent</small>
+          </div>
+          <div>
+            <span>Measurement ID detected</span>
+            <strong>{maskId(gaMeasurementId)}</strong>
+            <small>NEXT_PUBLIC_GA_MEASUREMENT_ID</small>
+          </div>
+          <div>
+            <span>GSC verification</span>
+            <strong>{gscVerification ? "Configured" : "Missing"}</strong>
+            <small>{gscVerification ? maskId(gscVerification) : "NEXT_PUBLIC_GSC_VERIFICATION"}</small>
+          </div>
+          <div>
+            <span>Indexing status</span>
+            <strong>{gscVerification ? "Ready" : "Action needed"}</strong>
+            <small>{indexingStatus}</small>
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-heading compact">
+            <div>
+              <p className="eyebrow">Search Console</p>
+              <h2>Sitemaps and crawl surfaces</h2>
+            </div>
+          </div>
+          <div className="analytics-sitemap-grid">
+            {sitemapUrls.map((url) => (
+              <a href={url} target="_blank" rel="noreferrer" key={url}>
+                {url}
+              </a>
+            ))}
+          </div>
+        </section>
+
         <section className="growth-metric-grid">
           {eventCards.map(([label, value]) => (
             <div key={label}>

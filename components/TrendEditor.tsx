@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackEvent, trackImageGeneration, trackPublish } from "@/lib/client/analytics";
 
 type PostDraft = {
   id: string;
@@ -151,7 +151,7 @@ export default function TrendEditor({
     if (result) {
       mergeImageResult(result);
       setMessage("Editorial image generated. Review and accept before publishing.");
-      trackEvent("generate_ai_image", { post_id: draft.id, mode: "generate" });
+      trackImageGeneration({ post_id: draft.id, mode: "generate" });
     }
   }
 
@@ -182,7 +182,7 @@ export default function TrendEditor({
               : "Image regenerated. Review and accept before publishing."
       );
       if (mode === "regenerate" || mode === "retry") {
-        trackEvent("generate_ai_image", { post_id: draft.id, mode });
+        trackImageGeneration({ post_id: draft.id, mode });
       }
     }
   }
@@ -237,7 +237,7 @@ export default function TrendEditor({
     if (result) {
       setDraft({ ...draft, status: "published" });
       setMessage("Article published.");
-      trackEvent("publish_article", {
+      trackPublish({
         post_id: draft.id,
         article_slug: draft.slug
       });

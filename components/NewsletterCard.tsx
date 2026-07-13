@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { trackNewsletter } from "@/lib/analytics";
 
 export default function NewsletterCard() {
   const [email, setEmail] = useState("");
@@ -26,6 +27,7 @@ export default function NewsletterCard() {
     }
     setState("success");
     setMessage("You’re on the list. Watch your inbox.");
+    trackNewsletter({ source: "newsletter_card" });
     setEmail("");
   }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackPublish } from "@/lib/client/analytics";
 
 type ActionResponse = {
   ok?: boolean;
@@ -110,7 +110,7 @@ export default function AdminPublishingActions({
                 confirmedFactCheck: true,
                 approvalOverride: true
               }).then((result) => {
-                trackEvent("publish_article", { post_id: postId, article_slug: slug });
+                trackPublish({ post_id: postId, article_slug: slug });
                 return result;
               })
             );

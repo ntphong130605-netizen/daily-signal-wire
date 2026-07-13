@@ -7,6 +7,8 @@ import { absoluteUrl, siteDescription, siteName, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const adsenseAccountMeta = adsenseClientId();
+const googleVerification =
+  process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION || "";
 const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "NewsMediaOrganization",
@@ -69,8 +71,8 @@ export const metadata: Metadata = {
       "max-video-preview": -1
     }
   },
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+  verification: googleVerification
+    ? { google: googleVerification }
     : undefined,
   other: adsenseAccountMeta
     ? {
@@ -81,10 +83,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const adsenseClient = adsenseClientId();
-  const analyticsId =
-    process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
-    process.env.GOOGLE_ANALYTICS_ID ||
-    "";
+  const analyticsId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID || "";
   const clarityProjectId =
     process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ||
@@ -115,6 +114,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             gaMeasurementId={analyticsId}
             gtmId={gtmId}
             clarityProjectId={clarityProjectId}
+            isProduction={process.env.NODE_ENV === "production"}
           />
         </Suspense>
       </body>

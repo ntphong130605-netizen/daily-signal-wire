@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, useState } from "react";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackEvent, trackImageGeneration, trackPublish } from "@/lib/client/analytics";
 
 type EditablePost = {
   id: string;
@@ -526,7 +526,7 @@ export default function AdminPostEditor({
       }));
       setMessage(`${mode} complete.`);
       if (mode === "generate" || mode === "regenerate") {
-        trackEvent("generate_ai_image", {
+        trackImageGeneration({
           post_id: post.id,
           mode
         });
@@ -662,7 +662,7 @@ export default function AdminPostEditor({
     if (result) {
       setPost((current) => ({ ...current, status: "published" }));
       setMessage("Published.");
-      trackEvent("publish_article", {
+      trackPublish({
         post_id: post.id,
         article_slug: post.slug
       });

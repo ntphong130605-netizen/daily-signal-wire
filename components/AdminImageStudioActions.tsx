@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackImageGeneration } from "@/lib/client/analytics";
 
 export default function AdminImageStudioActions({
   postId,
@@ -49,7 +49,7 @@ export default function AdminImageStudioActions({
             : "Image generated."
     );
     if (mode !== "prompt") {
-      trackEvent("generate_ai_image", { post_id: postId, mode });
+      trackImageGeneration({ post_id: postId, mode });
     }
     router.refresh();
   }

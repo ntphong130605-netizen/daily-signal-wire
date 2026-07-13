@@ -10989,6 +10989,26 @@ html[data-theme="dark"] .loading-card::after {
   text-decoration: none;
 }
 
+.analytics-sitemap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.analytics-sitemap-grid a {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--primary-dark);
+  background: #f8fcfd;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
 .revenue-optimizer-panel .growth-check-list li {
   grid-template-columns: 20px minmax(0, 1fr);
 }
@@ -11031,7 +11051,8 @@ html[data-theme="dark"] .loading-card::after {
 @media (max-width: 720px) {
   .growth-metric-grid,
   .growth-hub-grid,
-  .revenue-panels {
+  .revenue-panels,
+  .analytics-sitemap-grid {
     grid-template-columns: 1fr;
   }
 

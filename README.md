@@ -86,6 +86,7 @@ NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
 NEXT_PUBLIC_GA_MEASUREMENT_ID=
 NEXT_PUBLIC_GTM_ID=
 NEXT_PUBLIC_CLARITY_PROJECT_ID=
+NEXT_PUBLIC_GSC_VERIFICATION=
 GOOGLE_SITE_VERIFICATION=
 ADSENSE_ESTIMATED_RPM=
 
@@ -769,32 +770,51 @@ Production includes:
 - Open Graph metadata
 - Twitter Card metadata
 - NewsArticle, Article and Breadcrumb JSON-LD on article pages
-- Google Search Console verification through `GOOGLE_SITE_VERIFICATION`
+- Google Search Console verification through `NEXT_PUBLIC_GSC_VERIFICATION`
+  with legacy `GOOGLE_SITE_VERIFICATION` fallback
 - admin and draft pages excluded from indexing
 - published articles only in `/sitemap.xml`
-- Google Analytics integration through `NEXT_PUBLIC_GA_MEASUREMENT_ID`
+- Google Analytics 4 integration through `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - consent banner prepared for Google Consent Mode v2
 
 GA4 is optional:
 
 ```env
 NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+NEXT_PUBLIC_GSC_VERIFICATION=google-site-verification-token
 ```
 
-When configured and accepted through the cookie banner, the app tracks:
+GA4 scripts load only in production, only once, and only after analytics consent.
+In development, the internal privacy-safe analytics endpoint can still collect
+consented events without loading Google scripts.
+
+When configured and accepted through the cookie banner, the app tracks these
+standard events:
 
 - `page_view`
 - `article_view`
 - `session_start`
 - `search`
+- `outbound_click`
+- `newsletter_signup`
+- `image_generation`
+- `ai_publish`
 - `scroll_depth`
-- `time_on_page`
+- `session_time`
 - `copy_facebook_post`
-- `publish_article`
 - `generate_ai_article`
-- `generate_ai_image`
 
 If no GA4 ID is set, no GA script is loaded and the site does not crash.
+
+Search Console surfaces:
+
+- `google-site-verification` meta tag from `NEXT_PUBLIC_GSC_VERIFICATION`
+- `/robots.txt`
+- `/sitemap.xml`
+- `/news-sitemap.xml`
+- `/image-sitemap.xml`
+- `/video-sitemap.xml`
+- canonical URLs on public pages
 
 Public policy pages:
 

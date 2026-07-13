@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { trackEvent } from "@/lib/client/analytics";
+import { trackEvent, trackImageGeneration, trackPublish } from "@/lib/client/analytics";
 
 async function copyText(value: string) {
   try {
@@ -89,7 +89,7 @@ export default function AdminPostActions({
       return;
     }
     setMessage("Published");
-    trackEvent("publish_article", { post_id: id, article_slug: slug });
+    trackPublish({ post_id: id, article_slug: slug });
     router.refresh();
   }
 
@@ -108,7 +108,7 @@ export default function AdminPostActions({
       return;
     }
     setMessage(mode === "generate" ? "Image generated" : "Image regenerated");
-    trackEvent("generate_ai_image", { post_id: id, mode });
+    trackImageGeneration({ post_id: id, mode });
     router.refresh();
   }
 

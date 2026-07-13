@@ -52,7 +52,11 @@ export default async function AdminSettingsPage() {
     ],
     [
       "Google Analytics",
-      flag(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.GOOGLE_ANALYTICS_ID)
+      flag(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID)
+    ],
+    [
+      "Google Search Console",
+      flag(process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION)
     ],
     ["GTM", flag(process.env.NEXT_PUBLIC_GTM_ID)],
     ["Microsoft Clarity", flag(process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID)],
