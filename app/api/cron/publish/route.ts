@@ -11,8 +11,8 @@ export async function GET(request: Request) {
   if (!isDatabaseConfigured()) return databaseUnavailableResponse();
 
   try {
-    const published = await publishDueScheduledPosts();
-    return Response.json({ ok: true, published });
+    const summary = await publishDueScheduledPosts();
+    return Response.json({ ok: true, ...summary });
   } catch (error) {
     logError("scheduled_publish_cron_failed", error);
     return Response.json({ error: "Scheduled publish cron failed" }, { status: 500 });

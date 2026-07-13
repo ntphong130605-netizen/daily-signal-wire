@@ -9,14 +9,24 @@ export default async function AdminPostsPage({
 }) {
   const { status = "all", q = "" } = await searchParams;
   const aiConfigured = Boolean(process.env.OPENAI_API_KEY);
-  const { posts, draftCount, publishedCount, rejectedCount, scheduledCount } = await safeDbQuery(
+  const {
+    posts,
+    draftCount,
+    approvedCount,
+    publishedCount,
+    rejectedCount,
+    scheduledCount,
+    archivedCount
+  } = await safeDbQuery(
     "admin_posts_query_failed",
     {
       posts: [],
       draftCount: 0,
+      approvedCount: 0,
       publishedCount: 0,
       rejectedCount: 0,
-      scheduledCount: 0
+      scheduledCount: 0,
+      archivedCount: 0
     },
     async () => {
       const posts = await prisma.post.findMany({
@@ -36,17 +46,35 @@ export default async function AdminPostsPage({
         orderBy: { updatedAt: "desc" },
         take: 200
       });
-      const [draftCount, publishedCount, rejectedCount, scheduledCount] = await Promise.all([
-        prisma.post.count({ where: { status: "draft" } }),
+      const [
+        draftCount,
+        approvedCount,
+        publishedCount,
+        rejectedCount,
+        scheduledCount,
+        archivedCount
+      ] = await Promise.all([
+        prisma.post.count({ where: { status: { in: ["draft", "pending_review"] } } }),
+        prisma.post.count({ where: { status: "approved" } }),
         prisma.post.count({ where: { status: "published" } }),
         prisma.post.count({ where: { status: "rejected" } }),
-        prisma.post.count({ where: { status: "scheduled" } })
+        prisma.post.count({ where: { status: "scheduled" } }),
+        prisma.post.count({ where: { status: "archived" } })
       ]);
 
-      return { posts, draftCount, publishedCount, rejectedCount, scheduledCount };
+      return {
+        posts,
+        draftCount,
+        approvedCount,
+        publishedCount,
+        rejectedCount,
+        scheduledCount,
+        archivedCount
+      };
     }
   );
-  const totalCount = draftCount + publishedCount + rejectedCount + scheduledCount;
+  const totalCount =
+    draftCount + approvedCount + publishedCount + rejectedCount + scheduledCount + archivedCount;
 
   return (
     <>
@@ -79,6 +107,14 @@ export default async function AdminPostsPage({
           <Link href="/admin/posts?status=scheduled">
             <span>Scheduled</span>
             <strong>{scheduledCount}</strong>
+          </Link>
+          <Link href="/admin/posts?status=approved">
+            <span>Approved</span>
+            <strong>{approvedCount}</strong>
+          </Link>
+          <Link href="/admin/posts?status=archived">
+            <span>Archived</span>
+            <strong>{archivedCount}</strong>
           </Link>
           <form action="/admin/posts">
             <input type="search" name="q" defaultValue={q} placeholder="Search posts…" />

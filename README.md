@@ -36,6 +36,7 @@ Open:
 - Stories: <http://localhost:3000/admin/stories>
 - Posts: <http://localhost:3000/admin/posts>
 - Image Studio: <http://localhost:3000/admin/image-studio>
+- Publishing Center: <http://localhost:3000/admin/publishing>
 - Trends: <http://localhost:3000/admin/trends>
 - Settings: <http://localhost:3000/admin/settings>
 
@@ -332,8 +333,58 @@ When configured, AI article drafts include:
 - source URLs
 - fact-check notes
 
-AI drafts are never published automatically. Editors must review and publish
-from the admin area.
+AI drafts are never published directly from generation. Editors must review,
+approve and either publish immediately or schedule through the admin area.
+
+## Auto Publisher
+
+Admin route:
+
+```text
+/admin/publishing
+```
+
+Workflow:
+
+```text
+Research → AI Writer → Fact Check → AI Image → Draft
+→ Editor Review → Approved → Scheduled/Publish Now → Published
+```
+
+Supported statuses:
+
+- `draft`
+- `pending_review`
+- `approved`
+- `scheduled`
+- `publishing`
+- `published`
+- `rejected`
+- `archived`
+
+The Publishing Center shows upcoming posts, scheduled queue, published today,
+failed publishes, draft count, approval queue, editorial notifications and
+per-post status/approval history.
+
+Protected scheduled publish endpoint:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/publish
+```
+
+Cron only publishes a scheduled post when all pre-publish checks pass:
+
+- editor approval exists
+- hero image exists and is accepted
+- fact-check status is `Verified` for AI-generated articles
+- trust score is at least 75 for AI-generated articles
+- slug is unique
+- SEO title, meta description, OpenGraph description and canonical URL exist
+- FAQ and JSON-LD inputs are ready
+
+If a check fails, the article remains unpublished and an editorial notification
+is stored for review.
 
 ## AI image generation
 

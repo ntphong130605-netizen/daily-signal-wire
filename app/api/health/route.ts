@@ -97,6 +97,29 @@ export async function GET() {
           )
           .catch(() => ({}))
       : {};
+  const publishing =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.post
+          .groupBy({
+            by: ["status"],
+            _count: { _all: true }
+          })
+          .then((rows) =>
+            rows.reduce<Record<string, number>>((accumulator, row) => {
+              accumulator[row.status] = row._count._all;
+              return accumulator;
+            }, {})
+          )
+          .catch(() => ({}))
+      : {};
+  const publishingFailures =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.post.count({
+          where: {
+            publishError: { not: null }
+          }
+        }).catch(() => 0)
+      : 0;
 
   const ok = checks.app && (!checks.databaseConfigured || checks.databaseReachable);
 
@@ -117,6 +140,10 @@ export async function GET() {
         model: process.env.IMAGE_MODEL || "gpt-image-1",
         storage: checks.imageStorage,
         statuses: imageStudio
+      },
+      publishing: {
+        statuses: publishing,
+        failedPublishes: publishingFailures
       }
     },
     {

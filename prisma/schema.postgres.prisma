@@ -269,9 +269,20 @@ model Post {
   verifiedAt           DateTime?
   status               String           @default("draft")
   scheduledAt          DateTime?
+  publishAt            DateTime?
+  timezone             String?
+  approvalStatus       String           @default("pending")
+  approvedAt           DateTime?
+  approvedBy           String?
+  publishingStartedAt  DateTime?
+  publishError         String?
+  schedulerMetadata    String           @default("{}")
   rejectedAt           DateTime?
   rejectionReason      String?
   publishedAt          DateTime?
+  statusEvents         PostStatusEvent[]
+  approvalEvents       PostApprovalEvent[]
+  notifications        EditorialNotification[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
@@ -279,6 +290,10 @@ model Post {
   @@index([status, publishedAt])
   @@index([status, categoryId, publishedAt])
   @@index([scheduledAt])
+  @@index([publishAt])
+  @@index([approvalStatus])
+  @@index([approvedAt])
+  @@index([publishingStartedAt])
   @@index([publishedAt])
   @@index([createdAt])
   @@index([aiGenerated])
@@ -289,6 +304,59 @@ model Post {
   @@index([researchCandidateId])
   @@index([sourceStoryId])
   @@index([categoryId])
+}
+
+model PostStatusEvent {
+  id         String   @id @default(cuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  fromStatus String?
+  toStatus   String
+  action     String
+  actor      String?
+  note       String?
+  metadata   String   @default("{}")
+  createdAt  DateTime @default(now())
+
+  @@index([postId])
+  @@index([toStatus])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model PostApprovalEvent {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  action    String
+  actor     String?
+  note      String?
+  metadata  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model EditorialNotification {
+  id        String    @id @default(cuid())
+  postId    String?
+  post      Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  type      String
+  title     String
+  message   String
+  severity  String    @default("info")
+  status    String    @default("unread")
+  metadata  String    @default("{}")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([postId])
+  @@index([type])
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
 }
 
 model PostRevision {

@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    qualities: [75, 78, 85, 88, 90, 95],
     remotePatterns: [
       {
         protocol: "https",

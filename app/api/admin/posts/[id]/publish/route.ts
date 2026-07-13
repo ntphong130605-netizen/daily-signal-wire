@@ -1,6 +1,5 @@
 import { apiError, protectMutation } from "@/lib/apiSecurity";
-import { prisma } from "@/lib/prisma";
-import { validatePostForPublishing } from "@/lib/publishGuard";
+import { publishPostNow } from "@/lib/publishing";
 
 export async function POST(
   request: Request,
@@ -9,29 +8,21 @@ export async function POST(
   try {
     await protectMutation(request);
     const { id } = await params;
-    const post = await prisma.post.findUniqueOrThrow({
-      where: { id },
-      include: {
-        category: { select: { name: true } },
-        trend: { select: { category: true } }
-      }
-    });
     const body = (await request.json().catch(() => ({}))) as {
       confirmedFactCheck?: boolean;
     };
-    const error = validatePostForPublishing(post, Boolean(body.confirmedFactCheck));
-    if (error) return Response.json({ error }, { status: 400 });
-    await prisma.post.update({
-      where: { id },
-      data: {
-        status: "published",
-        publishedAt: new Date(),
-        scheduledAt: null,
-        rejectedAt: null,
-        rejectionReason: null
-      }
+    const result = await publishPostNow({
+      postId: id,
+      actor: "Admin",
+      source: "manual",
+      confirmedFactCheck: Boolean(body.confirmedFactCheck),
+      approvalOverride: Boolean(body.confirmedFactCheck)
     });
-    return Response.json({ ok: true });
+    return Response.json({
+      ok: true,
+      status: result.post.status,
+      publishedAt: result.post.publishedAt
+    });
   } catch (error) {
     return apiError(error);
   }

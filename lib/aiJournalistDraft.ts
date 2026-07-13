@@ -4,6 +4,7 @@ import { logError, logInfo } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { runFactCheckForPost } from "@/lib/aiFactChecker";
+import { notifyEditor, recordStatusEvent } from "@/lib/publishing";
 import type { SourceContext } from "@/lib/trends";
 import {
   AI_JOURNALIST_PROMPT_VERSION,
@@ -141,6 +142,14 @@ function articleData(result: JournalistGenerationResult, version: number, tone: 
     sourceUrls: json(article.sourceUrls),
     status: "draft",
     scheduledAt: null,
+    publishAt: null,
+    timezone: null,
+    approvalStatus: "pending",
+    approvedAt: null,
+    approvedBy: null,
+    publishingStartedAt: null,
+    publishError: null,
+    schedulerMetadata: json({}),
     rejectedAt: null,
     rejectionReason: null,
     publishedAt: null,
@@ -317,6 +326,26 @@ export async function generateJournalistDraftFromTrend(
     version,
     source: "trend"
   });
+  await recordStatusEvent({
+    postId: post.id,
+    fromStatus: existing?.status || null,
+    toStatus: post.status,
+    action: existing ? "regenerate_draft" : "draft_ready",
+    actor: "AI Writer",
+    metadata: { trendId, version, source: "trend" }
+  }).catch((error) =>
+    logError("draft_status_event_failed", error, { postId: post.id, trendId })
+  );
+  await notifyEditor({
+    postId: post.id,
+    type: "draft_ready",
+    title: "AI draft ready",
+    message: `"${post.title}" is ready for editor review.`,
+    severity: "success",
+    metadata: { trendId, version, source: "trend" }
+  }).catch((error) =>
+    logError("draft_ready_notification_failed", error, { postId: post.id, trendId })
+  );
   return post;
 }
 
@@ -439,6 +468,29 @@ export async function generateJournalistDraftFromResearch(
     version,
     source: "research"
   });
+  await recordStatusEvent({
+    postId: post.id,
+    fromStatus: existing ? "draft" : null,
+    toStatus: post.status,
+    action: existing ? "regenerate_draft" : "draft_ready",
+    actor: "AI Writer",
+    metadata: { researchCandidateId, version, source: "research" }
+  }).catch((error) =>
+    logError("draft_status_event_failed", error, { postId: post.id, researchCandidateId })
+  );
+  await notifyEditor({
+    postId: post.id,
+    type: "draft_ready",
+    title: "AI draft ready",
+    message: `"${post.title}" is ready for editor review.`,
+    severity: "success",
+    metadata: { researchCandidateId, version, source: "research" }
+  }).catch((error) =>
+    logError("draft_ready_notification_failed", error, {
+      postId: post.id,
+      researchCandidateId
+    })
+  );
 
   logInfo("journalist_research_draft_generated", {
     researchCandidateId,

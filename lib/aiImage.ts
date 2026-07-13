@@ -12,6 +12,7 @@ import {
 import { placeholderImageForCategory } from "@/lib/editorialImages";
 import { prisma } from "@/lib/prisma";
 import { logError, logInfo } from "@/lib/logger";
+import { notifyEditor } from "@/lib/publishing";
 export { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 
 const FEATURED_SIZE = { width: 1600, height: 900 };
@@ -819,6 +820,14 @@ export async function generateImageForPost(
       generationTimeMs: Date.now() - generationStartedAt,
       generationCostUsd
     });
+    await notifyEditor({
+      postId,
+      type: "image_failed",
+      title: "AI image generation failed",
+      message,
+      severity: "warning",
+      metadata: { model, category }
+    }).catch(() => null);
     logError("post_image_generation_failed", error, { postId, model });
     throw error;
   }

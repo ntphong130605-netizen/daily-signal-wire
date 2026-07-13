@@ -1,12 +1,22 @@
 import { z } from "zod";
 import { apiError, protectMutation } from "@/lib/apiSecurity";
-import { prisma } from "@/lib/prisma";
-import { validatePostForPublishing } from "@/lib/publishGuard";
+import {
+  approvePost,
+  archivePost,
+  movePostToDraft,
+  rejectPost,
+  schedulePost
+} from "@/lib/publishing";
 
 const StatusSchema = z.object({
-  action: z.enum(["approve", "reject", "schedule", "draft"]),
+  action: z.enum(["approve", "reject", "schedule", "draft", "archive"]),
   rejectionReason: z.string().max(1000).optional(),
   scheduledAt: z.string().datetime().optional(),
+  publishAt: z.string().datetime().optional(),
+  timezone: z.string().max(100).optional(),
+  recurrence: z.string().max(80).optional(),
+  queueMode: z.boolean().optional(),
+  note: z.string().max(1000).optional(),
   confirmedFactCheck: z.boolean().optional()
 });
 
@@ -18,44 +28,50 @@ export async function POST(
     await protectMutation(request);
     const body = StatusSchema.parse(await request.json().catch(() => ({})));
     const { id } = await params;
-    const post = await prisma.post.findUniqueOrThrow({
-      where: { id },
-      include: {
-        category: { select: { name: true } },
-        trend: { select: { category: true } }
-      }
-    });
 
     if (body.action === "reject") {
-      const updated = await prisma.post.update({
-        where: { id },
-        data: {
-          status: "rejected",
-          rejectedAt: new Date(),
-          rejectionReason:
-            body.rejectionReason?.trim() || "Rejected by editor for revision.",
-          scheduledAt: null,
-          publishedAt: null
-        }
+      const updated = await rejectPost({
+        postId: id,
+        actor: "Admin",
+        reason: body.rejectionReason
       });
       return Response.json({ ok: true, status: updated.status });
     }
 
-    if (body.action === "draft" || body.action === "approve") {
-      const updated = await prisma.post.update({
-        where: { id },
-        data: {
-          status: "draft",
-          rejectedAt: null,
-          rejectionReason: null,
-          scheduledAt: null,
-          publishedAt: null
-        }
+    if (body.action === "archive") {
+      const updated = await archivePost({
+        postId: id,
+        actor: "Admin",
+        note: body.note
       });
       return Response.json({ ok: true, status: updated.status });
     }
 
-    const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
+    if (body.action === "draft") {
+      const updated = await movePostToDraft({
+        postId: id,
+        actor: "Admin",
+        note: body.note
+      });
+      return Response.json({ ok: true, status: updated.status });
+    }
+
+    if (body.action === "approve") {
+      const result = await approvePost({
+        postId: id,
+        actor: "Admin",
+        note: body.note,
+        confirmedFactCheck: Boolean(body.confirmedFactCheck)
+      });
+      return Response.json({
+        ok: true,
+        status: result.post.status,
+        approvedAt: result.post.approvedAt,
+        readiness: result.readiness
+      });
+    }
+
+    const scheduledAt = body.publishAt || body.scheduledAt ? new Date(body.publishAt || body.scheduledAt || "") : null;
     if (!scheduledAt || Number.isNaN(scheduledAt.getTime())) {
       return Response.json(
         { error: "A valid scheduledAt ISO datetime is required." },
@@ -68,21 +84,24 @@ export async function POST(
         { status: 400 }
       );
     }
-
-    const error = validatePostForPublishing(post, Boolean(body.confirmedFactCheck));
-    if (error) return Response.json({ error }, { status: 400 });
-
-    const updated = await prisma.post.update({
-      where: { id },
-      data: {
-        status: "scheduled",
-        scheduledAt,
-        publishedAt: null,
-        rejectedAt: null,
-        rejectionReason: null
-      }
+    const result = await schedulePost({
+      postId: id,
+      publishAt: scheduledAt,
+      timezone: body.timezone,
+      recurrence: body.recurrence,
+      queueMode: body.queueMode,
+      actor: "Admin",
+      note: body.note,
+      confirmedFactCheck: Boolean(body.confirmedFactCheck)
     });
-    return Response.json({ ok: true, status: updated.status, scheduledAt });
+    return Response.json({
+      ok: true,
+      status: result.post.status,
+      scheduledAt: result.post.scheduledAt,
+      publishAt: result.post.publishAt,
+      timezone: result.post.timezone,
+      readiness: result.readiness
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return Response.json(

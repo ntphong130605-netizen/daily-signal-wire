@@ -4,6 +4,7 @@ import { JournalistToneSchema } from "@/lib/aiJournalist";
 import { rewritePostSection } from "@/lib/aiJournalistDraft";
 import { runFactCheckForPost } from "@/lib/aiFactChecker";
 import { databaseUnavailableResponse, isDatabaseConfigured } from "@/lib/prisma";
+import { notifyEditor } from "@/lib/publishing";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
 
 export const maxDuration = 180;
@@ -42,6 +43,22 @@ export async function POST(request: Request) {
     }
 
     const result = await runFactCheckForPost(body.postId);
+    if (result.status !== "Verified") {
+      await notifyEditor({
+        postId: body.postId,
+        type: "fact_check_failed",
+        title: "Fact check needs review",
+        message:
+          result.summary ||
+          "The AI Fact Checker flagged this article before publication.",
+        severity: result.status === "Low Confidence" ? "error" : "warning",
+        metadata: {
+          status: result.status,
+          trustScore: result.trustScore,
+          warnings: result.warnings
+        }
+      });
+    }
     return Response.json({ ok: true, result });
   } catch (error) {
     if (error instanceof z.ZodError) {

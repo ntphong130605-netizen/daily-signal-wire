@@ -685,6 +685,10 @@ export default function AdminPostEditor({
       payload.scheduledAt = new Date(scheduleAt).toISOString();
       payload.confirmedFactCheck = confirmed;
     }
+    if (action === "approve") {
+      payload.confirmedFactCheck = confirmed;
+      payload.note = "Approved from post editor.";
+    }
     const result = await call(
       `/api/admin/posts/${post.id}/status`,
       {
@@ -1639,7 +1643,7 @@ export default function AdminPostEditor({
           <button
             className="button button-secondary"
             onClick={() => statusAction("approve")}
-            disabled={Boolean(busy)}
+            disabled={Boolean(busy) || !confirmed || factCheckBlocksPublish}
           >
             Approve Draft
           </button>

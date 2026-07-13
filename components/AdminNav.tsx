@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/writer", icon: "✍", label: "AI Writer" },
   { href: "/admin/fact-checker", icon: "✓", label: "Fact Checker" },
   { href: "/admin/image-studio", icon: "▣", label: "Image Studio" },
+  { href: "/admin/publishing", icon: "⏱", label: "Publishing" },
   { href: "/admin/trends", icon: "↗", label: "US trends" },
   { href: "/admin/posts", icon: "✦", label: "Posts" },
   { href: "/admin/settings", icon: "⚙", label: "Settings" }

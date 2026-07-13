@@ -5,6 +5,7 @@ import { generateArticleFromTrend } from "@/lib/aiWriter";
 import { tryGenerateImageForPost } from "@/lib/aiImage";
 import { slugify } from "@/lib/slug";
 import { logError, logInfo } from "@/lib/logger";
+import { notifyEditor, recordStatusEvent } from "@/lib/publishing";
 
 async function uniquePostSlug(base: string, existingId?: string) {
   const root = slugify(base) || "rss-story-draft";
@@ -72,7 +73,7 @@ export async function POST(
 
     const existing = await prisma.post.findFirst({
       where: { sourceStoryId: story.id },
-      select: { id: true, slug: true }
+      select: { id: true, slug: true, status: true }
     });
     const slug = await uniquePostSlug(article.slug || article.title, existing?.id);
     const categoryId = await categoryIdFor(article.category || story.feed.category?.name || "RSS");
@@ -124,6 +125,14 @@ export async function POST(
             sourceUrls: JSON.stringify(article.sourceUrls),
             status: "draft",
             scheduledAt: null,
+            publishAt: null,
+            timezone: null,
+            approvalStatus: "pending",
+            approvedAt: null,
+            approvedBy: null,
+            publishingStartedAt: null,
+            publishError: null,
+            schedulerMetadata: JSON.stringify({}),
             rejectedAt: null,
             rejectionReason: null,
             publishedAt: null,
@@ -155,11 +164,35 @@ export async function POST(
             ]),
             sourceUrls: JSON.stringify(article.sourceUrls),
             status: "draft",
+            approvalStatus: "pending",
             ...resetImage
           }
         });
 
     logInfo("rss_story_converted_to_draft", { storyId: story.id, postId: post.id });
+    await recordStatusEvent({
+      postId: post.id,
+      fromStatus: existing?.status || null,
+      toStatus: "draft",
+      action: existing ? "regenerate_draft" : "draft_ready",
+      actor: "AI Writer",
+      metadata: { storyId: story.id, source: "rss" }
+    }).catch((error) =>
+      logError("rss_draft_status_event_failed", error, { storyId: story.id, postId: post.id })
+    );
+    await notifyEditor({
+      postId: post.id,
+      type: "draft_ready",
+      title: "RSS draft ready",
+      message: `"${post.title}" is ready for editor review.`,
+      severity: "success",
+      metadata: { storyId: story.id, source: "rss" }
+    }).catch((error) =>
+      logError("rss_draft_ready_notification_failed", error, {
+        storyId: story.id,
+        postId: post.id
+      })
+    );
     after(async () => {
       await tryGenerateImageForPost(post.id);
     });

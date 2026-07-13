@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiError, protectMutation } from "@/lib/apiSecurity";
 import { setFactCheckDecision } from "@/lib/aiFactChecker";
-import { prisma } from "@/lib/prisma";
+import { rejectPost } from "@/lib/publishing";
 
 const VerifySchema = z.object({
   postId: z.string().min(3),
@@ -15,16 +15,11 @@ export async function POST(request: Request) {
     const post = await setFactCheckDecision(body);
 
     if (body.action === "reject") {
-      await prisma.post.update({
-        where: { id: body.postId },
-        data: {
-          status: "rejected",
-          rejectedAt: new Date(),
-          rejectionReason:
-            "Rejected by fact-check workflow. Resolve unsupported or conflicting claims before publication.",
-          scheduledAt: null,
-          publishedAt: null
-        }
+      await rejectPost({
+        postId: body.postId,
+        actor: "AI Fact Checker",
+        reason:
+          "Rejected by fact-check workflow. Resolve unsupported or conflicting claims before publication."
       });
     }
 
