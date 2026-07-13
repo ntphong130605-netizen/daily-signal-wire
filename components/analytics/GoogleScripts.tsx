@@ -4,6 +4,7 @@ import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { ConsentState } from "@/components/consent/CookieConsent";
+import { analyticsIdentity } from "@/lib/client/analytics";
 
 declare global {
   interface Window {
@@ -23,6 +24,42 @@ const deniedConsent: ConsentState = {
 function currentConsent() {
   if (typeof window === "undefined") return deniedConsent;
   return window.__dswConsent || deniedConsent;
+}
+
+function sendInternalEvent(
+  eventName: string,
+  pathname: string,
+  metadata: Record<string, string | number | boolean | null | undefined> = {}
+) {
+  const search = window.location.search || "";
+  const pagePath = `${pathname}${search}`;
+  const identity = analyticsIdentity();
+  const payload = JSON.stringify({
+    eventName,
+    path: pagePath,
+    articleSlug: pathname.startsWith("/news/")
+      ? pathname.split("/").filter(Boolean).pop()
+      : undefined,
+    visitorId: identity.visitorId,
+    sessionId: identity.sessionId,
+    source: document.referrer ? new URL(document.referrer).hostname : "direct",
+    scrollDepth:
+      typeof metadata.percent_scrolled === "number" ? metadata.percent_scrolled : undefined,
+    metadata
+  });
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(
+      "/api/analytics/event",
+      new Blob([payload], { type: "application/json" })
+    );
+    return;
+  }
+  fetch("/api/analytics/event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true
+  }).catch(() => null);
 }
 
 export default function GoogleScripts({
@@ -55,29 +92,110 @@ export default function GoogleScripts({
   }, []);
 
   useEffect(() => {
-    if (!gaMeasurementId || consent.analytics_storage !== "granted") return;
-    if (typeof window.gtag !== "function") return;
+    if (consent.analytics_storage !== "granted") return;
+    const canSendGa = Boolean(gaMeasurementId) && typeof window.gtag === "function";
 
-    if (!gaConfigured) {
-      window.gtag("config", gaMeasurementId, { send_page_view: false });
+    if (canSendGa && !gaConfigured) {
+      window.gtag?.("config", gaMeasurementId, { send_page_view: false });
       setGaConfigured(true);
     }
 
     const search = searchParams.toString();
     const pagePath = search ? `${pathname}?${search}` : pathname;
-    window.gtag("event", "page_view", {
+    if (canSendGa) {
+      window.gtag?.("event", "page_view", {
+        page_path: pagePath,
+        page_location: window.location.href,
+        page_title: document.title
+      });
+    }
+    sendInternalEvent("page_view", pathname, {
       page_path: pagePath,
-      page_location: window.location.href,
       page_title: document.title
     });
 
     if (pathname.startsWith("/news/")) {
-      window.gtag("event", "article_view", {
+      if (canSendGa) {
+        window.gtag?.("event", "article_view", {
+          page_path: pagePath,
+          article_slug: pathname.split("/").filter(Boolean).pop()
+        });
+      }
+      sendInternalEvent("article_view", pathname, {
         page_path: pagePath,
         article_slug: pathname.split("/").filter(Boolean).pop()
       });
     }
   }, [consent.analytics_storage, gaConfigured, gaMeasurementId, pathname, searchParams]);
+
+  useEffect(() => {
+    if (consent.analytics_storage !== "granted") return;
+    try {
+      if (window.sessionStorage.getItem("dsw_session_started") === "true") return;
+      window.sessionStorage.setItem("dsw_session_started", "true");
+      sendInternalEvent("session_start", pathname, { page_path: window.location.pathname });
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "session_start", {
+          page_path: window.location.pathname + window.location.search
+        });
+      }
+    } catch {
+      sendInternalEvent("session_start", pathname, { page_path: window.location.pathname });
+    }
+  }, [consent.analytics_storage, pathname]);
+
+  useEffect(() => {
+    if (consent.analytics_storage !== "granted") return;
+    const fired = new Set<number>();
+    function handleScroll() {
+      const height = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      const percent = Math.round((window.scrollY / height) * 100);
+      for (const threshold of [25, 50, 75, 90]) {
+        if (percent >= threshold && !fired.has(threshold)) {
+          fired.add(threshold);
+          if (typeof window.gtag === "function") {
+            window.gtag("event", "scroll_depth", {
+              percent_scrolled: threshold,
+              page_path: window.location.pathname + window.location.search
+            });
+          }
+          sendInternalEvent("scroll_depth", pathname, { percent_scrolled: threshold });
+        }
+      }
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [consent.analytics_storage, pathname]);
+
+  useEffect(() => {
+    if (consent.analytics_storage !== "granted") return;
+    const startedAt = Date.now();
+    function sendDuration() {
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startedAt) / 1000));
+      const identity = analyticsIdentity();
+      const payload = JSON.stringify({
+        eventName: "time_on_page",
+        path: window.location.pathname + window.location.search,
+        articleSlug: window.location.pathname.startsWith("/news/")
+          ? window.location.pathname.split("/").filter(Boolean).pop()
+          : undefined,
+        visitorId: identity.visitorId,
+        sessionId: identity.sessionId,
+        source: document.referrer ? new URL(document.referrer).hostname : "direct",
+        durationSeconds,
+        metadata: { duration_seconds: durationSeconds }
+      });
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(
+          "/api/analytics/event",
+          new Blob([payload], { type: "application/json" })
+        );
+      }
+    }
+    window.addEventListener("pagehide", sendDuration, { once: true });
+    return () => window.removeEventListener("pagehide", sendDuration);
+  }, [consent.analytics_storage]);
 
   useEffect(() => {
     if (!adsenseClientId || consent.ad_storage !== "granted") return;

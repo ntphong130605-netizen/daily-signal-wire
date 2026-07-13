@@ -10,6 +10,8 @@ It combines:
 - AI-assisted original article drafts
 - admin review before publishing
 - safe AdSense placeholders in development
+- a Growth & Revenue Platform for content planning, distribution queues,
+  SEO/Discover audits, analytics, monitoring and revenue readiness
 
 The system does not copy publisher articles into the site. RSS stories store
 metadata such as title, excerpt, URL, source, time and image when the feed
@@ -37,6 +39,14 @@ Open:
 - Posts: <http://localhost:3000/admin/posts>
 - Image Studio: <http://localhost:3000/admin/image-studio>
 - Publishing Center: <http://localhost:3000/admin/publishing>
+- Growth Center: <http://localhost:3000/admin/growth>
+- Planner: <http://localhost:3000/admin/planner>
+- Distribution: <http://localhost:3000/admin/distribution>
+- SEO: <http://localhost:3000/admin/seo>
+- Discover: <http://localhost:3000/admin/discover>
+- Revenue: <http://localhost:3000/admin/revenue>
+- Analytics: <http://localhost:3000/admin/analytics>
+- Monitoring: <http://localhost:3000/admin/monitoring>
 - Trends: <http://localhost:3000/admin/trends>
 - Settings: <http://localhost:3000/admin/settings>
 
@@ -74,11 +84,27 @@ NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR=
 NEXT_PUBLIC_ADSENSE_SLOT_BOTTOM=
 
 NEXT_PUBLIC_GA_MEASUREMENT_ID=
+NEXT_PUBLIC_GTM_ID=
+NEXT_PUBLIC_CLARITY_PROJECT_ID=
 GOOGLE_SITE_VERIFICATION=
+ADSENSE_ESTIMATED_RPM=
 
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
 MAX_TRENDS_PER_RUN=5
+EDITORIAL_TIMEZONE=America/New_York
+
+FACEBOOK_PAGE_ACCESS_TOKEN=
+FACEBOOK_PAGE_ID=
+X_API_KEY=
+X_ACCESS_TOKEN=
+LINKEDIN_ACCESS_TOKEN=
+PINTEREST_ACCESS_TOKEN=
+THREADS_ACCESS_TOKEN=
+BLUESKY_IDENTIFIER=
+BLUESKY_APP_PASSWORD=
+RESEND_API_KEY=
+NEWSLETTER_FROM_EMAIL=
 
 RESEARCH_REGION=US
 RESEARCH_LANGUAGE=en-US
@@ -386,6 +412,93 @@ Cron only publishes a scheduled post when all pre-publish checks pass:
 If a check fails, the article remains unpublished and an editorial notification
 is stored for review.
 
+## Growth & Revenue Platform
+
+Phase 4.0 adds a business operations layer inside Admin. It does not replace the
+existing CMS, AI writer, fact checker, image studio, search, SEO or AdSense
+workflows.
+
+Admin routes:
+
+- `/admin/growth` unified business command center
+- `/admin/planner` AI Content Planner and seven-day publishing calendar
+- `/admin/distribution` Traffic Engine and distribution queue
+- `/admin/seo` SEO Intelligence analyzer
+- `/admin/discover` Google Discover optimizer
+- `/admin/revenue` Revenue Center and AI revenue recommendations
+- `/admin/analytics` Analytics Center
+- `/admin/monitoring` System Status
+
+The planner builds schedules from real saved inputs:
+
+- Google Trends records
+- evergreen editorial topics
+- existing category balance
+
+It supports drag-and-drop rescheduling, priority, status and timezone metadata.
+
+The Distribution Center supports queueing jobs for:
+
+- Facebook
+- X
+- LinkedIn
+- Pinterest
+- Threads
+- Bluesky
+- RSS
+- Email newsletter
+
+External networks require official API/OAuth credentials. If credentials are
+missing, jobs are marked `blocked` and the app never fakes a successful social
+post. RSS distribution becomes live through `/rss.xml` when the article is
+published.
+
+Protected distribution cron endpoint:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/distribution
+```
+
+Optional distribution environment variables:
+
+```env
+FACEBOOK_PAGE_ACCESS_TOKEN=
+FACEBOOK_PAGE_ID=
+X_API_KEY=
+X_ACCESS_TOKEN=
+LINKEDIN_ACCESS_TOKEN=
+PINTEREST_ACCESS_TOKEN=
+THREADS_ACCESS_TOKEN=
+BLUESKY_IDENTIFIER=
+BLUESKY_APP_PASSWORD=
+RESEND_API_KEY=
+NEWSLETTER_FROM_EMAIL=
+EDITORIAL_TIMEZONE=America/New_York
+```
+
+SEO Intelligence checks headline length, meta description, slug quality,
+content depth, keyword density, internal links, source links, schema inputs,
+image SEO and duplicate paragraph risk. Discover optimization scores freshness,
+entity clarity, image readiness and headline quality.
+
+Revenue Center uses tracked pageviews and optional imported revenue metrics. If
+you set `ADSENSE_ESTIMATED_RPM`, the dashboard displays an internal estimate:
+
+```env
+ADSENSE_ESTIMATED_RPM=12.50
+```
+
+Leave it empty unless you want an internal planning estimate. The app does not
+invent revenue or call Google AdSense APIs without an official OAuth/API
+integration.
+
+Analytics Center stores privacy-safe internal events only after analytics
+consent. It creates anonymous local visitor/session IDs, but does not store IP
+addresses. Tracked internal events include page views, article views, searches,
+scroll depth, time on page, AI article generation, AI image generation, publish
+actions and Facebook copy actions.
+
 ## AI image generation
 
 After an AI article draft is created from Google Trends or an RSS story, the app
@@ -672,6 +785,10 @@ When configured and accepted through the cookie banner, the app tracks:
 
 - `page_view`
 - `article_view`
+- `session_start`
+- `search`
+- `scroll_depth`
+- `time_on_page`
 - `copy_facebook_post`
 - `publish_article`
 - `generate_ai_article`

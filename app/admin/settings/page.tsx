@@ -7,6 +7,7 @@ import {
   maskPublicId
 } from "@/lib/ads";
 import { configuredImageStorageLabel } from "@/lib/aiImage";
+import { channelConfigured, distributionPlatforms } from "@/lib/growth";
 import { isDatabaseConfigured, prisma, safeDbQuery } from "@/lib/prisma";
 
 function flag(value: string | undefined) {
@@ -53,6 +54,10 @@ export default async function AdminSettingsPage() {
       "Google Analytics",
       flag(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.GOOGLE_ANALYTICS_ID)
     ],
+    ["GTM", flag(process.env.NEXT_PUBLIC_GTM_ID)],
+    ["Microsoft Clarity", flag(process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID)],
+    ["AdSense estimate RPM", flag(process.env.ADSENSE_ESTIMATED_RPM)],
+    ["Editorial timezone", process.env.EDITORIAL_TIMEZONE || "America/New_York"],
     ["Cron secret", flag(process.env.CRON_SECRET)],
     ["NextAuth secret", flag(process.env.NEXTAUTH_SECRET)]
   ];
@@ -131,6 +136,30 @@ export default async function AdminSettingsPage() {
                     <span>{slot.label}</span>
                     <strong>{slot.enabled ? "Enabled" : "Hidden"}</strong>
                     <small>{slot.slotId || "Dev placeholder: Advertisement"}</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+            <section className="panel admin-form-panel">
+              <div className="panel-heading compact">
+                <h2>Growth channels</h2>
+              </div>
+              <div className="settings-list compact">
+                {distributionPlatforms.map((channel) => (
+                  <div key={channel.platform}>
+                    <span>{channel.label}</span>
+                    <strong
+                      className={channelConfigured(channel.platform) ? "configured" : "missing"}
+                    >
+                      {channelConfigured(channel.platform)
+                        ? "Configured"
+                        : "Missing credentials"}
+                    </strong>
+                    <small>
+                      {channel.credentialKeys.length === 0
+                        ? "No credentials required"
+                        : channel.credentialKeys.join(", ")}
+                    </small>
                   </div>
                 ))}
               </div>

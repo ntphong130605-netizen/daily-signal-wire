@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { newsroomCategories } from "@/lib/categoryLanding";
+import { trackEvent } from "@/lib/client/analytics";
 import type { SearchFilters, SearchResponse, SearchResult, SearchSuggestion } from "@/lib/searchEngine";
 
 const recentSearchKey = "dsw-recent-searches";
@@ -111,6 +112,7 @@ export default function SearchExperience({
   const [isPending, startTransition] = useTransition();
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const lastTrackedSearchRef = useRef("");
 
   const allSuggestions = useMemo<SearchSuggestion[]>(() => response.suggestions.slice(0, 10), [response.suggestions]);
   const visibleResults = response.results.slice(0, visibleCount);
@@ -167,6 +169,16 @@ export default function SearchExperience({
         if (!result.ok) return;
         const data = (await result.json()) as SearchResponse;
         setResponse(data);
+        const trackedQuery = normalized.q?.trim() || "";
+        if (trackedQuery.length > 1 && trackedQuery !== lastTrackedSearchRef.current) {
+          lastTrackedSearchRef.current = trackedQuery;
+          trackEvent("search", {
+            query: trackedQuery,
+            result_count: data.total,
+            category: normalized.category || "",
+            tag: normalized.tag || ""
+          });
+        }
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           // Keep the previous response visible; search should never blank the page.

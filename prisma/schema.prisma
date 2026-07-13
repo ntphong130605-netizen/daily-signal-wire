@@ -283,6 +283,10 @@ model Post {
   statusEvents         PostStatusEvent[]
   approvalEvents       PostApprovalEvent[]
   notifications        EditorialNotification[]
+  contentPlanItems     ContentPlanItem[]
+  distributionPublishes DistributionPublish[]
+  seoAudits            SeoAudit[]
+  discoverAudits       DiscoverAudit[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
@@ -357,6 +361,193 @@ model EditorialNotification {
   @@index([status])
   @@index([severity])
   @@index([createdAt])
+}
+
+model ContentPlanItem {
+  id             String    @id @default(cuid())
+  postId         String?
+  post           Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  topic          String
+  slug           String?
+  category       String    @default("US News")
+  sourceType     String    @default("manual")
+  sourceId       String?
+  status         String    @default("planned")
+  priority       Int       @default(3)
+  plannedFor     DateTime
+  timezone       String    @default("UTC")
+  frequency      String    @default("one_time")
+  angle          String?
+  targetKeywords String    @default("[]")
+  notes          String?
+  owner          String?
+  metadata       String    @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([postId])
+  @@index([status])
+  @@index([priority])
+  @@index([plannedFor])
+  @@index([category])
+  @@index([sourceType])
+}
+
+model DistributionChannel {
+  id             String                @id @default(cuid())
+  platform       String                @unique
+  label          String
+  enabled        Boolean               @default(false)
+  mode           String                @default("manual")
+  status         String                @default("not_configured")
+  configStatus   String                @default("missing_credentials")
+  lastCheckedAt  DateTime?
+  notes          String?
+  metadata       String                @default("{}")
+  publishes      DistributionPublish[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([enabled])
+  @@index([status])
+  @@index([mode])
+}
+
+model DistributionPublish {
+  id             String               @id @default(cuid())
+  postId         String?
+  post           Post?                @relation(fields: [postId], references: [id], onDelete: SetNull)
+  channelId      String?
+  channel        DistributionChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  platform       String
+  mode           String               @default("manual")
+  status         String               @default("queued")
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  retryCount     Int                  @default(0)
+  lastError      String?
+  destinationUrl String?
+  message        String?
+  payload        String               @default("{}")
+  history        String               @default("[]")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@index([postId])
+  @@index([channelId])
+  @@index([platform])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+}
+
+model SeoAudit {
+  id             String   @id @default(cuid())
+  postId         String
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score          Int
+  keyword        String?
+  checks         String   @default("[]")
+  suggestions    String   @default("[]")
+  keywords       String   @default("[]")
+  duplicateRisk  String   @default("low")
+  thinContent    Boolean  @default(false)
+  brokenLinks    String   @default("[]")
+  metadata       String   @default("{}")
+  analyzedAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([postId])
+  @@index([score])
+  @@index([duplicateRisk])
+  @@index([analyzedAt])
+}
+
+model DiscoverAudit {
+  id                  String   @id @default(cuid())
+  postId              String
+  post                Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score               Int
+  freshnessScore      Int
+  entityScore         Int
+  imageScore          Int
+  largePreviewReady   Boolean  @default(false)
+  headlineVariations  String   @default("[]")
+  suggestions         String   @default("[]")
+  metadata            String   @default("{}")
+  analyzedAt          DateTime @default(now())
+  createdAt           DateTime @default(now())
+
+  @@index([postId])
+  @@index([score])
+  @@index([freshnessScore])
+  @@index([analyzedAt])
+}
+
+model RevenueMetric {
+  id               String   @id @default(cuid())
+  date             DateTime
+  source           String   @default("internal")
+  pageviews        Int      @default(0)
+  sessions         Int      @default(0)
+  estimatedRevenue Float?
+  ctr              Float?
+  rpm              Float?
+  topArticles      String   @default("[]")
+  topCategories    String   @default("[]")
+  topCountries     String   @default("[]")
+  trafficSources   String   @default("[]")
+  metadata         String   @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([date, source])
+  @@index([date])
+  @@index([source])
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  eventName   String
+  path        String?
+  articleSlug String?
+  category    String?
+  visitorId   String?
+  sessionId   String?
+  country     String?
+  device      String?
+  source      String?
+  referrer    String?
+  durationSeconds Int?
+  scrollDepth Int?
+  metadata    String   @default("{}")
+  createdAt   DateTime @default(now())
+
+  @@index([eventName])
+  @@index([path])
+  @@index([articleSlug])
+  @@index([category])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([country])
+  @@index([device])
+  @@index([source])
+  @@index([scrollDepth])
+  @@index([createdAt])
+}
+
+model SystemStatusCheck {
+  id        String   @id @default(cuid())
+  key       String
+  label     String
+  status    String   @default("unknown")
+  message   String?
+  metadata  String   @default("{}")
+  checkedAt DateTime @default(now())
+
+  @@index([key])
+  @@index([status])
+  @@index([checkedAt])
 }
 
 model PostRevision {

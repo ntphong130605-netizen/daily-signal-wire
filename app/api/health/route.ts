@@ -120,6 +120,41 @@ export async function GET() {
           }
         }).catch(() => 0)
       : 0;
+  const growth =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await Promise.all([
+          prisma.contentPlanItem.count({ where: { plannedFor: { gte: new Date() } } }),
+          prisma.distributionPublish.groupBy({
+            by: ["status"],
+            _count: { _all: true }
+          }),
+          prisma.analyticsEvent.count({
+            where: {
+              eventName: "page_view",
+              createdAt: { gte: new Date(Date.now() - 24 * 36e5) }
+            }
+          }),
+          prisma.seoAudit.findFirst({
+            orderBy: { analyzedAt: "desc" },
+            select: { score: true, analyzedAt: true }
+          }),
+          prisma.discoverAudit.findFirst({
+            orderBy: { analyzedAt: "desc" },
+            select: { score: true, analyzedAt: true }
+          })
+        ])
+          .then(([plannerUpcoming, distributionRows, pageviews24h, latestSeo, latestDiscover]) => ({
+            plannerUpcoming,
+            distribution: distributionRows.reduce<Record<string, number>>((accumulator, row) => {
+              accumulator[row.status] = row._count._all;
+              return accumulator;
+            }, {}),
+            pageviews24h,
+            latestSeo,
+            latestDiscover
+          }))
+          .catch(() => null)
+      : null;
 
   const ok = checks.app && (!checks.databaseConfigured || checks.databaseReachable);
 
@@ -144,7 +179,8 @@ export async function GET() {
       publishing: {
         statuses: publishing,
         failedPublishes: publishingFailures
-      }
+      },
+      growth
     },
     {
       status: ok ? 200 : 503,

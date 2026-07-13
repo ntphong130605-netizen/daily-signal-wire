@@ -60,6 +60,11 @@ export default async function AdminDashboard() {
             <strong>{publishedCount}</strong>
             <small>{subscriberCount} newsletter subscribers</small>
           </div>
+          <Link href="/admin/growth" className="stat-card">
+            <span>Growth platform</span>
+            <strong>Phase 4.0</strong>
+            <small>Traffic, revenue, SEO, analytics</small>
+          </Link>
         </section>
         <section className="panel trend-panel">
           <div className="panel-heading">
