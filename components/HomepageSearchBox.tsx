@@ -41,7 +41,7 @@ export default function HomepageSearchBox({
   return (
     <form
       className="news-home-search news-home-search-live"
-      action="/"
+      action="/search"
       onFocus={() => setFocused(true)}
       onBlur={() => window.setTimeout(() => setFocused(false), 120)}
     >
@@ -80,7 +80,7 @@ export default function HomepageSearchBox({
               <p>Trending topics</p>
               <div className="news-home-search-topics">
                 {topicMatches.map((topic) => (
-                  <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+                  <Link key={topic} href={`/search?q=${encodeURIComponent(topic)}`}>
                     #{topic}
                   </Link>
                 ))}

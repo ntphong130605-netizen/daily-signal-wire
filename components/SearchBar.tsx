@@ -8,7 +8,7 @@ export default function SearchBar({
   return (
     <form
       className={`site-search${compact ? " site-search-compact" : ""}`}
-      action="/"
+      action="/search"
       method="get"
       role="search"
     >

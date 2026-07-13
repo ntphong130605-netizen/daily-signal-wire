@@ -238,7 +238,7 @@ export default function NewsReaderLayout({
               </div>
               <div className="news-home-topic-track">
                 {topics.map((topic) => (
-                  <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+                  <Link key={topic} href={`/search?q=${encodeURIComponent(topic)}`}>
                     <span>#</span>
                     {topic}
                   </Link>
@@ -438,7 +438,7 @@ export default function NewsReaderLayout({
                   <p className="news-home-kicker">Popular topics</p>
                   <div className="news-home-topic-cloud">
                     {topics.slice(0, 10).map((topic) => (
-                      <Link key={topic} href={`/?q=${encodeURIComponent(topic)}`}>
+                      <Link key={topic} href={`/search?q=${encodeURIComponent(topic)}`}>
                         {topic}
                       </Link>
                     ))}

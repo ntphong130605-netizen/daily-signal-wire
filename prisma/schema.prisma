@@ -249,8 +249,12 @@ model Post {
   updatedAt            DateTime         @updatedAt
 
   @@index([status])
+  @@index([status, publishedAt])
+  @@index([status, categoryId, publishedAt])
   @@index([scheduledAt])
   @@index([publishedAt])
+  @@index([createdAt])
+  @@index([aiGenerated])
   @@index([imageStatus])
   @@index([sourceStoryId])
   @@index([categoryId])
