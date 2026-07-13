@@ -8,7 +8,12 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/admin", "/login", "/api/admin", "/api/cron"]
     },
-    sitemap: [absoluteUrl("/sitemap.xml"), absoluteUrl("/news-sitemap.xml")],
+    sitemap: [
+      absoluteUrl("/sitemap.xml"),
+      absoluteUrl("/news-sitemap.xml"),
+      absoluteUrl("/image-sitemap.xml"),
+      absoluteUrl("/video-sitemap.xml")
+    ],
     host: siteUrl()
   };
 }

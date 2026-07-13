@@ -1,4 +1,5 @@
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { parseStringArray } from "@/lib/json";
 import { absoluteUrl, siteName } from "@/lib/site";
 
 function escapeXml(value: string) {
@@ -24,8 +25,11 @@ export async function GET() {
         select: {
           slug: true,
           title: true,
+          tags: true,
           publishedAt: true,
-          updatedAt: true
+          updatedAt: true,
+          category: { select: { name: true } },
+          trend: { select: { category: true } }
         },
         orderBy: { publishedAt: "desc" },
         take: 1000
@@ -37,6 +41,8 @@ export async function GET() {
 ${posts
   .map((post) => {
     const publishedAt = post.publishedAt || post.updatedAt || new Date();
+    const category = post.category?.name || post.trend?.category || "Latest";
+    const keywords = [category, ...parseStringArray(post.tags)].filter(Boolean).slice(0, 10);
     return `  <url>
     <loc>${escapeXml(absoluteUrl(`/news/${post.slug}`))}</loc>
     <news:news>
@@ -46,6 +52,7 @@ ${posts
       </news:publication>
       <news:publication_date>${publishedAt.toISOString()}</news:publication_date>
       <news:title>${escapeXml(post.title)}</news:title>
+      ${keywords.length ? `<news:keywords>${escapeXml(keywords.join(", "))}</news:keywords>` : ""}
     </news:news>
   </url>`;
   })

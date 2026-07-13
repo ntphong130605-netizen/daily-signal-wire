@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { newsroomCategories } from "@/lib/categoryLanding";
 import { parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/site";
@@ -13,7 +14,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/terms",
     "/editorial-policy",
     "/ai-content-policy",
-    "/dmca"
+    "/dmca",
+    "/search"
   ];
   const posts = await safeDbQuery(
     "sitemap_posts_query_failed",
@@ -47,6 +49,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: 0.5
+    })),
+    ...newsroomCategories.map((category) => ({
+      url: absoluteUrl(`/category/${category.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "hourly" as const,
+      priority: 0.65
     })),
     ...posts.map((post) => ({
       url: absoluteUrl(`/news/${post.slug}`),

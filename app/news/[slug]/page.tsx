@@ -14,6 +14,13 @@ import ReaderShell from "@/components/ReaderShell";
 import { isAdmin } from "@/lib/auth";
 import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { parseJsonArray, parseStringArray } from "@/lib/json";
+import {
+  buildKeyTakeaways,
+  compactSeoText,
+  extractFirstVideoUrl,
+  stripMarkdown,
+  videoEmbedUrl
+} from "@/lib/newsSeo";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { absoluteUrl, siteName } from "@/lib/site";
 import { slugify } from "@/lib/slug";
@@ -154,7 +161,10 @@ export async function generateMetadata({
 
   const category = post.category?.name || post.trend?.category || "Latest";
   const tags = parseStringArray(post.tags);
-  const description = post.openGraphDescription || post.seoDescription;
+  const description = compactSeoText(
+    post.openGraphDescription || post.seoDescription || post.subtitle || post.title,
+    200
+  );
   const ogImage = normalizeEditorialImageUrl(
     post.openGraphImage || post.featuredImageUrl || post.featuredImage || post.imageUrl,
     category
@@ -200,6 +210,29 @@ export async function generateMetadata({
       title: post.seoTitle || post.title,
       description,
       images: twitterImage ? [absoluteUrl(twitterImage)] : []
+    },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1
+      }
+    },
+    other: {
+      "article:published_time": post.publishedAt?.toISOString() || "",
+      "article:modified_time": post.updatedAt.toISOString(),
+      "article:section": category,
+      "og:image:secure_url": ogImage ? absoluteUrl(ogImage) : "",
+      "og:image:width": "1600",
+      "og:image:height": "900",
+      "twitter:label1": "Written by",
+      "twitter:data1": "Daily Signal Wire Desk",
+      "twitter:label2": "Filed under",
+      "twitter:data2": category
     }
   };
 }
@@ -270,6 +303,13 @@ export default async function NewsArticlePage({
   const sourceUrls = parseStringArray(post.sourceUrls);
   const factCheckNotes = parseStringArray(post.factCheckNotes);
   const headings = extractArticleHeadings(post.content);
+  const keyTakeaways = buildKeyTakeaways({
+    title: post.title,
+    subtitle: post.subtitle,
+    summary: post.summary,
+    excerpt: post.excerpt,
+    content: post.content
+  });
   const minutes = readingTime(post.content);
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const categoryUrl = absoluteUrl(`/category/${slugify(categoryLabel)}`);
@@ -282,6 +322,12 @@ export default async function NewsArticlePage({
     post.imageDisclosure ||
     (post.imageSourceType === "ai" ? "AI-generated editorial illustration" : null);
   const wordCount = post.content.split(/\s+/).filter(Boolean).length;
+  const articleDescription = compactSeoText(
+    post.openGraphDescription || post.seoDescription || post.summary || post.excerpt,
+    200
+  );
+  const primaryImageUrl = coverImage ? absoluteUrl(coverImage) : undefined;
+  const videoUrl = extractFirstVideoUrl([post.content, ...sourceUrls]);
 
   const relatedCategoryFilters = [
     ...(post.category?.name ? [{ category: { name: post.category.name } }] : []),
@@ -395,62 +441,119 @@ export default async function NewsArticlePage({
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "NewsMediaOrganization",
+        "@id": absoluteUrl("/#organization"),
+        name: siteName,
+        url: absoluteUrl("/"),
+        logo: {
+          "@type": "ImageObject",
+          "@id": absoluteUrl("/#publisher-logo"),
+          url: absoluteUrl("/icon.svg"),
+          width: 512,
+          height: 512
+        },
+        publishingPrinciples: absoluteUrl("/editorial-policy"),
+        ethicsPolicy: absoluteUrl("/editorial-policy"),
+        correctionsPolicy: absoluteUrl("/editorial-policy"),
+        diversityPolicy: absoluteUrl("/editorial-policy")
+      },
+      {
+        "@type": "WebSite",
+        "@id": absoluteUrl("/#website"),
+        name: siteName,
+        url: absoluteUrl("/"),
+        publisher: { "@id": absoluteUrl("/#organization") },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: `${absoluteUrl("/search")}?q={search_term_string}`,
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Person",
+        "@id": absoluteUrl("/about#daily-signal-wire-desk"),
+        name: authorName,
+        url: absoluteUrl("/about"),
+        affiliation: { "@id": absoluteUrl("/#organization") },
+        jobTitle: "News desk"
+      },
+      ...(primaryImageUrl
+        ? [
+            {
+              "@type": "ImageObject",
+              "@id": `${articleUrl}#primaryimage`,
+              url: primaryImageUrl,
+              contentUrl: primaryImageUrl,
+              width: 1600,
+              height: 900,
+              caption: post.imageCaption || imageDisclosure || post.title,
+              creditText: post.imageCredit || siteName,
+              license: post.imageLicense || undefined,
+              description: post.imageAlt || post.title,
+              representativeOfPage: true
+            }
+          ]
+        : []),
+      ...(videoUrl
+        ? [
+            {
+              "@type": "VideoObject",
+              "@id": `${articleUrl}#video`,
+              name: post.title,
+              description: articleDescription,
+              thumbnailUrl: primaryImageUrl ? [primaryImageUrl] : undefined,
+              uploadDate: (post.publishedAt || post.createdAt).toISOString(),
+              contentUrl: videoUrl,
+              embedUrl: videoEmbedUrl(videoUrl),
+              publisher: { "@id": absoluteUrl("/#organization") }
+            }
+          ]
+        : []),
+      {
         "@type": ["NewsArticle", "Article"],
+        "@id": `${articleUrl}#article`,
         headline: post.title,
         alternativeHeadline: post.subtitle || undefined,
-        description: post.openGraphDescription || post.summary || post.excerpt,
+        description: articleDescription,
+        abstract: post.summary || post.excerpt,
         datePublished: (post.publishedAt || post.createdAt).toISOString(),
         dateModified: post.updatedAt.toISOString(),
-        mainEntityOfPage: articleUrl,
+        mainEntityOfPage: {
+          "@type": "WebPage",
+          "@id": articleUrl
+        },
         url: articleUrl,
-        image: coverImage
-          ? [
-              {
-                "@type": "ImageObject",
-                url: absoluteUrl(coverImage),
-                width: 1600,
-                height: 900,
-                caption: post.imageCaption || imageDisclosure || undefined,
-                creditText: post.imageCredit || undefined,
-                license: post.imageLicense || undefined,
-                description: post.imageAlt || post.title
-              }
-            ]
-          : undefined,
-        associatedMedia: coverImage
-          ? {
-              "@type": "ImageObject",
-              url: absoluteUrl(coverImage),
-              caption: post.imageCaption || imageDisclosure || undefined,
-              creditText: post.imageCredit || undefined
-            }
-          : undefined,
-        thumbnailUrl: coverImage ? absoluteUrl(coverImage) : undefined,
+        image: primaryImageUrl ? { "@id": `${articleUrl}#primaryimage` } : undefined,
+        associatedMedia: primaryImageUrl ? { "@id": `${articleUrl}#primaryimage` } : undefined,
+        thumbnailUrl: primaryImageUrl,
         author: {
-          "@type": "Organization",
-          name: authorName,
-          url: absoluteUrl("/about")
+          "@id": absoluteUrl("/about#daily-signal-wire-desk")
         },
         editor: {
-          "@type": "Organization",
+          "@type": "Person",
           name: editorName,
           url: absoluteUrl("/editorial-policy")
         },
         publisher: {
-          "@type": "Organization",
-          name: siteName,
-          url: absoluteUrl("/"),
-          logo: {
-            "@type": "ImageObject",
-            url: absoluteUrl("/icon.svg")
-          }
+          "@id": absoluteUrl("/#organization")
         },
+        isPartOf: { "@id": absoluteUrl("/#website") },
         articleSection: categoryLabel,
         keywords: tags.length ? tags.join(", ") : undefined,
+        about: tags.slice(0, 8).map((tag) => ({
+          "@type": "Thing",
+          name: tag,
+          url: absoluteUrl(`/tag/${slugify(tag)}`)
+        })),
         citation: sourceUrls.length ? sourceUrls : undefined,
         wordCount,
         timeRequired: `PT${minutes}M`,
-        isAccessibleForFree: true
+        articleBody: stripMarkdown(post.content).slice(0, 5000),
+        isAccessibleForFree: true,
+        speakable: {
+          "@type": "SpeakableSpecification",
+          cssSelector: [".premium-article h1", ".article-subheadline", ".article-key-takeaways"]
+        }
       },
       {
         "@type": "BreadcrumbList",
@@ -581,6 +684,20 @@ export default async function NewsArticlePage({
             </header>
 
             <AdSlot position="top" className="article-top-ad" />
+
+            {keyTakeaways.length > 0 && (
+              <section className="article-key-takeaways premium-article-card" aria-labelledby="key-takeaways-heading">
+                <div className="article-section-heading">
+                  <p className="section-kicker">What to know</p>
+                  <h2 id="key-takeaways-heading">Key Takeaways</h2>
+                </div>
+                <ul>
+                  {keyTakeaways.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             {(sourceUrls.length > 0 || factCheckNotes.length > 0 || post.aiGenerated) && (
               <section className="article-source-panel" aria-label="Source and fact-check notes">
