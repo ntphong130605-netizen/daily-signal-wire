@@ -1,4 +1,5 @@
 import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
+import { sanitizeQueryParam } from "@/lib/http";
 import { parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { buildSearchResponse, type SearchCandidate, type SearchFilters } from "@/lib/searchEngine";
@@ -13,13 +14,13 @@ export function filtersFromSearchParams(searchParams: URLSearchParams): SearchFi
   const date = searchParams.get("date") || "any";
   const readingTime = searchParams.get("readingTime") || "any";
   return {
-    q: searchParams.get("q")?.trim() || "",
-    category: searchParams.get("category")?.trim() || "",
-    tag: searchParams.get("tag")?.trim() || "",
+    q: sanitizeQueryParam(searchParams.get("q"), 120),
+    category: sanitizeQueryParam(searchParams.get("category"), 80),
+    tag: sanitizeQueryParam(searchParams.get("tag"), 80),
     date: ["24h", "7d", "30d", "year"].includes(date)
       ? (date as SearchFilters["date"])
       : "any",
-    author: searchParams.get("author")?.trim() || "",
+    author: sanitizeQueryParam(searchParams.get("author"), 80),
     readingTime: ["under-3", "3-5", "5-10", "10-plus"].includes(readingTime)
       ? (readingTime as SearchFilters["readingTime"])
       : "any",
@@ -93,4 +94,3 @@ export async function runSearch(filters: SearchFilters) {
   const candidates = await loadSearchCandidates();
   return buildSearchResponse(candidates, filters);
 }
-

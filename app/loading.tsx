@@ -1,7 +1,7 @@
 export default function Loading() {
   return (
-    <main className="newsroom-skeleton-page">
-      <section className="newsroom-skeleton-hero">
+    <main className="newsroom-skeleton-page" aria-busy="true" aria-live="polite">
+      <section className="newsroom-skeleton-hero" aria-label="Loading top story">
         <div>
           <span className="skeleton-line short" />
           <span className="skeleton-line title" />
@@ -11,7 +11,7 @@ export default function Loading() {
         </div>
         <div className="skeleton-image" />
       </section>
-      <section className="newsroom-skeleton-grid">
+      <section className="newsroom-skeleton-grid" aria-label="Loading story cards">
         {Array.from({ length: 6 }).map((_, index) => (
           <div className="skeleton-card" key={index}>
             <span className="skeleton-thumb" />

@@ -85,9 +85,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ||
     process.env.GOOGLE_ANALYTICS_ID ||
     "";
+  const gtmId = process.env.NEXT_PUBLIC_GTM_ID || "";
+  const clarityProjectId =
+    process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID ||
+    process.env.MICROSOFT_CLARITY_PROJECT_ID ||
+    "";
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://pagead2.googlesyndication.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.pexels.com" />
+        <link rel="dns-prefetch" href="https://upload.wikimedia.org" />
+      </head>
       <body>
         <script
           type="application/ld+json"
@@ -101,6 +113,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <GoogleScripts
             adsenseClientId={adsenseClient}
             gaMeasurementId={analyticsId}
+            gtmId={gtmId}
+            clarityProjectId={clarityProjectId}
           />
         </Suspense>
       </body>

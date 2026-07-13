@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publicCache } from "@/lib/http";
 import { filtersFromSearchParams, runSearch } from "@/lib/searchServer";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +11,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json(response, {
     headers: {
-      "Cache-Control": filters.q
-        ? "public, max-age=0, s-maxage=45, stale-while-revalidate=120"
-        : "public, max-age=0, s-maxage=90, stale-while-revalidate=180"
+      "Cache-Control": filters.q ? publicCache(45, 120) : publicCache(90, 180)
     }
   });
 }
-

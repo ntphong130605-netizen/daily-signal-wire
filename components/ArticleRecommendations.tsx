@@ -32,16 +32,21 @@ export default function ArticleRecommendations({
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !hasMore || loading) return;
+    const controller = new AbortController();
+    let active = true;
 
     const observer = new IntersectionObserver(async (entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       setLoading(true);
       try {
-        const response = await fetch(`/api/posts?page=${page}&limit=6`);
+        const response = await fetch(`/api/posts?page=${page}&limit=6`, {
+          signal: controller.signal
+        });
         const data = (await response.json()) as {
           posts?: SerializedPost[];
           nextPage?: number | null;
         };
+        if (!active) return;
         const nextPosts = (data.posts || []).filter((post) => post.slug !== excludeSlug);
         setPosts((current) => {
           const seen = new Set(current.map((post) => post.id));
@@ -50,14 +55,20 @@ export default function ArticleRecommendations({
         setPage(data.nextPage || page + 1);
         setHasMore(Boolean(data.nextPage));
       } catch {
+        if (!active) return;
         setHasMore(false);
       } finally {
+        if (!active) return;
         setLoading(false);
       }
     }, { rootMargin: "700px" });
 
     observer.observe(sentinel);
-    return () => observer.disconnect();
+    return () => {
+      active = false;
+      controller.abort();
+      observer.disconnect();
+    };
   }, [excludeSlug, hasMore, loading, page]);
 
   if (!posts.length) return null;
@@ -73,7 +84,7 @@ export default function ArticleRecommendations({
           <ArticleCard key={post.id} post={revive(post)} />
         ))}
       </div>
-      <div ref={sentinelRef} className="infinite-sentinel">
+      <div ref={sentinelRef} className="infinite-sentinel" aria-live="polite" aria-busy={loading}>
         {loading ? "Loading more recommendations…" : hasMore ? "Scroll for more" : "End of recommendations"}
       </div>
     </section>

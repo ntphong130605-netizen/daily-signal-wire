@@ -21,7 +21,13 @@ export default function ReaderThemeToggle() {
   }
 
   return (
-    <button className="reader-theme-toggle" onClick={toggle} type="button">
+    <button
+      className="reader-theme-toggle"
+      onClick={toggle}
+      type="button"
+      aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
+      aria-pressed={dark}
+    >
       <span>{dark ? "☾" : "☼"}</span>
       {dark ? "Dark" : "Light"}
     </button>

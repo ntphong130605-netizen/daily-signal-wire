@@ -43,6 +43,9 @@ export default function ArticleImageFrame({
               sizes="(max-width: 900px) 100vw, 980px"
               placeholder="blur"
               blurDataURL={blurDataUrl}
+              quality={priority ? 90 : 82}
+              fetchPriority={priority ? "high" : "auto"}
+              decoding="async"
             />
           </span>
           <span className="article-image-zoom">Fullscreen</span>
@@ -78,6 +81,7 @@ export default function ArticleImageFrame({
             sizes="100vw"
             placeholder="blur"
             blurDataURL={blurDataUrl}
+            quality={92}
           />
         </div>
       )}

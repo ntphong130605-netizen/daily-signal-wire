@@ -43,6 +43,7 @@ export default function BreakingNewsTicker({
           className="breaking-news-pause"
           onClick={() => setPaused((value) => !value)}
           aria-pressed={paused}
+          aria-label={paused ? "Resume breaking news ticker" : "Pause breaking news ticker"}
         >
           {paused ? "Play" : "Pause"}
         </button>
