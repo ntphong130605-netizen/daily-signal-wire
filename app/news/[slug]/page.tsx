@@ -132,6 +132,7 @@ export async function generateMetadata({
         seoTitle: true,
         seoDescription: true,
         openGraphDescription: true,
+        authorName: true,
         tags: true,
         publishedAt: true,
         updatedAt: true,
@@ -179,7 +180,7 @@ export async function generateMetadata({
     title: post.seoTitle || post.title,
     description,
     keywords: tags.length ? tags : [category, siteName, "news", "AI newsroom"],
-    authors: [{ name: "Daily Signal Wire Desk", url: absoluteUrl("/about") }],
+    authors: [{ name: post.authorName || "Daily Signal Wire Desk", url: absoluteUrl("/about") }],
     alternates: {
       canonical
     },
@@ -303,20 +304,24 @@ export default async function NewsArticlePage({
   const sourceUrls = parseStringArray(post.sourceUrls);
   const factCheckNotes = parseStringArray(post.factCheckNotes);
   const headings = extractArticleHeadings(post.content);
-  const keyTakeaways = buildKeyTakeaways({
-    title: post.title,
-    subtitle: post.subtitle,
-    summary: post.summary,
-    excerpt: post.excerpt,
-    content: post.content
-  });
-  const minutes = readingTime(post.content);
+  const storedKeyTakeaways = parseStringArray(post.keyTakeaways);
+  const keyTakeaways = storedKeyTakeaways.length
+    ? storedKeyTakeaways
+    : buildKeyTakeaways({
+        title: post.title,
+        subtitle: post.subtitle,
+        summary: post.summary,
+        excerpt: post.excerpt,
+        content: post.content
+      });
+  const articleTimeline = parseStringArray(post.timeline);
+  const minutes = post.readingTimeMinutes || readingTime(post.content);
   const articleUrl = absoluteUrl(`/news/${post.slug}`);
   const categoryUrl = absoluteUrl(`/category/${slugify(categoryLabel)}`);
   const publishedDisplay = formatDateTime(post.publishedAt || post.createdAt);
   const updatedDisplay = formatDateTime(post.updatedAt);
   const publishedDateOnly = formatDateOnly(post.publishedAt || post.createdAt);
-  const authorName = "Daily Signal Wire Desk";
+  const authorName = post.authorName || "Daily Signal Wire Desk";
   const editorName = "Daily Signal Wire Editorial Desk";
   const imageDisclosure =
     post.imageDisclosure ||
@@ -739,6 +744,20 @@ export default async function NewsArticlePage({
             )}
 
             <ArticleBody content={post.content} />
+
+            {articleTimeline.length > 0 && (
+              <section className="article-timeline premium-article-card" aria-labelledby="article-timeline-heading">
+                <div className="article-section-heading">
+                  <p className="section-kicker">Timeline</p>
+                  <h2 id="article-timeline-heading">How the story developed</h2>
+                </div>
+                <ol>
+                  {articleTimeline.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+              </section>
+            )}
 
             {faq.length > 0 && (
               <section className="article-faq premium-article-card">

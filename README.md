@@ -233,6 +233,56 @@ Clicking `Generate Article Draft` from `/admin/research` only transfers the
 brief into the existing `/admin/trends` draft workflow. It does not write the
 article immediately and never auto-publishes.
 
+## AI Journalist
+
+Phase 3.2 adds the AI Journalist workflow:
+
+```text
+Research Brief → AI Journalist Draft → Editor Preview/Edit → Approve/Publish
+```
+
+Admin route:
+
+```text
+/admin/writer
+```
+
+Protected admin API endpoints:
+
+```text
+POST /api/ai/write
+POST /api/ai/rewrite
+POST /api/ai/headline
+POST /api/ai/meta
+POST /api/ai/faq
+```
+
+`/api/ai/write` accepts either a `researchCandidateId` or a `trendId` and
+creates a draft post only. It also queues the existing AI editorial image
+pipeline after the draft is saved. It never publishes.
+
+`/api/ai/rewrite` can rewrite only one section at a time:
+
+- headline
+- lead
+- body
+- faq
+- meta
+- summary
+
+Supported tones:
+
+- Neutral
+- Business
+- Breaking
+- Analysis
+
+The writer stores draft version, revision history, token usage, generation
+time, prompt version, quality metadata, key takeaways, timeline, related topics
+and internal link suggestions. Before saving, generated drafts are checked for
+word count, duplicate paragraphs, repeated sentences, SEO score, heading
+hierarchy and broken markdown.
+
 ## Google Trends and AI drafts
 
 Google Trends cron endpoint:

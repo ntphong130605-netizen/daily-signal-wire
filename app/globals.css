@@ -3274,6 +3274,126 @@ textarea:focus {
   font-weight: 900;
 }
 
+.writer-assist-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  border: 1px solid rgba(22, 138, 150, 0.18);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, #f7fffd, #ffffff);
+}
+
+.writer-assist-panel h3 {
+  margin: 2px 0 6px;
+  font-size: 20px;
+}
+
+.writer-assist-panel p,
+.writer-assist-panel small {
+  color: var(--muted);
+}
+
+.writer-assist-controls,
+.admin-writer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.writer-assist-controls select,
+.admin-writer-actions select {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.admin-writer-actions button,
+.admin-writer-actions a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-writer-actions button:hover,
+.admin-writer-actions a:hover {
+  border-color: #b8d4c9;
+  color: var(--green);
+}
+
+.admin-writer-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.admin-writer-actions small {
+  width: 100%;
+  color: var(--green-2);
+  text-align: right;
+}
+
+.writer-candidate-list,
+.writer-draft-list,
+.writer-revision-list {
+  display: grid;
+}
+
+.writer-candidate-card,
+.writer-draft-row,
+.writer-revision-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.writer-candidate-card:last-child,
+.writer-draft-row:last-child,
+.writer-revision-list article:last-child {
+  border-bottom: 0;
+}
+
+.writer-candidate-card p {
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.writer-candidate-card small,
+.writer-draft-row small,
+.writer-revision-list small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.writer-draft-row strong,
+.writer-revision-list strong {
+  display: block;
+  margin: 8px 0 2px;
+}
+
+.article-timeline ol {
+  display: grid;
+  gap: 0.85rem;
+  padding-left: 1.2rem;
+}
+
+.article-timeline li {
+  line-height: 1.65;
+}
+
 .admin-editor-panel {
   overflow: hidden;
 }
@@ -9642,11 +9762,17 @@ html[data-theme="dark"] .loading-card::after {
   .research-row,
   .research-source-list article,
   .research-detail-grid,
-  .research-two-col {
+  .research-two-col,
+  .writer-assist-panel,
+  .writer-candidate-card,
+  .writer-draft-row,
+  .writer-revision-list article {
     grid-template-columns: 1fr;
   }
 
-  .admin-research-actions {
+  .admin-research-actions,
+  .writer-assist-controls,
+  .admin-writer-actions {
     justify-content: flex-start;
   }
 

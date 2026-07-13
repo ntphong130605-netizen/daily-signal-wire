@@ -12,6 +12,21 @@ const DraftSchema = z.object({
   seoDescription: z.string().min(20).max(300),
   openGraphDescription: z.string().max(300).nullable().optional(),
   facebookCaption: z.string().min(10).max(1000),
+  authorName: z.string().min(2).max(120).optional(),
+  readingTimeMinutes: z.number().int().min(1).max(60).nullable().optional(),
+  keyTakeaways: z.array(z.string().min(1).max(240)).max(10).optional(),
+  timeline: z.array(z.string().min(1).max(260)).max(20).optional(),
+  relatedTopics: z.array(z.string().min(1).max(120)).max(20).optional(),
+  internalLinkSuggestions: z
+    .array(
+      z.object({
+        title: z.string().min(1).max(180),
+        url: z.string().min(1).max(300),
+        reason: z.string().max(260).optional()
+      })
+    )
+    .max(20)
+    .optional(),
   tags: z.array(z.string().min(1).max(40)).max(12),
   faq: z
     .array(
@@ -49,6 +64,12 @@ export async function PATCH(
         seoDescription: data.seoDescription,
         openGraphDescription: data.openGraphDescription || null,
         facebookCaption: data.facebookCaption,
+        authorName: data.authorName || "Daily Signal Wire Desk",
+        readingTimeMinutes: data.readingTimeMinutes || null,
+        keyTakeaways: JSON.stringify(data.keyTakeaways || []),
+        timeline: JSON.stringify(data.timeline || []),
+        relatedTopics: JSON.stringify(data.relatedTopics || []),
+        internalLinkSuggestions: JSON.stringify(data.internalLinkSuggestions || []),
         tags: JSON.stringify(data.tags),
         faq: JSON.stringify(data.faq),
         imagePrompt: data.imagePrompt,

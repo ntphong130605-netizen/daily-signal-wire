@@ -21,6 +21,7 @@ async function postJson(url: string, body?: Record<string, unknown>) {
   const payload = (await response.json().catch(() => ({}))) as {
     error?: string;
     trendUrl?: string;
+    postUrl?: string;
     message?: string;
   };
   if (!response.ok) throw new Error(payload.error || "Request failed.");
@@ -74,12 +75,15 @@ export default function AdminResearchActions({
             disabled={isPending || !canGenerate || blocked}
             onClick={() =>
               run(async () => {
-                const result = await postJson(`/api/admin/research/${id}/send-to-trend`);
-                if (result.trendUrl) {
-                  window.location.href = result.trendUrl;
+                const result = await postJson("/api/ai/write", {
+                  researchCandidateId: id,
+                  tone: "Neutral"
+                });
+                if (result.postUrl) {
+                  window.location.href = result.postUrl;
                   return;
                 }
-                setMessage(result.message || "Sent to trend draft workflow.");
+                setMessage(result.message || "Draft generated.");
                 router.refresh();
               })
             }

@@ -17,6 +17,18 @@ type EditablePost = {
   seoDescription: string;
   openGraphDescription: string;
   facebookCaption: string;
+  authorName: string;
+  readingTimeMinutes: number | null;
+  keyTakeaways: string[];
+  timeline: string[];
+  relatedTopics: string[];
+  internalLinkSuggestions: { title: string; url: string; reason: string }[];
+  draftVersion: number;
+  journalistTone: string;
+  generationMetadata: string;
+  tokenUsage: string;
+  generationTimeMs: number | null;
+  promptVersion: string;
   tags: string[];
   faq: { question: string; answer: string }[];
   imagePrompt: string;
@@ -94,6 +106,17 @@ async function copyText(value: string) {
   }
 }
 
+function parseJsonArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function AdminPostEditor({
   initialPost,
   aiConfigured
@@ -107,6 +130,7 @@ export default function AdminPostEditor({
   const [message, setMessage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [scheduleAt, setScheduleAt] = useState(initialPost.scheduledAt);
+  const [rewriteTone, setRewriteTone] = useState(initialPost.journalistTone || "Neutral");
   const [urlFields, setUrlFields] = useState({
     imageUrl: "",
     imageAlt: "",
@@ -157,6 +181,12 @@ export default function AdminPostEditor({
           seoDescription: post.seoDescription,
           openGraphDescription: post.openGraphDescription,
           facebookCaption: post.facebookCaption,
+          authorName: post.authorName,
+          readingTimeMinutes: post.readingTimeMinutes,
+          keyTakeaways: post.keyTakeaways,
+          timeline: post.timeline,
+          relatedTopics: post.relatedTopics,
+          internalLinkSuggestions: post.internalLinkSuggestions,
           tags: post.tags,
           faq: post.faq,
           imagePrompt: post.imagePrompt,
@@ -198,6 +228,21 @@ export default function AdminPostEditor({
         openGraphDescription:
           result.article.openGraphDescription ?? current.openGraphDescription,
         facebookCaption: result.article.facebookCaption ?? current.facebookCaption,
+        authorName: result.article.authorName ?? current.authorName,
+        readingTimeMinutes:
+          result.article.readingTimeMinutes ?? current.readingTimeMinutes,
+        keyTakeaways: result.article.keyTakeaways ?? current.keyTakeaways,
+        timeline: result.article.timeline ?? current.timeline,
+        relatedTopics: result.article.relatedTopics ?? current.relatedTopics,
+        internalLinkSuggestions:
+          result.article.internalLinkSuggestions ?? current.internalLinkSuggestions,
+        draftVersion: result.article.draftVersion ?? current.draftVersion,
+        journalistTone: result.article.journalistTone ?? current.journalistTone,
+        generationMetadata:
+          result.article.generationMetadata ?? current.generationMetadata,
+        tokenUsage: result.article.tokenUsage ?? current.tokenUsage,
+        generationTimeMs: result.article.generationTimeMs ?? current.generationTimeMs,
+        promptVersion: result.article.promptVersion ?? current.promptVersion,
         tags: result.article.tags ?? current.tags,
         faq: result.article.faq ?? current.faq,
         imagePrompt: result.article.imagePrompt ?? current.imagePrompt,
@@ -208,6 +253,71 @@ export default function AdminPostEditor({
       }));
       setMessage("Article regenerated. Review all facts again before publishing.");
       trackEvent("generate_ai_article", { post_id: post.id, mode: "regenerate" });
+      router.refresh();
+    }
+  }
+
+  async function rewriteSection(
+    section: "headline" | "lead" | "body" | "faq" | "meta" | "summary"
+  ) {
+    const result = await call(
+      "/api/ai/rewrite",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id, section, tone: rewriteTone })
+      },
+      `rewrite ${section}`
+    );
+    if (result?.post) {
+      const updated = result.post;
+      setPost((current) => ({
+        ...current,
+        title: updated.title ?? current.title,
+        subtitle: updated.subtitle ?? current.subtitle,
+        excerpt: updated.excerpt ?? current.excerpt,
+        summary: updated.summary ?? current.summary,
+        content: updated.content ?? current.content,
+        seoTitle: updated.seoTitle ?? current.seoTitle,
+        seoDescription: updated.seoDescription ?? current.seoDescription,
+        openGraphDescription: updated.openGraphDescription ?? current.openGraphDescription,
+        facebookCaption: updated.facebookCaption ?? current.facebookCaption,
+        tags: parseJsonArray<string>(updated.tags).length
+          ? parseJsonArray<string>(updated.tags)
+          : current.tags,
+        faq: parseJsonArray<{ question: string; answer: string }>(updated.faq).length
+          ? parseJsonArray<{ question: string; answer: string }>(updated.faq)
+          : current.faq,
+        keyTakeaways: parseJsonArray<string>(updated.keyTakeaways).length
+          ? parseJsonArray<string>(updated.keyTakeaways)
+          : current.keyTakeaways,
+        timeline: parseJsonArray<string>(updated.timeline).length
+          ? parseJsonArray<string>(updated.timeline)
+          : current.timeline,
+        relatedTopics: parseJsonArray<string>(updated.relatedTopics).length
+          ? parseJsonArray<string>(updated.relatedTopics)
+          : current.relatedTopics,
+        internalLinkSuggestions: parseJsonArray<{
+          title: string;
+          url: string;
+          reason: string;
+        }>(updated.internalLinkSuggestions).length
+          ? parseJsonArray<{ title: string; url: string; reason: string }>(
+              updated.internalLinkSuggestions
+            )
+          : current.internalLinkSuggestions,
+        draftVersion: updated.draftVersion ?? current.draftVersion,
+        journalistTone: updated.journalistTone ?? current.journalistTone,
+        generationMetadata: updated.generationMetadata ?? current.generationMetadata,
+        tokenUsage: updated.tokenUsage ?? current.tokenUsage,
+        generationTimeMs: updated.generationTimeMs ?? current.generationTimeMs,
+        promptVersion: updated.promptVersion ?? current.promptVersion,
+        factCheckNotes: parseJsonArray<string>(updated.factCheckNotes).length
+          ? parseJsonArray<string>(updated.factCheckNotes)
+          : current.factCheckNotes
+      }));
+      setMessage(`${section} rewritten. Review before saving or publishing.`);
+      trackEvent("generate_ai_article", { post_id: post.id, mode: `rewrite_${section}` });
       router.refresh();
     }
   }
@@ -537,7 +647,66 @@ export default function AdminPostEditor({
           </span>
         </div>
 
+        <section className="writer-assist-panel">
+          <div>
+            <p className="eyebrow">AI Journalist</p>
+            <h3>Selective rewrite</h3>
+            <p>
+              Rewrite one section at a time. Existing sources and fact-check notes stay attached.
+            </p>
+            <small>
+              Draft v{post.draftVersion} · {post.promptVersion || "manual"} ·{" "}
+              {post.generationTimeMs ? `${post.generationTimeMs}ms` : "no generation timing"}
+            </small>
+          </div>
+          <div className="writer-assist-controls">
+            <select
+              value={rewriteTone}
+              onChange={(event) => setRewriteTone(event.target.value)}
+              aria-label="Rewrite tone"
+            >
+              <option>Neutral</option>
+              <option>Business</option>
+              <option>Breaking</option>
+              <option>Analysis</option>
+            </select>
+            {(["headline", "lead", "body", "faq", "meta", "summary"] as const).map((section) => (
+              <button
+                key={section}
+                className="button button-secondary"
+                onClick={() => rewriteSection(section)}
+                disabled={Boolean(busy) || !aiConfigured || post.status === "published"}
+              >
+                Rewrite {section}
+              </button>
+            ))}
+          </div>
+        </section>
+
         <div className="edit-form">
+          <div className="two-col">
+            <label>
+              Author
+              <input
+                value={post.authorName}
+                onChange={(event) => field("authorName", event.target.value)}
+              />
+            </label>
+            <label>
+              Reading time
+              <input
+                type="number"
+                min="1"
+                value={post.readingTimeMinutes ?? ""}
+                onChange={(event) =>
+                  field(
+                    "readingTimeMinutes",
+                    event.target.value ? Number(event.target.value) : null
+                  )
+                }
+              />
+            </label>
+          </div>
           <label>
             Headline
             <input value={post.title} onChange={(event) => field("title", event.target.value)} />
@@ -682,6 +851,82 @@ export default function AdminPostEditor({
                   field("faq", faq);
                 }}
                 placeholder={"Question one?\nAnswer one.\n\nQuestion two?\nAnswer two."}
+              />
+            </label>
+          </div>
+          <div className="two-col">
+            <label>
+              Key takeaways, one per line
+              <textarea
+                rows={6}
+                value={post.keyTakeaways.join("\n")}
+                onChange={(event) =>
+                  field(
+                    "keyTakeaways",
+                    event.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            </label>
+            <label>
+              Timeline, one per line
+              <textarea
+                rows={6}
+                value={post.timeline.join("\n")}
+                onChange={(event) =>
+                  field(
+                    "timeline",
+                    event.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            </label>
+          </div>
+          <div className="two-col">
+            <label>
+              Related topics, one per line
+              <textarea
+                rows={5}
+                value={post.relatedTopics.join("\n")}
+                onChange={(event) =>
+                  field(
+                    "relatedTopics",
+                    event.target.value
+                      .split("\n")
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                  )
+                }
+              />
+            </label>
+            <label>
+              Internal link suggestions
+              <textarea
+                rows={5}
+                value={post.internalLinkSuggestions
+                  .map((item) => `${item.title} | ${item.url} | ${item.reason}`)
+                  .join("\n")}
+                onChange={(event) =>
+                  field(
+                    "internalLinkSuggestions",
+                    event.target.value
+                      .split("\n")
+                      .map((line) => {
+                        const [title = "", url = "", reason = ""] = line
+                          .split("|")
+                          .map((item) => item.trim());
+                        return { title, url, reason };
+                      })
+                      .filter((item) => item.title && item.url)
+                  )
+                }
+                placeholder="Title | /news/story | Why this link helps"
               />
             </label>
           </div>

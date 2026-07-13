@@ -200,6 +200,7 @@ model Post {
   id                   String           @id @default(cuid())
   trendId              String?          @unique
   trend                Trend?           @relation(fields: [trendId], references: [id], onDelete: SetNull)
+  researchCandidateId  String?
   sourceStoryId        String?
   sourceStory          FeedStory?       @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
   categoryId           String?
@@ -214,6 +215,18 @@ model Post {
   seoDescription       String
   openGraphDescription String?
   facebookCaption      String
+  authorName           String           @default("Daily Signal Wire Desk")
+  readingTimeMinutes   Int?
+  keyTakeaways         String           @default("[]")
+  timeline             String           @default("[]")
+  relatedTopics        String           @default("[]")
+  internalLinkSuggestions String        @default("[]")
+  draftVersion         Int              @default(1)
+  journalistTone       String           @default("Neutral")
+  generationMetadata   String           @default("{}")
+  tokenUsage           String           @default("{}")
+  generationTimeMs     Int?
+  promptVersion        String?
   tags                 String           @default("[]")
   faq                  String           @default("[]")
   imagePrompt          String?
@@ -237,6 +250,7 @@ model Post {
   imageLicense         String?
   imageCredit          String?
   generatedImages      GeneratedImage[]
+  revisions            PostRevision[]
   aiGenerated          Boolean          @default(false)
   factCheckNotes       String           @default("[]")
   sourceUrls           String           @default("[]")
@@ -256,8 +270,47 @@ model Post {
   @@index([createdAt])
   @@index([aiGenerated])
   @@index([imageStatus])
+  @@index([researchCandidateId])
   @@index([sourceStoryId])
   @@index([categoryId])
+}
+
+model PostRevision {
+  id                      String   @id @default(cuid())
+  postId                  String
+  post                    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  version                 Int
+  changeType              String
+  section                 String?
+  tone                    String?
+  title                   String?
+  subtitle                String?
+  excerpt                 String?
+  summary                 String?
+  content                 String?
+  seoTitle                String?
+  seoDescription          String?
+  openGraphDescription    String?
+  facebookCaption         String?
+  tags                    String   @default("[]")
+  faq                     String   @default("[]")
+  keyTakeaways            String   @default("[]")
+  timeline                String   @default("[]")
+  relatedTopics           String   @default("[]")
+  internalLinkSuggestions String   @default("[]")
+  factCheckNotes          String   @default("[]")
+  sourceUrls              String   @default("[]")
+  generationMetadata      String   @default("{}")
+  tokenUsage              String   @default("{}")
+  generationTimeMs        Int?
+  promptVersion           String?
+  createdAt               DateTime @default(now())
+
+  @@unique([postId, version])
+  @@index([postId])
+  @@index([changeType])
+  @@index([section])
+  @@index([createdAt])
 }
 
 model NewsletterSubscriber {

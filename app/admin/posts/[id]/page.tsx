@@ -54,6 +54,22 @@ export default async function AdminPostEditPage({
           seoDescription: post.seoDescription,
           openGraphDescription: post.openGraphDescription || "",
           facebookCaption: post.facebookCaption,
+          authorName: post.authorName,
+          readingTimeMinutes: post.readingTimeMinutes,
+          keyTakeaways: parseStringArray(post.keyTakeaways),
+          timeline: parseStringArray(post.timeline),
+          relatedTopics: parseStringArray(post.relatedTopics),
+          internalLinkSuggestions: parseJsonArray<{
+            title: string;
+            url: string;
+            reason: string;
+          }>(post.internalLinkSuggestions),
+          draftVersion: post.draftVersion,
+          journalistTone: post.journalistTone,
+          generationMetadata: post.generationMetadata,
+          tokenUsage: post.tokenUsage,
+          generationTimeMs: post.generationTimeMs,
+          promptVersion: post.promptVersion || "",
           tags: parseStringArray(post.tags),
           faq: parseJsonArray<{ question: string; answer: string }>(post.faq),
           imagePrompt: post.imagePrompt || "",
