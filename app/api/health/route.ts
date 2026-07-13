@@ -2,6 +2,7 @@ import { isDatabaseConfigured, prisma } from "@/lib/prisma";
 import { configuredImageStorageLabel } from "@/lib/aiImage";
 import { adsenseClientId, hasAdsTxtConfiguration } from "@/lib/ads";
 import { getResearchEngineReadiness } from "@/lib/research/engine";
+import { googleIndexingReadiness } from "@/lib/googleIndexing";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export async function GET() {
     gscVerificationConfigured: Boolean(
       process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION
     ),
+    googleIndexingConfigured: googleIndexingReadiness().configured,
     siteUrlConfigured: Boolean(
       process.env.NEXT_PUBLIC_SITE_URL ||
         process.env.NEXTAUTH_URL ||
@@ -121,6 +123,24 @@ export async function GET() {
           }
         }).catch(() => 0)
       : 0;
+  const indexing =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.indexingJob
+          .groupBy({
+            by: ["status"],
+            _count: { _all: true }
+          })
+          .then((rows) =>
+            rows.reduce<Record<string, number>>(
+              (accumulator, row) => {
+                accumulator[row.status] = row._count._all;
+                return accumulator;
+              },
+              { pending: 0, processing: 0, success: 0, failed: 0 }
+            )
+          )
+          .catch(() => ({ pending: 0, processing: 0, success: 0, failed: 0 }))
+      : { pending: 0, processing: 0, success: 0, failed: 0 };
   const growth =
     checks.databaseConfigured && checks.databaseReachable
       ? await Promise.all([
@@ -180,6 +200,10 @@ export async function GET() {
       publishing: {
         statuses: publishing,
         failedPublishes: publishingFailures
+      },
+      indexing: {
+        readiness: googleIndexingReadiness(),
+        statuses: indexing
       },
       growth
     },

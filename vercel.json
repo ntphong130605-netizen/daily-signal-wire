@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/publish",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/indexing",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

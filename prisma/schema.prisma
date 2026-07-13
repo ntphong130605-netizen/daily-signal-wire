@@ -536,6 +536,26 @@ model AnalyticsEvent {
   @@index([createdAt])
 }
 
+model IndexingJob {
+  id          String    @id @default(cuid())
+  url         String
+  type        String
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  lastError   String?
+  submittedAt DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([url])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+  @@index([submittedAt])
+  @@index([finishedAt])
+}
+
 model SystemStatusCheck {
   id        String   @id @default(cuid())
   key       String

@@ -10846,6 +10846,98 @@ html[data-theme="dark"] .loading-card::after {
   background: #f59e0b;
 }
 
+.indexing-dashboard .header-badge.warning,
+.header-badge.warning {
+  border-color: rgba(180, 83, 9, 0.28);
+  color: #92400e;
+  background: #fff7ed;
+}
+
+.indexing-actions {
+  overflow: hidden;
+}
+
+.indexing-form-grid {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+
+.indexing-form-grid label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.indexing-form-grid input,
+.indexing-form-grid textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 13px;
+  color: var(--text);
+  background: #fff;
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.indexing-form-grid textarea {
+  resize: vertical;
+}
+
+.indexing-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.growth-table-head.indexing,
+.growth-table-row.indexing {
+  grid-template-columns: minmax(260px, 2.2fr) 80px 110px 90px 120px 110px;
+}
+
+.growth-table-row.indexing > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.growth-table-row.indexing strong,
+.growth-table-row.indexing small {
+  overflow-wrap: anywhere;
+}
+
+.indexing-inline-action {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.indexing-inline-action .button {
+  min-height: 34px;
+  padding: 8px 10px;
+}
+
+.status-pending {
+  color: #92400e;
+  background: #fff7ed;
+}
+
+.status-processing {
+  color: #155e75;
+  background: #e0f2fe;
+}
+
+.status-success {
+  color: #166534;
+  background: #dcfce7;
+}
+
 .growth-table {
   display: grid;
   gap: 8px;

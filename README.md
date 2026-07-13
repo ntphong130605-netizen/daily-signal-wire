@@ -89,6 +89,9 @@ NEXT_PUBLIC_CLARITY_PROJECT_ID=
 NEXT_PUBLIC_GSC_VERIFICATION=
 GOOGLE_SITE_VERIFICATION=
 ADSENSE_ESTIMATED_RPM=
+GOOGLE_INDEXING_ENABLED=false
+GOOGLE_SERVICE_ACCOUNT_EMAIL=
+GOOGLE_PRIVATE_KEY=
 
 ADMIN_PASSWORD=choose-a-strong-password
 ADMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
@@ -221,6 +224,16 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 `vercel.json` uses a once-per-day RSS cron schedule so Hobby deployments pass
 Vercel's cron limits. If the project is on Vercel Pro, you can change the
 schedule back to `*/30 * * * *`.
+
+Google Indexing queue cron:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/indexing
+```
+
+The indexing cron runs every 15 minutes in Vercel and processes pending or
+retryable failed URL submissions.
 
 ## AI research engine
 
@@ -815,6 +828,42 @@ Search Console surfaces:
 - `/image-sitemap.xml`
 - `/video-sitemap.xml`
 - canonical URLs on public pages
+
+## Google Indexing API
+
+Daily Signal Wire includes a protected Google Indexing queue at:
+
+```text
+/admin/indexing
+```
+
+Publishing a post automatically queues its canonical `/news/[slug]` URL,
+refreshes sitemap/RSS routes, and attempts a Google Indexing API submission when
+credentials are configured. If credentials are missing, the job remains pending
+with the message `Waiting for Google credentials` and the website does not
+crash.
+
+Vercel environment variables:
+
+```env
+GOOGLE_INDEXING_ENABLED=true
+GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+```
+
+Important: Google’s official Indexing API documentation says the API is intended
+for pages with `JobPosting` or livestream `BroadcastEvent` structured data. For
+ordinary news articles, keep XML sitemaps, RSS, canonical URLs and Search
+Console as the primary indexing path; the queue exists for safe operational
+submission and transparent monitoring.
+
+Protected API routes:
+
+- `POST /api/indexing/publish`
+- `POST /api/indexing/update`
+- `POST /api/indexing/delete`
+- `GET /api/indexing/status`
+- `POST /api/indexing/retry`
 
 Public policy pages:
 

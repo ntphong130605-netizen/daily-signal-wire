@@ -19,6 +19,7 @@ const links = [
   { href: "/admin/discover", icon: "◉", label: "Discover" },
   { href: "/admin/revenue", icon: "$", label: "Revenue" },
   { href: "/admin/analytics", icon: "▥", label: "Analytics" },
+  { href: "/admin/indexing", icon: "⌕", label: "Indexing" },
   { href: "/admin/monitoring", icon: "●", label: "Monitoring" },
   { href: "/admin/trends", icon: "↗", label: "US trends" },
   { href: "/admin/posts", icon: "✦", label: "Posts" },

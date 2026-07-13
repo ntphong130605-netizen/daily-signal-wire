@@ -1,8 +1,10 @@
+import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { validatePostForPublishing } from "@/lib/publishGuard";
 import { parseJsonArray } from "@/lib/json";
 import { absoluteUrl } from "@/lib/site";
 import { logError, logInfo } from "@/lib/logger";
+import { submitPublishedPostToIndexing } from "@/lib/googleIndexing";
 
 export const PUBLISH_STATUSES = [
   "draft",
@@ -54,6 +56,24 @@ function imageUrl(post: NonNullable<PublishingPost>) {
 
 function unique<T>(items: T[]) {
   return [...new Set(items)];
+}
+
+function revalidatePublishedPostPaths(slug: string) {
+  const paths = [
+    "/",
+    `/news/${slug}`,
+    "/sitemap.xml",
+    "/news-sitemap.xml",
+    "/image-sitemap.xml",
+    "/rss.xml"
+  ];
+  for (const path of paths) {
+    try {
+      revalidatePath(path);
+    } catch (error) {
+      logError("publish_revalidate_path_failed", error, { path, slug });
+    }
+  }
 }
 
 function loadPostForPublishing(postId: string) {
@@ -643,6 +663,28 @@ export async function publishPostNow({
     severity: "success",
     metadata: { source, publishedAt: publishedAt.toISOString() }
   });
+  revalidatePublishedPostPaths(post.slug);
+  try {
+    const indexingJob = await submitPublishedPostToIndexing({ slug: post.slug });
+    await notifyEditor({
+      postId,
+      type: "indexing_queued",
+      title: "Google indexing queued",
+      message:
+        indexingJob.status === "success"
+          ? "Published URL was accepted by the Google Indexing endpoint."
+          : indexingJob.lastError || "Published URL is queued for Google indexing.",
+      severity: indexingJob.status === "failed" ? "warning" : "info",
+      metadata: {
+        jobId: indexingJob.id,
+        status: indexingJob.status,
+        attempts: indexingJob.attempts,
+        url: indexingJob.url
+      }
+    });
+  } catch (error) {
+    logError("publish_indexing_queue_failed", error, { postId, slug: post.slug });
+  }
   logInfo("post_published", { postId, source });
   return { post: updated, readiness };
 }
