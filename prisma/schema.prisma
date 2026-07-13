@@ -409,6 +409,10 @@ model GeneratedImage {
   category     String?
   metadata     String   @default("{}")
   validationNotes String @default("[]")
+  generationCostUsd Float?
+  generationTimeMs  Int?
+  promptVersion String?
+  promptTemplate String?
   license      String?
   credit       String?
   error        String?
@@ -420,6 +424,7 @@ model GeneratedImage {
   @@index([sourceType])
   @@index([illustrative])
   @@index([category])
+  @@index([promptVersion])
 }
 
 model SiteSetting {

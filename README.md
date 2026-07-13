@@ -35,6 +35,7 @@ Open:
 - Feeds: <http://localhost:3000/admin/feeds>
 - Stories: <http://localhost:3000/admin/stories>
 - Posts: <http://localhost:3000/admin/posts>
+- Image Studio: <http://localhost:3000/admin/image-studio>
 - Trends: <http://localhost:3000/admin/trends>
 - Settings: <http://localhost:3000/admin/settings>
 
@@ -59,6 +60,7 @@ NEXTAUTH_URL=http://localhost:3000
 OPENAI_API_KEY=
 AI_MODEL=gpt-5.5
 IMAGE_MODEL=gpt-image-1
+IMAGE_GENERATION_COST_USD=
 CRON_SECRET=replace-with-a-long-random-string
 IMAGE_STORAGE=local
 BLOB_READ_WRITE_TOKEN=
@@ -349,8 +351,9 @@ AI article → topic/category/entities/location/time analysis → prompt builder
 
 The prompt builder analyzes headline, subtitle, summary, category, tags,
 entities, country, time period and tone, then applies category-specific
-composition rules for Business, Politics, Technology, Science, Health, Finance,
-Climate, Education, Sports, World, Culture, Lifestyle and Travel.
+composition rules for Technology, Business, Finance, Sports, Health, Science,
+Politics, World and Entertainment. It also supports Climate, Education,
+Culture, Lifestyle, Travel and general Editorial fallbacks.
 
 Generated images are resized into responsive landscape 16:9 assets:
 
@@ -365,7 +368,13 @@ instead of base64 database payloads.
 ```env
 BLOB_READ_WRITE_TOKEN=...
 IMAGE_STORAGE=blob
+IMAGE_GENERATION_COST_USD=
 ```
+
+`IMAGE_GENERATION_COST_USD` is optional. If you set it to your current estimated
+per-image OpenAI cost, Image Studio stores and displays that estimate. If it is
+empty, the app records generation time but shows cost as “not configured”
+instead of inventing a number.
 
 Use `IMAGE_STORAGE=local` only when the runtime has a persistent writable
 filesystem. If Blob is not configured in production, the app still saves the
@@ -392,9 +401,13 @@ Each post stores:
 - `imageSourceType`
 - image width/height/format, source type, illustrative flag and validation
   notes in `GeneratedImage`
+- generation cost estimate, generation time, prompt version and prompt template
+  in `GeneratedImage`
 
 The admin visual desk supports:
 
+- `/admin/image-studio` queue with prompt log, generated image, retry,
+  generation cost and generation time
 - Generate Image
 - Regenerate
 - Edit Prompt
@@ -456,6 +469,7 @@ Admin routes:
 - `/admin/stories` RSS story queue
 - `/admin/trends` Google Trends US queue
 - `/admin/posts` draft/published post manager
+- `/admin/image-studio` AI editorial image queue and prompt review
 - `/admin/settings` runtime status and ad slot overview
 
 Post actions include:

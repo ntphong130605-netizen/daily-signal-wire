@@ -95,6 +95,10 @@ type GeneratedImageVersion = {
   category: string;
   metadata: string;
   validationNotes: string[];
+  generationCostUsd: number | null;
+  generationTimeMs: number | null;
+  promptVersion: string;
+  promptTemplate: string;
   license: string;
   credit: string;
   error: string;
@@ -506,6 +510,10 @@ export default function AdminPostEditor({
                 category: "",
                 metadata: "{}",
                 validationNotes: [],
+                generationCostUsd: result.generationCostUsd ?? null,
+                generationTimeMs: result.generationTimeMs ?? null,
+                promptVersion: result.promptVersion ?? "",
+                promptTemplate: result.promptTemplate ?? "",
                 license: result.imageLicense ?? "",
                 credit: result.imageCredit ?? "",
                 error: result.imageError ?? "",
@@ -776,6 +784,7 @@ export default function AdminPostEditor({
         .map((source) => [source.url, source] as const)
     ).values()
   );
+  const latestGeneratedImage = post.generatedImages.find((image) => image.sourceType === "ai") || post.generatedImages[0];
 
   return (
     <main className="admin-content">
@@ -1328,6 +1337,23 @@ export default function AdminPostEditor({
           <span>Alt: {post.imageAlt || "Not set"}</span>
           <span>Caption: {post.imageCaption || "Not set"}</span>
           <span>Disclosure: {post.imageDisclosure || "None"}</span>
+          <span>
+            Generation:{" "}
+            {latestGeneratedImage?.generationTimeMs
+              ? `${(latestGeneratedImage.generationTimeMs / 1000).toFixed(1)}s`
+              : "not recorded"}
+          </span>
+          <span>
+            Cost:{" "}
+            {latestGeneratedImage?.generationCostUsd !== undefined &&
+            latestGeneratedImage?.generationCostUsd !== null
+              ? `$${latestGeneratedImage.generationCostUsd.toFixed(4)} est.`
+              : "not configured"}
+          </span>
+          <span>
+            Prompt: {latestGeneratedImage?.promptVersion || "not recorded"}
+            {latestGeneratedImage?.promptTemplate ? ` · ${latestGeneratedImage.promptTemplate}` : ""}
+          </span>
         </div>
         <p className="license-line">
           {post.imageLicense || "License not set"}
@@ -1366,10 +1392,19 @@ export default function AdminPostEditor({
                       </div>
                       <strong>{image.title || image.caption || "Editorial image version"}</strong>
                       <small>
-                        {image.width && image.height ? `${image.width}×${image.height}` : "Size pending"}
+                {image.width && image.height ? `${image.width}×${image.height}` : "Size pending"}
                         {image.format ? ` · ${image.format.toUpperCase()}` : ""}
                         {image.model ? ` · ${image.model}` : ""}
+                        {image.generationTimeMs ? ` · ${(image.generationTimeMs / 1000).toFixed(1)}s` : ""}
+                        {image.generationCostUsd !== null
+                          ? ` · $${image.generationCostUsd.toFixed(4)} est.`
+                          : " · cost not configured"}
                       </small>
+                      {(image.promptVersion || image.promptTemplate) && (
+                        <small>
+                          {image.promptVersion || "prompt"} · {image.promptTemplate || "default template"}
+                        </small>
+                      )}
                       <p>{image.description || image.caption || "No description recorded."}</p>
                       {image.validationNotes.length > 0 && (
                         <ul>

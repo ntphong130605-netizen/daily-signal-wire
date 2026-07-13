@@ -497,10 +497,16 @@ export async function POST(
       );
     }
 
-    const promptOverride = body.imagePrompt?.trim() || undefined;
+    const hasExistingReusableImage = Boolean(
+      (post.featuredImageUrl || post.featuredImage || post.imageUrl || post.thumbnailImage) &&
+        ["accepted", "completed"].includes(post.imageStatus)
+    );
+    const force = body.mode === "regenerate" || body.mode === "retry";
+    const promptOverride =
+      force || !hasExistingReusableImage ? body.imagePrompt?.trim() || undefined : undefined;
     const result = await generateImageForPost(id, {
       promptOverride,
-      force: body.mode === "regenerate" || body.mode === "retry"
+      force
     });
     return Response.json({ ok: true, ...result });
   } catch (error) {

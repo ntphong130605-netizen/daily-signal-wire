@@ -82,6 +82,21 @@ export async function GET() {
           )
           .catch(() => ({}))
       : {};
+  const imageStudio =
+    checks.databaseConfigured && checks.databaseReachable
+      ? await prisma.post
+          .groupBy({
+            by: ["imageStatus"],
+            _count: { _all: true }
+          })
+          .then((rows) =>
+            rows.reduce<Record<string, number>>((accumulator, row) => {
+              accumulator[row.imageStatus] = row._count._all;
+              return accumulator;
+            }, {})
+          )
+          .catch(() => ({}))
+      : {};
 
   const ok = checks.app && (!checks.databaseConfigured || checks.databaseReachable);
 
@@ -97,7 +112,12 @@ export async function GET() {
         lastRun: lastResearchRun,
         failedSources: failedResearchSources
       },
-      factChecker
+      factChecker,
+      imageStudio: {
+        model: process.env.IMAGE_MODEL || "gpt-image-1",
+        storage: checks.imageStorage,
+        statuses: imageStudio
+      }
     },
     {
       status: ok ? 200 : 503,

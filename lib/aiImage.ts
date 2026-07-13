@@ -5,6 +5,7 @@ import { put } from "@vercel/blob";
 import sharp from "sharp";
 import {
   buildEditorialImagePlan,
+  EDITORIAL_IMAGE_PROMPT_VERSION,
   type EditorialImagePlan,
   type EditorialImagePromptInput
 } from "@/lib/editorialImagePrompt";
@@ -79,6 +80,10 @@ export type StoredImageAssets = {
   imageError?: string | null;
   generatedImageId?: string;
   finalPrompt?: string;
+  generationCostUsd?: number | null;
+  generationTimeMs?: number | null;
+  promptVersion?: string;
+  promptTemplate?: string;
 };
 
 type StoredVariantFiles = {
@@ -99,6 +104,14 @@ function imageModel() {
   const configured = process.env.IMAGE_MODEL?.trim();
   if (!configured || configured === "gpt-image-2") return "gpt-image-1";
   return configured;
+}
+
+function configuredImageGenerationCostUsd() {
+  const configured =
+    process.env.IMAGE_GENERATION_COST_USD?.trim() || process.env.IMAGE_COST_USD?.trim();
+  if (!configured) return null;
+  const parsed = Number(configured);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function imageDirectory() {
@@ -512,6 +525,10 @@ async function createGeneratedImageAudit(
       format: "jpeg",
       metadata: stringifyJson(plan.metadata),
       validationNotes: stringifyJson(plan.validationNotes),
+      generationCostUsd: null,
+      generationTimeMs: null,
+      promptVersion: EDITORIAL_IMAGE_PROMPT_VERSION,
+      promptTemplate: plan.promptTemplate,
       license: plan.license,
       credit: plan.credit
     }
@@ -590,7 +607,11 @@ function assetsFromExisting(post: ImageContext, plan: EditorialImagePlan): Store
     imageStorage: post.imageStorage || "url",
     imagePrompt: post.imagePrompt || plan.prompt,
     imageError: null,
-    finalPrompt: plan.prompt
+    finalPrompt: plan.prompt,
+    generationCostUsd: null,
+    generationTimeMs: null,
+    promptVersion: EDITORIAL_IMAGE_PROMPT_VERSION,
+    promptTemplate: plan.promptTemplate
   };
 }
 
@@ -641,6 +662,8 @@ export async function generateImageForPost(
   });
 
   const audit = await createGeneratedImageAudit(postId, plan, model, "queued", prompt);
+  const generationStartedAt = Date.now();
+  const generationCostUsd = configuredImageGenerationCostUsd();
 
   if (!process.env.OPENAI_API_KEY) {
     const reason = "AI image generation is not configured.";
@@ -698,6 +721,7 @@ export async function generateImageForPost(
     });
 
     const now = new Date();
+    const generationTimeMs = Date.now() - generationStartedAt;
     const imageUrl = variants.thumbnailImage;
     const assets: StoredImageAssets = {
       imageUrl,
@@ -719,7 +743,11 @@ export async function generateImageForPost(
       imagePrompt: plan.prompt,
       imageError: null,
       generatedImageId: audit.id,
-      finalPrompt: plan.prompt
+      finalPrompt: plan.prompt,
+      generationCostUsd,
+      generationTimeMs,
+      promptVersion: EDITORIAL_IMAGE_PROMPT_VERSION,
+      promptTemplate: plan.promptTemplate
     };
 
     await prisma.post.update({
@@ -749,8 +777,15 @@ export async function generateImageForPost(
       validationNotes: stringifyJson(validationNotes),
       metadata: stringifyJson({
         ...plan.metadata,
-        responsiveImages: variants.responsiveImages
+        responsiveImages: variants.responsiveImages,
+        generationTimeMs,
+        generationCostUsd,
+        costSource: generationCostUsd === null ? "not_configured" : "IMAGE_GENERATION_COST_USD"
       }),
+      generationCostUsd,
+      generationTimeMs,
+      promptVersion: EDITORIAL_IMAGE_PROMPT_VERSION,
+      promptTemplate: plan.promptTemplate,
       error: null
     });
     logInfo("post_image_generated", {
@@ -779,7 +814,11 @@ export async function generateImageForPost(
     } else {
       await applyPlaceholderImageForPost(postId, post, message, "failed", plan);
     }
-    await markAuditStatus(audit.id, "failed", { error: message });
+    await markAuditStatus(audit.id, "failed", {
+      error: message,
+      generationTimeMs: Date.now() - generationStartedAt,
+      generationCostUsd
+    });
     logError("post_image_generation_failed", error, { postId, model });
     throw error;
   }
