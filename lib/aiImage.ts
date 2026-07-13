@@ -102,7 +102,7 @@ type StoredVariantFiles = {
 
 function imageModel() {
   const configured = process.env.IMAGE_MODEL?.trim();
-  if (!configured || configured === "gpt-image-2") return "gpt-image-1";
+  if (!configured) return "gpt-image-1";
   return configured;
 }
 
