@@ -232,8 +232,11 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
   http://localhost:3000/api/cron/indexing
 ```
 
-The indexing cron runs every 15 minutes in Vercel and processes pending or
-retryable failed URL submissions.
+The endpoint is safe to run every 15 minutes, but the checked-in `vercel.json`
+uses a once-per-day schedule so the current Vercel Hobby project can deploy.
+If the project is upgraded to Vercel Pro, change the indexing schedule to
+`*/15 * * * *`; otherwise call `/api/cron/indexing` every 15 minutes from an
+external cron service with the `Authorization: Bearer $CRON_SECRET` header.
 
 ## AI research engine
 
