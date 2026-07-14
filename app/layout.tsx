@@ -3,32 +3,14 @@ import { Suspense } from "react";
 import GoogleScripts from "@/components/analytics/GoogleScripts";
 import CookieConsent from "@/components/consent/CookieConsent";
 import { adsenseClientId } from "@/lib/ads";
+import { organizationJsonLd, webSiteJsonLd } from "@/lib/eeat";
 import { absoluteUrl, siteDescription, siteName, siteUrl } from "@/lib/site";
 import "./globals.css";
 
 const adsenseAccountMeta = adsenseClientId();
 const googleVerification =
   process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION || "";
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "NewsMediaOrganization",
-  name: siteName,
-  url: absoluteUrl("/"),
-  logo: absoluteUrl("/icon.svg"),
-  sameAs: []
-};
-const webSiteJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: siteName,
-  url: absoluteUrl("/"),
-  description: siteDescription(),
-  potentialAction: {
-    "@type": "SearchAction",
-    target: `${absoluteUrl("/search")}?q={search_term_string}`,
-    "query-input": "required name=search_term_string"
-  }
-};
+const rootJsonLd = [organizationJsonLd(), webSiteJsonLd()];
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -103,7 +85,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify([organizationJsonLd, webSiteJsonLd])
+            __html: JSON.stringify(rootJsonLd)
           }}
         />
         {children}

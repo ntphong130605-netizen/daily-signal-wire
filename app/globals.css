@@ -5494,6 +5494,80 @@ html[data-theme="light"],
   line-height: 1.7;
 }
 
+.static-page-list {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.editorial-team-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.editorial-team-card,
+.author-profile-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: clamp(20px, 3vw, 28px);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.editorial-team-card h2,
+.author-profile-hero h1 {
+  margin: 0 0 8px;
+  color: var(--text);
+  letter-spacing: -0.04em;
+}
+
+.editorial-team-card p,
+.author-profile-hero p:not(.section-kicker) {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.author-profile-hero {
+  margin-top: 18px;
+}
+
+.author-profile-avatar {
+  width: 76px;
+  height: 76px;
+  font-size: 24px;
+}
+
+.policy-link-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.policy-link-grid a {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 11px;
+  color: var(--primary-dark);
+  background: #f8fcfd;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.policy-link-grid.compact {
+  margin-top: 10px;
+}
+
 .category-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -5578,8 +5652,13 @@ html[data-theme="light"],
 
 @media (max-width: 920px) {
   .static-page-card,
+  .editorial-team-grid,
   .category-grid,
   .publish-checklist {
+    grid-template-columns: 1fr;
+  }
+
+  .author-profile-hero {
     grid-template-columns: 1fr;
   }
 }
@@ -9652,6 +9731,45 @@ html {
   font-weight: 900;
 }
 
+.article-fact-box {
+  margin: 24px 0 28px;
+  padding: clamp(18px, 3vw, 26px);
+}
+
+.article-fact-box dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--reader-border);
+  border-radius: 18px;
+  background: var(--reader-border);
+}
+
+.article-fact-box dl > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px 14px;
+  background: var(--reader-surface-2);
+}
+
+.article-fact-box dt {
+  color: var(--reader-muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.article-fact-box dd {
+  margin: 0;
+  color: var(--reader-text);
+  font-size: 13px;
+  font-weight: 820;
+  line-height: 1.4;
+}
+
 .reader-article-body {
   max-width: 740px;
   margin: 0 auto;
@@ -9865,7 +9983,8 @@ html {
   margin: 30px 0;
 }
 
-.article-tags a {
+.article-tags a,
+.article-tags span {
   border: 1px solid var(--reader-border);
   border-radius: 999px;
   padding: 8px 12px;
@@ -9881,6 +10000,40 @@ html {
   border-color: var(--primary-dark);
   background: var(--primary-dark);
   outline: none;
+}
+
+.seo-readiness-grid > div {
+  border-top: 3px solid var(--primary);
+}
+
+.seo-readiness-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.seo-readiness-pills span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--primary-dark);
+  background: #f8fcfd;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.seo-check-list li::before {
+  content: "✓";
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .article-comments-shell {
@@ -10111,6 +10264,10 @@ html {
   font-weight: 850;
 }
 
+.premium-author-card .policy-link-grid a {
+  margin-top: 0;
+}
+
 .article-metadata-card dl {
   display: grid;
   gap: 12px;
@@ -10187,6 +10344,10 @@ html {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .article-fact-box dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .article-related-grid,
   .article-recommendation-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -10248,6 +10409,7 @@ html {
   }
 
   .article-meta-grid,
+  .article-fact-box dl,
   .article-source-panel-grid,
   .article-related-grid,
   .article-recommendation-grid,

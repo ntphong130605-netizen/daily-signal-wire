@@ -3,6 +3,7 @@ import ReaderShell from "@/components/ReaderShell";
 export type StaticSection = {
   title: string;
   body: string;
+  items?: string[];
 };
 
 export default function StaticPage({
@@ -30,6 +31,13 @@ export default function StaticPage({
             <article key={section.title}>
               <h2>{section.title}</h2>
               <p>{section.body}</p>
+              {section.items?.length ? (
+                <ul className="static-page-list">
+                  {section.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
             </article>
           ))}
         </section>

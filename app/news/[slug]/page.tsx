@@ -13,6 +13,14 @@ import ArticleToc from "@/components/ArticleToc";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import ReaderShell from "@/components/ReaderShell";
 import { isAdmin } from "@/lib/auth";
+import {
+  authorByName,
+  authorUrl,
+  newsroomAuthors,
+  newsroomPolicies,
+  organizationJsonLd,
+  webSiteJsonLd
+} from "@/lib/eeat";
 import { normalizeEditorialImageUrl, placeholderImageForCategory } from "@/lib/editorialImages";
 import { parseJsonArray, parseStringArray } from "@/lib/json";
 import {
@@ -117,6 +125,10 @@ function uniquePosts(posts: ReaderPost[], excludeSlug: string) {
   });
 }
 
+function schemaGraphNode(schema: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(schema).filter(([key]) => key !== "@context"));
+}
+
 export async function generateMetadata({
   params
 }: {
@@ -176,12 +188,14 @@ export async function generateMetadata({
     category
   );
   const canonical = absoluteUrl(`/news/${slug}`);
+  const metadataAuthor = authorByName(post.authorName);
+  const metadataAuthorName = post.authorName || metadataAuthor.name;
 
   return {
     title: post.seoTitle || post.title,
     description,
     keywords: tags.length ? tags : [category, siteName, "news", "AI newsroom"],
-    authors: [{ name: post.authorName || "Daily Signal Wire Desk", url: absoluteUrl("/about") }],
+    authors: [{ name: metadataAuthorName, url: authorUrl(metadataAuthor) }],
     alternates: {
       canonical
     },
@@ -193,7 +207,7 @@ export async function generateMetadata({
       type: "article",
       publishedTime: post.publishedAt?.toISOString(),
       modifiedTime: post.updatedAt.toISOString(),
-      authors: [siteName],
+      authors: [metadataAuthorName],
       section: category,
       tags,
       images: ogImage
@@ -232,7 +246,7 @@ export async function generateMetadata({
       "og:image:width": "1600",
       "og:image:height": "900",
       "twitter:label1": "Written by",
-      "twitter:data1": "Daily Signal Wire Desk",
+      "twitter:data1": metadataAuthorName,
       "twitter:label2": "Filed under",
       "twitter:data2": category
     }
@@ -323,7 +337,11 @@ export default async function NewsArticlePage({
   const updatedDisplay = formatDateTime(post.updatedAt);
   const publishedDateOnly = formatDateOnly(post.publishedAt || post.createdAt);
   const authorName = post.authorName || "Daily Signal Wire Desk";
-  const editorName = "Daily Signal Wire Editorial Desk";
+  const author = authorByName(authorName);
+  const authorProfileUrl = authorUrl(author);
+  const editor = newsroomAuthors[1] || author;
+  const editorName = editor.name;
+  const editorProfileUrl = authorUrl(editor);
   const imageDisclosure =
     post.imageDisclosure ||
     (post.imageSourceType === "ai" ? "AI-generated editorial illustration" : null);
@@ -334,6 +352,18 @@ export default async function NewsArticlePage({
   );
   const primaryImageUrl = coverImage ? absoluteUrl(coverImage) : undefined;
   const videoUrl = extractFirstVideoUrl([post.content, ...sourceUrls]);
+  const verificationStatus =
+    post.factCheckStatus === "Verified"
+      ? "Verified"
+      : post.factCheckStatus === "Low Confidence"
+        ? "Low confidence"
+        : post.factCheckStatus === "Rejected"
+          ? "Rejected"
+          : post.factCheckStatus === "Needs Review"
+            ? "Needs review"
+            : factCheckNotes.length || sourceUrls.length
+              ? "Source reviewed"
+              : "Editorial review";
 
   const relatedCategoryFilters = [
     ...(post.category?.name ? [{ category: { name: post.category.name } }] : []),
@@ -446,42 +476,29 @@ export default async function NewsArticlePage({
   const structuredData: ArticleJsonLd = {
     "@context": "https://schema.org",
     "@graph": [
+      schemaGraphNode(organizationJsonLd()),
+      schemaGraphNode(webSiteJsonLd()),
       {
-        "@type": "NewsMediaOrganization",
-        "@id": absoluteUrl("/#organization"),
-        name: siteName,
-        url: absoluteUrl("/"),
-        logo: {
-          "@type": "ImageObject",
-          "@id": absoluteUrl("/#publisher-logo"),
-          url: absoluteUrl("/icon.svg"),
-          width: 512,
-          height: 512
-        },
-        publishingPrinciples: absoluteUrl("/editorial-policy"),
-        ethicsPolicy: absoluteUrl("/editorial-policy"),
-        correctionsPolicy: absoluteUrl("/editorial-policy"),
-        diversityPolicy: absoluteUrl("/editorial-policy")
-      },
-      {
-        "@type": "WebSite",
-        "@id": absoluteUrl("/#website"),
-        name: siteName,
-        url: absoluteUrl("/"),
-        publisher: { "@id": absoluteUrl("/#organization") },
-        potentialAction: {
-          "@type": "SearchAction",
-          target: `${absoluteUrl("/search")}?q={search_term_string}`,
-          "query-input": "required name=search_term_string"
-        }
+        "@type": "Person",
+        "@id": `${authorProfileUrl}#person`,
+        name: authorName,
+        url: authorProfileUrl,
+        affiliation: { "@id": absoluteUrl("/#organization") },
+        worksFor: { "@id": absoluteUrl("/#organization") },
+        jobTitle: author.role,
+        description: author.bio,
+        knowsAbout: author.expertise
       },
       {
         "@type": "Person",
-        "@id": absoluteUrl("/about#daily-signal-wire-desk"),
-        name: authorName,
-        url: absoluteUrl("/about"),
+        "@id": `${editorProfileUrl}#person`,
+        name: editorName,
+        url: editorProfileUrl,
         affiliation: { "@id": absoluteUrl("/#organization") },
-        jobTitle: "News desk"
+        worksFor: { "@id": absoluteUrl("/#organization") },
+        jobTitle: editor.role,
+        description: editor.bio,
+        knowsAbout: editor.expertise
       },
       ...(primaryImageUrl
         ? [
@@ -500,6 +517,19 @@ export default async function NewsArticlePage({
             }
           ]
         : []),
+      {
+        "@type": "WebPage",
+        "@id": articleUrl,
+        url: articleUrl,
+        name: post.title,
+        description: articleDescription,
+        isPartOf: { "@id": absoluteUrl("/#website") },
+        primaryImageOfPage: primaryImageUrl ? { "@id": `${articleUrl}#primaryimage` } : undefined,
+        breadcrumb: { "@id": `${articleUrl}#breadcrumb` },
+        datePublished: (post.publishedAt || post.createdAt).toISOString(),
+        dateModified: post.updatedAt.toISOString(),
+        reviewedBy: { "@id": `${editorProfileUrl}#person` }
+      },
       ...(videoUrl
         ? [
             {
@@ -525,7 +555,6 @@ export default async function NewsArticlePage({
         datePublished: (post.publishedAt || post.createdAt).toISOString(),
         dateModified: post.updatedAt.toISOString(),
         mainEntityOfPage: {
-          "@type": "WebPage",
           "@id": articleUrl
         },
         url: articleUrl,
@@ -533,12 +562,16 @@ export default async function NewsArticlePage({
         associatedMedia: primaryImageUrl ? { "@id": `${articleUrl}#primaryimage` } : undefined,
         thumbnailUrl: primaryImageUrl,
         author: {
-          "@id": absoluteUrl("/about#daily-signal-wire-desk")
+          "@id": `${authorProfileUrl}#person`
         },
         editor: {
-          "@type": "Person",
-          name: editorName,
-          url: absoluteUrl("/editorial-policy")
+          "@id": `${editorProfileUrl}#person`
+        },
+        reviewedBy: {
+          "@id": `${editorProfileUrl}#person`
+        },
+        accountablePerson: {
+          "@id": `${editorProfileUrl}#person`
         },
         publisher: {
           "@id": absoluteUrl("/#organization")
@@ -552,6 +585,9 @@ export default async function NewsArticlePage({
           url: absoluteUrl(`/tag/${slugify(tag)}`)
         })),
         citation: sourceUrls.length ? sourceUrls : undefined,
+        publishingPrinciples: newsroomPolicies.editorial,
+        correction: newsroomPolicies.corrections,
+        conditionsOfAccess: "Free to read",
         wordCount,
         timeRequired: `PT${minutes}M`,
         articleBody: stripMarkdown(post.content).slice(0, 5000),
@@ -563,6 +599,7 @@ export default async function NewsArticlePage({
       },
       {
         "@type": "BreadcrumbList",
+        "@id": `${articleUrl}#breadcrumb`,
         itemListElement: [
           {
             "@type": "ListItem",
@@ -705,6 +742,42 @@ export default async function NewsArticlePage({
               </section>
             )}
 
+            <section
+              className="article-fact-box premium-article-card"
+              aria-labelledby="fact-box-heading"
+            >
+              <div className="article-section-heading">
+                <p className="section-kicker">Fact box</p>
+                <h2 id="fact-box-heading">Story essentials</h2>
+              </div>
+              <dl>
+                <div>
+                  <dt>Topic</dt>
+                  <dd>{categoryLabel}</dd>
+                </div>
+                <div>
+                  <dt>Status</dt>
+                  <dd>{verificationStatus}</dd>
+                </div>
+                <div>
+                  <dt>Published</dt>
+                  <dd>{publishedDateOnly}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{updatedDisplay}</dd>
+                </div>
+                <div>
+                  <dt>Sources reviewed</dt>
+                  <dd>{sourceUrls.length || "Editorial file"}</dd>
+                </div>
+                <div>
+                  <dt>Image disclosure</dt>
+                  <dd>{imageDisclosure || post.imageSourceType || "Editorial image"}</dd>
+                </div>
+              </dl>
+            </section>
+
             {(sourceUrls.length > 0 || factCheckNotes.length > 0 || post.aiGenerated) && (
               <section className="article-source-panel" aria-label="Source and fact-check notes">
                 <div>
@@ -740,6 +813,11 @@ export default async function NewsArticlePage({
                       </ul>
                     </div>
                   )}
+                </div>
+                <div className="policy-link-grid" aria-label="Editorial policy links">
+                  <Link href="/fact-check-policy">Fact-check policy</Link>
+                  <Link href="/corrections-policy">Corrections policy</Link>
+                  <Link href="/ai-transparency">AI transparency</Link>
                 </div>
               </section>
             )}
@@ -843,15 +921,16 @@ export default async function NewsArticlePage({
             <ArticleToc headings={headings} />
 
             <section className="author-card premium-author-card">
-              <div className="author-card-avatar">DS</div>
+              <div className="author-card-avatar">{author.initials}</div>
               <div>
                 <p className="section-kicker">Author</p>
                 <h2>{authorName}</h2>
-                <p>
-                  Source-first newsroom coverage prepared with editorial review, factual checks
-                  and transparent AI-assisted workflow controls.
-                </p>
-                <Link href="/editorial-policy">Editorial policy</Link>
+                <p>{author.bio}</p>
+                <div className="policy-link-grid compact" aria-label="Author and policy links">
+                  <Link href={`/authors/${author.slug}`}>Author profile</Link>
+                  <Link href="/editorial-policy">Editorial policy</Link>
+                  <Link href="/editorial-team">Editorial team</Link>
+                </div>
               </div>
             </section>
 
@@ -875,6 +954,10 @@ export default async function NewsArticlePage({
                 <div>
                   <dt>Image</dt>
                   <dd>{imageDisclosure || post.imageSourceType || "Editorial image"}</dd>
+                </div>
+                <div>
+                  <dt>Trust</dt>
+                  <dd>{verificationStatus}</dd>
                 </div>
               </dl>
             </section>

@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { newsroomCategories } from "@/lib/categoryLanding";
+import { newsroomAuthors } from "@/lib/eeat";
 import { parseStringArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 import { absoluteUrl } from "@/lib/site";
@@ -14,6 +15,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/terms",
     "/editorial-policy",
     "/ai-content-policy",
+    "/ai-transparency",
+    "/corrections-policy",
+    "/fact-check-policy",
+    "/editorial-team",
     "/dmca",
     "/search"
   ];
@@ -55,6 +60,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "hourly" as const,
       priority: 0.65
+    })),
+    ...newsroomAuthors.map((author) => ({
+      url: absoluteUrl(`/authors/${author.slug}`),
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.45
     })),
     ...posts.map((post) => ({
       url: absoluteUrl(`/news/${post.slug}`),

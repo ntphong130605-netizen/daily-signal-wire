@@ -14,6 +14,10 @@ export default function ReaderFooter() {
           <Link href="/cookie-policy">Cookies</Link>
           <Link href="/editorial-policy">Editorial Policy</Link>
           <Link href="/ai-content-policy">AI Content Policy</Link>
+          <Link href="/ai-transparency">AI Transparency</Link>
+          <Link href="/fact-check-policy">Fact-Check Policy</Link>
+          <Link href="/corrections-policy">Corrections</Link>
+          <Link href="/editorial-team">Editorial Team</Link>
           <Link href="/dmca">DMCA</Link>
           <Link href="/terms">Terms</Link>
           <Link href="/admin">Newsroom</Link>
