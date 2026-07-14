@@ -1,25 +1,11 @@
 import { apiError, protectMutation } from "@/lib/apiSecurity";
-import { systemChecks } from "@/lib/growth";
-import { prisma } from "@/lib/prisma";
+import { recordProductionReadinessSnapshot } from "@/lib/opsReadiness";
 
 export async function POST(request: Request) {
   try {
     await protectMutation(request);
-    const checks = await systemChecks();
-    await Promise.all(
-      checks.map((check) =>
-        prisma.systemStatusCheck.create({
-          data: {
-            key: check.key,
-            label: check.label,
-            status: check.status,
-            message: check.message,
-            metadata: JSON.stringify({})
-          }
-        })
-      )
-    );
-    return Response.json({ ok: true, checks });
+    const report = await recordProductionReadinessSnapshot();
+    return Response.json({ ok: true, checks: report.checks, healthScore: report.healthScore });
   } catch (error) {
     return apiError(error);
   }

@@ -26,3 +26,30 @@ export function logInfo(event: string, context: LogContext = {}) {
     })
   );
 }
+
+export function logWarn(event: string, context: LogContext = {}) {
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      event,
+      at: new Date().toISOString(),
+      ...context
+    })
+  );
+}
+
+export function logPerformance(
+  event: string,
+  durationMs: number,
+  context: LogContext = {}
+) {
+  console.info(
+    JSON.stringify({
+      level: durationMs > 2_500 ? "warn" : "info",
+      event,
+      durationMs,
+      at: new Date().toISOString(),
+      ...context
+    })
+  );
+}

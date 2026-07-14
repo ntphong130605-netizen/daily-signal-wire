@@ -47,6 +47,8 @@ Open:
 - Revenue: <http://localhost:3000/admin/revenue>
 - Analytics: <http://localhost:3000/admin/analytics>
 - Monitoring: <http://localhost:3000/admin/monitoring>
+- System: <http://localhost:3000/admin/system>
+- Checklist: <http://localhost:3000/admin/checklist>
 - Trends: <http://localhost:3000/admin/trends>
 - Settings: <http://localhost:3000/admin/settings>
 
@@ -446,6 +448,8 @@ Admin routes:
 - `/admin/revenue` Revenue Center and AI revenue recommendations
 - `/admin/analytics` Analytics Center
 - `/admin/monitoring` System Status
+- `/admin/system` Production Readiness Dashboard
+- `/admin/checklist` live production launch checklist
 
 The planner builds schedules from real saved inputs:
 
@@ -805,6 +809,8 @@ Ad positions:
 Production includes:
 
 - `/api/health`
+- `/admin/system`
+- `/admin/checklist`
 - `/sitemap.xml`
 - `/news-sitemap.xml`
 - `/robots.txt`
@@ -819,6 +825,14 @@ Production includes:
 - published articles only in `/sitemap.xml`
 - Google Analytics 4 integration through `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 - consent banner prepared for Google Consent Mode v2
+
+Production operations runbooks:
+
+- `DEPLOYMENT.md`
+- `OPERATIONS.md`
+- `BACKUP.md`
+- `PRODUCTION_CHECKLIST.md`
+- `TROUBLESHOOTING.md`
 
 GA4 is optional:
 

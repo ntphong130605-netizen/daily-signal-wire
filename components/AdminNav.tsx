@@ -22,6 +22,8 @@ const links = [
   { href: "/admin/analytics", icon: "▥", label: "Analytics" },
   { href: "/admin/indexing", icon: "⌕", label: "Indexing" },
   { href: "/admin/monitoring", icon: "●", label: "Monitoring" },
+  { href: "/admin/system", icon: "◈", label: "System" },
+  { href: "/admin/checklist", icon: "☑", label: "Checklist" },
   { href: "/admin/trends", icon: "↗", label: "US trends" },
   { href: "/admin/posts", icon: "✦", label: "Posts" },
   { href: "/admin/settings", icon: "⚙", label: "Settings" }

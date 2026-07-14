@@ -11100,6 +11100,88 @@ html[data-theme="dark"] .loading-card::after {
   background: #dcfce7;
 }
 
+.status-operational,
+.status-healthy,
+.status-configured,
+.status-ready {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.status-waiting,
+.status-unknown,
+.status-empty,
+.status-not_configured {
+  color: #92400e;
+  background: #fff7ed;
+}
+
+.status-degraded,
+.status-warning,
+.status-blocked {
+  color: #9a3412;
+  background: #ffedd5;
+}
+
+.status-failed,
+.status-error {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.growth-status-dot.bad {
+  background: #dc2626;
+  box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.12);
+}
+
+.system-dashboard .growth-hub-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.system-check-card > div {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-review-link.inline {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.system-queue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.system-queue-grid article {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fbfcfd;
+}
+
+.system-queue-grid h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.production-checklist li > div {
+  display: grid;
+  gap: 6px;
+}
+
+.production-checklist p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .growth-table {
   display: grid;
   gap: 8px;

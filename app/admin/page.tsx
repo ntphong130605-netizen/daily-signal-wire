@@ -65,6 +65,11 @@ export default async function AdminDashboard() {
             <strong>Phase 4.0</strong>
             <small>Traffic, revenue, SEO, analytics</small>
           </Link>
+          <Link href="/admin/system" className="stat-card">
+            <span>Production ops</span>
+            <strong>System</strong>
+            <small>Readiness, credentials, queues, monitoring</small>
+          </Link>
         </section>
         <section className="panel trend-panel">
           <div className="panel-heading">
