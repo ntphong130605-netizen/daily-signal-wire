@@ -624,7 +624,7 @@ async function publishNewsletter(job: NonNullable<SocialPostWithArticle>): Promi
   const subscribers = await prisma.newsletterSubscriber.findMany({
     where: { status: "active" },
     select: { email: true },
-    take: 100
+    take: 50
   });
   if (subscribers.length === 0) {
     return {
@@ -633,9 +633,12 @@ async function publishNewsletter(job: NonNullable<SocialPostWithArticle>): Promi
       note: "Newsletter waits for active subscribers."
     };
   }
-  const payload = parseJsonArray<{ newsletterSubject?: string; newsletterPreviewText?: string }>(
-    `[${job.payload}]`
-  )[0];
+  let payload: { newsletterSubject?: string; newsletterPreviewText?: string } = {};
+  try {
+    payload = JSON.parse(job.payload || "{}");
+  } catch {
+    payload = {};
+  }
   const subject = payload?.newsletterSubject || compact(job.article.title, 86);
   const preview = payload?.newsletterPreviewText || job.shortSummary || job.article.excerpt;
   const url = job.trackingUrl || job.utmUrl || baseArticleUrl(job.article.slug);

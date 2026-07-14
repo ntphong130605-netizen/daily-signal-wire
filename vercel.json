@@ -20,10 +20,6 @@
     {
       "path": "/api/cron/indexing",
       "schedule": "15 3 * * *"
-    },
-    {
-      "path": "/api/cron/social",
-      "schedule": "*/30 * * * *"
     }
   ]
 }

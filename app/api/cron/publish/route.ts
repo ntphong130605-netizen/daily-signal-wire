@@ -1,6 +1,7 @@
 import { databaseUnavailableResponse, isDatabaseConfigured } from "@/lib/prisma";
 import { logError } from "@/lib/logger";
 import { publishDueScheduledPosts } from "@/lib/scheduledPublish";
+import { processSocialQueue } from "@/lib/socialDistribution";
 
 export async function GET(request: Request) {
   const configuredSecret = process.env.CRON_SECRET;
@@ -11,8 +12,11 @@ export async function GET(request: Request) {
   if (!isDatabaseConfigured()) return databaseUnavailableResponse();
 
   try {
-    const summary = await publishDueScheduledPosts();
-    return Response.json({ ok: true, ...summary });
+    const [publishing, social] = await Promise.all([
+      publishDueScheduledPosts(),
+      processSocialQueue()
+    ]);
+    return Response.json({ ok: true, publishing, social });
   } catch (error) {
     logError("scheduled_publish_cron_failed", error);
     return Response.json({ error: "Scheduled publish cron failed" }, { status: 500 });
