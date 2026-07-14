@@ -86,6 +86,7 @@ export default function GoogleScripts({
       window.gtag?.("consent", "update", consentRef.current);
 
       if (!gaConfiguredRef.current) {
+        window.gtag?.("js", new Date());
         window.gtag?.("config", gaMeasurementId, { send_page_view: false });
         gaConfiguredRef.current = true;
       }
