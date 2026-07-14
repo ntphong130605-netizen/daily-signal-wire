@@ -56,7 +56,9 @@ export default function GoogleScripts({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [consent, setConsent] = useState<ConsentState>(deniedConsent);
+  const consentRef = useRef<ConsentState>(deniedConsent);
   const gaConfiguredRef = useRef(false);
+  consentRef.current = consent;
 
   useEffect(() => {
     setConsent(currentConsent());
@@ -77,9 +79,16 @@ export default function GoogleScripts({
     const canSendGa =
       isProduction && Boolean(gaMeasurementId) && typeof window.gtag === "function";
 
-    if (canSendGa && !gaConfiguredRef.current) {
-      window.gtag?.("config", gaMeasurementId, { send_page_view: false });
-      gaConfiguredRef.current = true;
+    if (canSendGa) {
+      // The default Consent Mode script intentionally starts denied. Reapply
+      // the visitor's persisted choice before configuring GA or sending the
+      // first page view so a returning visitor is not measured as denied.
+      window.gtag?.("consent", "update", consentRef.current);
+
+      if (!gaConfiguredRef.current) {
+        window.gtag?.("config", gaMeasurementId, { send_page_view: false });
+        gaConfiguredRef.current = true;
+      }
     }
 
     const search = searchParams.toString();
