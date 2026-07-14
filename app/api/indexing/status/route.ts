@@ -2,7 +2,10 @@ import { z } from "zod";
 import { requireAdmin } from "@/lib/auth";
 import { apiError } from "@/lib/apiSecurity";
 import {
+  googleSearchConsolePropertyStatus,
+  googleSearchConsoleReadiness,
   googleIndexingReadiness,
+  indexingDiscoveryStatus,
   indexingStats,
   listIndexingJobs
 } from "@/lib/googleIndexing";
@@ -23,13 +26,20 @@ export async function GET(request: Request) {
       status: searchParams.get("status") || undefined,
       limit: searchParams.get("limit") || undefined
     });
-    const [stats, jobs] = await Promise.all([
+    const [stats, jobs, searchConsole, discovery] = await Promise.all([
       indexingStats(),
-      listIndexingJobs({ status: params.status, limit: params.limit || 80 })
+      listIndexingJobs({ status: params.status, limit: params.limit || 80 }),
+      googleSearchConsolePropertyStatus(),
+      indexingDiscoveryStatus()
     ]);
     return Response.json({
       ok: true,
       readiness: googleIndexingReadiness(),
+      searchConsole: {
+        readiness: googleSearchConsoleReadiness(),
+        property: searchConsole
+      },
+      discovery,
       stats,
       jobs
     });

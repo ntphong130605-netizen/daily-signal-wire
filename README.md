@@ -866,6 +866,8 @@ If no GA4 ID is set, no GA script is loaded and the site does not crash.
 Search Console surfaces:
 
 - `google-site-verification` meta tag from `NEXT_PUBLIC_GSC_VERIFICATION`
+- optional HTML verification through `GOOGLE_SITE_VERIFICATION_FILE`
+- live property-access status when the service account is added to Search Console
 - `/robots.txt`
 - `/sitemap.xml`
 - `/news-sitemap.xml`
@@ -893,6 +895,11 @@ Vercel environment variables:
 GOOGLE_INDEXING_ENABLED=true
 GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@project.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+NEXT_PUBLIC_GSC_VERIFICATION=your-meta-verification-token
+GOOGLE_SEARCH_CONSOLE_PROPERTY_URL=https://daily-signal-wire.vercel.app/
+# Optional HTML-file verification:
+GOOGLE_SITE_VERIFICATION_FILE=googleXXXXXXXXXXXX.html
+GOOGLE_SITE_VERIFICATION_CONTENT="google-site-verification: googleXXXXXXXXXXXX.html"
 ```
 
 Important: Google’s official Indexing API documentation says the API is intended
@@ -904,10 +911,18 @@ submission and transparent monitoring.
 Protected API routes:
 
 - `POST /api/indexing/publish`
+- `POST /api/indexing/submit` (publish, update, delete, and batches)
 - `POST /api/indexing/update`
 - `POST /api/indexing/delete`
 - `GET /api/indexing/status`
 - `POST /api/indexing/retry`
+
+Only canonical production URLs under `/news/[slug]` are accepted. Localhost,
+preview hosts, foreign domains, query strings and non-published article URLs are
+rejected before a Google request is created. Each attempt stores the HTTP
+status, truncated response payload, response time, attempt count and exponential
+retry time. The cron recovers stale jobs and processes due pending/failed jobs
+without dropping the queue.
 
 Public policy pages:
 

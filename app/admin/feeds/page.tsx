@@ -1,6 +1,7 @@
 import AddFeedPanel from "@/components/AddFeedPanel";
 import AdminFeedActions from "@/components/AdminFeedActions";
 import OpmlImportForm from "@/components/OpmlImportForm";
+import Link from "next/link";
 import { prisma, safeDbQuery } from "@/lib/prisma";
 
 function dateLabel(date: Date | null) {
@@ -48,22 +49,22 @@ export default async function AdminFeedsPage() {
       </header>
       <main className="admin-content admin-reader-content">
         <section className="admin-post-stats">
-          <a href="/admin/feeds">
+          <Link href="/admin/feeds">
             <span>RSS feeds</span>
             <strong>{feeds.length}</strong>
-          </a>
-          <a href="/admin/stories">
+          </Link>
+          <Link href="/admin/stories">
             <span>Stories</span>
             <strong>{storyCount}</strong>
-          </a>
-          <a href="/admin/stories?filter=unread">
+          </Link>
+          <Link href="/admin/stories?filter=unread">
             <span>Unread</span>
             <strong>{unreadCount}</strong>
-          </a>
-          <a href="/api/admin/opml">
+          </Link>
+          <Link href="/api/admin/opml" prefetch={false}>
             <span>Export</span>
             <strong>OPML</strong>
-          </a>
+          </Link>
         </section>
 
         <div className="admin-two-column">

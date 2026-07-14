@@ -4,7 +4,7 @@ import { validatePostForPublishing } from "@/lib/publishGuard";
 import { parseJsonArray } from "@/lib/json";
 import { absoluteUrl } from "@/lib/site";
 import { logError, logInfo } from "@/lib/logger";
-import { submitPublishedPostToIndexing } from "@/lib/googleIndexing";
+import { submitToGoogle } from "@/lib/googleIndexing";
 import { queueSocialPostsForArticle } from "@/lib/socialDistribution";
 
 export const PUBLISH_STATUSES = [
@@ -695,7 +695,7 @@ export async function publishPostNow({
     );
   }
   try {
-    const indexingJob = await submitPublishedPostToIndexing({ slug: post.slug });
+    const indexingJob = await submitToGoogle({ slug: post.slug });
     await notifyEditor({
       postId,
       type: "indexing_queued",

@@ -5,10 +5,6 @@ import { useRouter } from "next/navigation";
 
 type IndexingAction = "publish" | "update" | "delete";
 
-function endpointFor(action: IndexingAction) {
-  return `/api/indexing/${action}`;
-}
-
 async function postJson(url: string, payload: unknown) {
   const response = await fetch(url, {
     method: "POST",
@@ -38,7 +34,10 @@ export function AdminIndexingActions({
     startTransition(() => {
       void (async () => {
         try {
-          await postJson(endpointFor(action), payload);
+          await postJson("/api/indexing/submit", {
+            ...(payload as Record<string, unknown>),
+            type: action
+          });
           setMessage("Indexing job queued.");
           router.refresh();
         } catch (error) {
@@ -171,7 +170,13 @@ export function AdminIndexingActions({
   );
 }
 
-export function RetryIndexingJobButton({ id }: { id: string }) {
+export function RetryIndexingJobButton({
+  id,
+  status
+}: {
+  id: string;
+  status: string;
+}) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -195,7 +200,7 @@ export function RetryIndexingJobButton({ id }: { id: string }) {
     <div className="indexing-inline-action">
       <button
         className="button button-secondary"
-        disabled={isPending}
+        disabled={isPending || status === "processing"}
         onClick={retry}
         type="button"
       >

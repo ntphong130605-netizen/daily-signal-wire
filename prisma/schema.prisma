@@ -577,21 +577,27 @@ model AnalyticsEvent {
 }
 
 model IndexingJob {
-  id          String    @id @default(cuid())
-  url         String
-  type        String
-  status      String    @default("pending")
-  attempts    Int       @default(0)
-  lastError   String?
-  submittedAt DateTime?
-  finishedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  url            String
+  type           String
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  lastError      String?
+  responseCode   Int?
+  responseBody   String?
+  responseTimeMs Int?
+  nextAttemptAt  DateTime?
+  verifiedAt     DateTime?
+  submittedAt    DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([url])
   @@index([type])
   @@index([status])
   @@index([createdAt])
+  @@index([nextAttemptAt])
   @@index([submittedAt])
   @@index([finishedAt])
 }

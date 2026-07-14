@@ -74,18 +74,18 @@ export default async function AdminStoriesPage({
       </header>
       <main className="admin-content">
         <section className="admin-post-stats">
-          <a href="/admin/stories">
+          <Link href="/admin/stories">
             <span>All stories</span>
             <strong>{allCount}</strong>
-          </a>
-          <a href="/admin/stories?filter=unread">
+          </Link>
+          <Link href="/admin/stories?filter=unread">
             <span>Unread</span>
             <strong>{unreadCount}</strong>
-          </a>
-          <a href="/admin/stories?filter=saved">
+          </Link>
+          <Link href="/admin/stories?filter=saved">
             <span>Saved</span>
             <strong>{savedCount}</strong>
-          </a>
+          </Link>
           <form action="/admin/stories">
             <input type="search" name="q" defaultValue={q} placeholder="Search stories…" />
             <button>Search</button>
