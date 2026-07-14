@@ -3,6 +3,7 @@ import { configuredImageStorageLabel } from "@/lib/aiImage";
 import { adsenseClientId, hasAdsTxtConfiguration } from "@/lib/ads";
 import { getResearchEngineReadiness } from "@/lib/research/engine";
 import { googleIndexingReadiness } from "@/lib/googleIndexing";
+import { socialReadiness } from "@/lib/socialDistribution";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ function parseSourceStatuses(value: string | null | undefined) {
 }
 
 export async function GET() {
+  const socialCredentialReadiness = socialReadiness();
   const checks = {
     app: true,
     databaseConfigured: isDatabaseConfigured(),
@@ -29,6 +31,7 @@ export async function GET() {
       process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION
     ),
     googleIndexingConfigured: googleIndexingReadiness().configured,
+    socialDistributionConfigured: socialCredentialReadiness.some((platform) => platform.configured),
     siteUrlConfigured: Boolean(
       process.env.NEXT_PUBLIC_SITE_URL ||
         process.env.NEXTAUTH_URL ||
@@ -149,6 +152,11 @@ export async function GET() {
             by: ["status"],
             _count: { _all: true }
           }),
+          prisma.socialPost.groupBy({
+            by: ["status"],
+            _count: { _all: true },
+            _sum: { clicks: true, shares: true, likes: true, comments: true }
+          }),
           prisma.analyticsEvent.count({
             where: {
               eventName: "page_view",
@@ -164,12 +172,32 @@ export async function GET() {
             select: { score: true, analyzedAt: true }
           })
         ])
-          .then(([plannerUpcoming, distributionRows, pageviews24h, latestSeo, latestDiscover]) => ({
+        .then(([plannerUpcoming, distributionRows, socialRows, pageviews24h, latestSeo, latestDiscover]) => ({
             plannerUpcoming,
             distribution: distributionRows.reduce<Record<string, number>>((accumulator, row) => {
               accumulator[row.status] = row._count._all;
               return accumulator;
             }, {}),
+            social: {
+              credentials: socialCredentialReadiness.map((platform) => ({
+                platform: platform.platform,
+                configured: platform.configured,
+                missing: platform.missing
+              })),
+              statuses: socialRows.reduce<Record<string, number>>((accumulator, row) => {
+                accumulator[row.status] = row._count._all;
+                return accumulator;
+              }, {}),
+              totals: socialRows.reduce(
+                (accumulator, row) => ({
+                  clicks: accumulator.clicks + (row._sum.clicks || 0),
+                  shares: accumulator.shares + (row._sum.shares || 0),
+                  likes: accumulator.likes + (row._sum.likes || 0),
+                  comments: accumulator.comments + (row._sum.comments || 0)
+                }),
+                { clicks: 0, shares: 0, likes: 0, comments: 0 }
+              )
+            },
             pageviews24h,
             latestSeo,
             latestDiscover

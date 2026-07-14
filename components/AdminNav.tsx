@@ -15,6 +15,7 @@ const links = [
   { href: "/admin/growth", icon: "◆", label: "Growth" },
   { href: "/admin/planner", icon: "▦", label: "Planner" },
   { href: "/admin/distribution", icon: "⇄", label: "Distribution" },
+  { href: "/admin/social", icon: "◌", label: "Social" },
   { href: "/admin/seo", icon: "⌁", label: "SEO" },
   { href: "/admin/discover", icon: "◉", label: "Discover" },
   { href: "/admin/revenue", icon: "$", label: "Revenue" },

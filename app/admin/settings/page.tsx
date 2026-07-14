@@ -9,6 +9,7 @@ import {
 import { configuredImageStorageLabel } from "@/lib/aiImage";
 import { channelConfigured, distributionPlatforms } from "@/lib/growth";
 import { isDatabaseConfigured, prisma, safeDbQuery } from "@/lib/prisma";
+import { socialReadiness } from "@/lib/socialDistribution";
 
 function flag(value: string | undefined) {
   return value ? "Configured" : "Not configured";
@@ -65,6 +66,7 @@ export default async function AdminSettingsPage() {
     ["Cron secret", flag(process.env.CRON_SECRET)],
     ["NextAuth secret", flag(process.env.NEXTAUTH_SECRET)]
   ];
+  const socialChannels = socialReadiness();
 
   return (
     <>
@@ -166,6 +168,29 @@ export default async function AdminSettingsPage() {
                     </small>
                   </div>
                 ))}
+              </div>
+            </section>
+            <section className="panel admin-form-panel">
+              <div className="panel-heading compact">
+                <h2>Social distribution</h2>
+              </div>
+              <div className="settings-list compact">
+                {socialChannels.map((channel) => (
+                  <div key={channel.platform}>
+                    <span>{channel.label}</span>
+                    <strong className={channel.configured ? "configured" : "missing"}>
+                      {channel.configured ? "Configured" : "Waiting for credentials"}
+                    </strong>
+                    <small>
+                      {channel.configured ? "Ready to publish" : channel.missing.join(", ")}
+                    </small>
+                  </div>
+                ))}
+              </div>
+              <div className="settings-actions">
+                <Link className="button button-secondary" href="/admin/social">
+                  Open Social Queue
+                </Link>
               </div>
             </section>
             <section className="panel admin-form-panel settings-note">

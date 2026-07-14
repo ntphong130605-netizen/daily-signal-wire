@@ -5,6 +5,7 @@ import { parseJsonArray } from "@/lib/json";
 import { absoluteUrl } from "@/lib/site";
 import { logError, logInfo } from "@/lib/logger";
 import { submitPublishedPostToIndexing } from "@/lib/googleIndexing";
+import { queueSocialPostsForArticle } from "@/lib/socialDistribution";
 
 export const PUBLISH_STATUSES = [
   "draft",
@@ -664,6 +665,35 @@ export async function publishPostNow({
     metadata: { source, publishedAt: publishedAt.toISOString() }
   });
   revalidatePublishedPostPaths(post.slug);
+  try {
+    const socialJobs = await queueSocialPostsForArticle({
+      articleId: postId,
+      source: "publish_workflow"
+    });
+    await notifyEditor({
+      postId,
+      type: "social_queue_created",
+      title: "Social queue created",
+      message: `${socialJobs.length} social distribution jobs were created for "${post.title}".`,
+      severity: "info",
+      metadata: { jobs: socialJobs.map((job) => ({ id: job.id, platform: job.platform, status: job.status })) }
+    });
+  } catch (error) {
+    logError("publish_social_queue_failed", error, { postId, slug: post.slug });
+    await notifyEditor({
+      postId,
+      type: "social_queue_failed",
+      title: "Social queue failed",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Social distribution queue could not be created.",
+      severity: "warning",
+      metadata: { source }
+    }).catch((notifyError) =>
+      logError("publish_social_queue_notification_failed", notifyError, { postId })
+    );
+  }
   try {
     const indexingJob = await submitPublishedPostToIndexing({ slug: post.slug });
     await notifyEditor({

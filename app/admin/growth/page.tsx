@@ -201,8 +201,17 @@ export default async function AdminGrowthPage() {
             </p>
             <strong>{formatNumber(data.distributionBlocked)} blocked jobs →</strong>
           </Link>
-          <Link href="/admin/seo" className="growth-hub-card">
+          <Link href="/admin/social" className="growth-hub-card">
             <span>03</span>
+            <h2>AI Social Platform</h2>
+            <p>
+              Generate platform-specific copy, UTM links, social images and
+              retryable queue entries for every published article.
+            </p>
+            <strong>Open social queue →</strong>
+          </Link>
+          <Link href="/admin/seo" className="growth-hub-card">
+            <span>04</span>
             <h2>SEO Intelligence</h2>
             <p>
               Audit headlines, metadata, slug quality, source links, image SEO,
@@ -211,7 +220,7 @@ export default async function AdminGrowthPage() {
             <strong>Analyze articles →</strong>
           </Link>
           <Link href="/admin/monitoring" className="growth-hub-card">
-            <span>04</span>
+            <span>05</span>
             <h2>System Status</h2>
             <p>
               Check cron readiness, OpenAI, Blob Storage, database, search,

@@ -285,6 +285,7 @@ model Post {
   notifications        EditorialNotification[]
   contentPlanItems     ContentPlanItem[]
   distributionPublishes DistributionPublish[]
+  socialPosts          SocialPost[]
   seoAudits            SeoAudit[]
   discoverAudits       DiscoverAudit[]
   createdAt            DateTime         @default(now())
@@ -439,6 +440,45 @@ model DistributionPublish {
   @@index([status])
   @@index([scheduledAt])
   @@index([publishedAt])
+}
+
+model SocialPost {
+  id             String    @id @default(cuid())
+  platform       String
+  articleId      String
+  article        Post      @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  status         String    @default("queued")
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  retryCount     Int       @default(0)
+  errorMessage   String?
+  copy           String?
+  hashtags       String    @default("[]")
+  shortSummary   String?
+  callToAction   String?
+  utmUrl         String?
+  trackingUrl    String?
+  openGraphImage String?
+  squareImage    String?
+  verticalImage  String?
+  payload        String    @default("{}")
+  logs           String    @default("[]")
+  externalPostId String?
+  clicks         Int       @default(0)
+  impressions    Int       @default(0)
+  shares         Int       @default(0)
+  likes          Int       @default(0)
+  comments       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([articleId, platform])
+  @@index([articleId])
+  @@index([platform])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([publishedAt])
+  @@index([createdAt])
 }
 
 model SeoAudit {

@@ -440,6 +440,7 @@ Admin routes:
 - `/admin/growth` unified business command center
 - `/admin/planner` AI Content Planner and seven-day publishing calendar
 - `/admin/distribution` Traffic Engine and distribution queue
+- `/admin/social` AI Social Distribution Platform and social queue
 - `/admin/seo` SEO Intelligence analyzer
 - `/admin/discover` Google Discover optimizer
 - `/admin/revenue` Revenue Center and AI revenue recommendations
@@ -470,6 +471,24 @@ missing, jobs are marked `blocked` and the app never fakes a successful social
 post. RSS distribution becomes live through `/rss.xml` when the article is
 published.
 
+The Social Queue at `/admin/social` is created automatically when an article is
+published. It generates platform-specific copy, hashtags, UTM tracking links,
+OpenGraph/square/vertical image URLs, click-tracking redirect URLs and retry
+logs for:
+
+- Facebook Page
+- X (Twitter)
+- Threads
+- LinkedIn Company Page
+- Pinterest
+- Bluesky
+- Newsletter through Resend
+- RSS push
+
+Missing credentials never crash the site. Jobs remain in
+`waiting_credentials` until the relevant official platform credentials are
+added. RSS jobs are marked live through `/rss.xml`.
+
 Protected distribution cron endpoint:
 
 ```bash
@@ -485,14 +504,22 @@ FACEBOOK_PAGE_ID=
 X_API_KEY=
 X_ACCESS_TOKEN=
 LINKEDIN_ACCESS_TOKEN=
+LINKEDIN_ORGANIZATION_URN=
+LINKEDIN_COMPANY_ID=
 PINTEREST_ACCESS_TOKEN=
+PINTEREST_BOARD_ID=
 THREADS_ACCESS_TOKEN=
+THREADS_USER_ID=
 BLUESKY_IDENTIFIER=
 BLUESKY_APP_PASSWORD=
 RESEND_API_KEY=
 NEWSLETTER_FROM_EMAIL=
 EDITORIAL_TIMEZONE=America/New_York
 ```
+
+`LINKEDIN_ORGANIZATION_URN`, `LINKEDIN_COMPANY_ID`, `PINTEREST_BOARD_ID` and
+`THREADS_USER_ID` are optional in local development but required for actual
+publishing to those company/page destinations.
 
 SEO Intelligence checks headline length, meta description, slug quality,
 content depth, keyword density, internal links, source links, schema inputs,
