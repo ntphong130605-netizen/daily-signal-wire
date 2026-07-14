@@ -330,7 +330,7 @@ export default function AdminPostEditor({
         imageError: ""
       }));
       setMessage("Article regenerated. Review all facts again before publishing.");
-      trackEvent("generate_ai_article", { post_id: post.id, mode: "regenerate" });
+      trackEvent("ai_generate", { post_id: post.id, mode: "regenerate" });
       router.refresh();
     }
   }
@@ -395,7 +395,7 @@ export default function AdminPostEditor({
           : current.factCheckNotes
       }));
       setMessage(`${section} rewritten. Review before saving or publishing.`);
-      trackEvent("generate_ai_article", { post_id: post.id, mode: `rewrite_${section}` });
+      trackEvent("ai_generate", { post_id: post.id, mode: `rewrite_${section}` });
       router.refresh();
     }
   }
@@ -417,7 +417,7 @@ export default function AdminPostEditor({
           ? "Fact check complete."
           : "Flagged sections regenerated and fact-checked."
       );
-      trackEvent("generate_ai_article", {
+      trackEvent("ai_generate", {
         post_id: post.id,
         mode: action === "run" ? "fact_check" : "regenerate_failed_sections"
       });

@@ -72,6 +72,7 @@ function referrerSource() {
 function sendToGa(eventName: string, params: AnalyticsParams) {
   if (process.env.NODE_ENV !== "production") return;
   if (typeof window === "undefined" || typeof window.gtag !== "function") return;
+  if (window.__dswConsent?.analytics_storage !== "granted") return;
   window.gtag("event", eventName, {
     ...params,
     transport_type: "beacon"
@@ -154,11 +155,19 @@ export function trackNewsletter(params: AnalyticsParams = {}) {
 }
 
 export function trackImageGeneration(params: AnalyticsParams = {}) {
-  trackCustom("image_generation", params);
+  trackCustom("image_generate", params);
 }
 
 export function trackPublish(params: AnalyticsParams = {}) {
-  trackCustom("ai_publish", params);
+  trackCustom("publish_article", params);
+}
+
+export function trackAiGenerate(params: AnalyticsParams = {}) {
+  trackCustom("ai_generate", params);
+}
+
+export function trackArticleShare(params: AnalyticsParams = {}) {
+  trackCustom("article_share", params);
 }
 
 export const trackEvent = trackCustom;

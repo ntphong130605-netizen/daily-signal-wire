@@ -29,7 +29,7 @@ export default function GenerateDraftButton({
       setError(body.error || "Generation failed");
       return;
     }
-    trackEvent("generate_ai_article", { trend_id: trendId });
+    trackEvent("ai_generate", { trend_id: trendId });
     router.push(`/admin/trends/${trendId}`);
     router.refresh();
   }

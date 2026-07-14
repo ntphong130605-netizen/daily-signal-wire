@@ -127,7 +127,7 @@ export default function AdminPostActions({
       return;
     }
     setMessage("Article regenerated");
-    trackEvent("generate_ai_article", { post_id: id, mode: "regenerate" });
+    trackEvent("ai_generate", { post_id: id, mode: "regenerate" });
     router.refresh();
   }
 

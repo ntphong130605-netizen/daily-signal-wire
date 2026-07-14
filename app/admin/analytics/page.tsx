@@ -191,10 +191,10 @@ export default async function AdminAnalyticsPage() {
           where: { eventName: { in: ["ai_publish", "publish_article"] }, createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.count({
-          where: { eventName: "generate_ai_article", createdAt: { gte: since } }
+          where: { eventName: { in: ["generate_ai_article", "ai_generate"] }, createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.count({
-          where: { eventName: { in: ["image_generation", "generate_ai_image"] }, createdAt: { gte: since } }
+          where: { eventName: { in: ["image_generation", "generate_ai_image", "image_generate"] }, createdAt: { gte: since } }
         }),
         prisma.analyticsEvent.findMany({
           where: { eventName: "scroll_depth", createdAt: { gte: since } },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { trackArticleShare } from "@/lib/analytics";
 
 type ShareVariant = "inline" | "rail" | "floating";
 
@@ -60,6 +61,7 @@ export default function ArticleShareTools({
     if (!url) return;
     try {
       await navigator.clipboard.writeText(url);
+      trackArticleShare({ article_slug: slug, share_method: "copy_link" });
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -78,7 +80,12 @@ export default function ArticleShareTools({
   }
 
   function printArticle() {
+    trackArticleShare({ article_slug: slug, share_method: "print" });
     window.print();
+  }
+
+  function trackShare(label: string) {
+    trackArticleShare({ article_slug: slug, share_method: label.toLowerCase() });
   }
 
   const content = (
@@ -91,6 +98,7 @@ export default function ArticleShareTools({
           target={link.label === "Email" ? undefined : "_blank"}
           rel={link.label === "Email" ? undefined : "noreferrer"}
           aria-label={`Share on ${link.label}`}
+          onClick={() => trackShare(link.label)}
         >
           {link.short}
         </a>

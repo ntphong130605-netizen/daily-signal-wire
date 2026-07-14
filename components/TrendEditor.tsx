@@ -87,7 +87,7 @@ export default function TrendEditor({
     );
     if (result) {
       setMessage("Draft generated. Review every fact before publishing.");
-      trackEvent("generate_ai_article", { trend_id: trend.id });
+      trackEvent("ai_generate", { trend_id: trend.id });
       router.refresh();
     }
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackArticleShare } from "@/lib/analytics";
 
 export default function ShareButtons({
   title,
@@ -28,6 +29,7 @@ export default function ShareButtons({
         target="_blank"
         rel="noreferrer"
         aria-label="Share on Facebook"
+        onClick={() => trackArticleShare({ article_slug: slug, share_method: "facebook" })}
       >
         f
       </a>
@@ -40,6 +42,7 @@ export default function ShareButtons({
         target="_blank"
         rel="noreferrer"
         aria-label="Share on X"
+        onClick={() => trackArticleShare({ article_slug: slug, share_method: "x" })}
       >
         𝕏
       </a>
@@ -48,6 +51,7 @@ export default function ShareButtons({
         target="_blank"
         rel="noreferrer"
         aria-label="Share on WhatsApp"
+        onClick={() => trackArticleShare({ article_slug: slug, share_method: "whatsapp" })}
       >
         W
       </a>

@@ -136,7 +136,7 @@ export default function StoryActions({
     try {
       const payload = await post(`/api/admin/stories/${storyId}/convert`);
       setMessage(`AI draft created: ${payload.slug}`);
-      trackEvent("generate_ai_article", { story_id: storyId });
+      trackEvent("ai_generate", { story_id: storyId });
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Draft failed");

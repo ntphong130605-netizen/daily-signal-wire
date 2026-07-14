@@ -2,6 +2,8 @@
 
 export {
   analyticsIdentity,
+  trackAiGenerate,
+  trackArticleShare,
   trackArticleView,
   trackCustom,
   trackEvent,

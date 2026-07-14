@@ -42,7 +42,7 @@ export default function AdminFactCheckActions({
     );
     if (result) {
       setMessage(action === "run" ? "Fact check complete." : "Failed sections regenerated.");
-      trackEvent("generate_ai_article", {
+      trackEvent("ai_generate", {
         post_id: postId,
         mode: action === "run" ? "fact_check" : "regenerate_failed_sections"
       });

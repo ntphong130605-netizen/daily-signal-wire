@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ConsentState } from "@/components/consent/CookieConsent";
 import {
   trackArticleView,
@@ -56,7 +56,7 @@ export default function GoogleScripts({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [consent, setConsent] = useState<ConsentState>(deniedConsent);
-  const [gaConfigured, setGaConfigured] = useState(false);
+  const gaConfiguredRef = useRef(false);
 
   useEffect(() => {
     setConsent(currentConsent());
@@ -77,9 +77,9 @@ export default function GoogleScripts({
     const canSendGa =
       isProduction && Boolean(gaMeasurementId) && typeof window.gtag === "function";
 
-    if (canSendGa && !gaConfigured) {
+    if (canSendGa && !gaConfiguredRef.current) {
       window.gtag?.("config", gaMeasurementId, { send_page_view: false });
-      setGaConfigured(true);
+      gaConfiguredRef.current = true;
     }
 
     const search = searchParams.toString();
@@ -96,7 +96,7 @@ export default function GoogleScripts({
         article_slug: pathname.split("/").filter(Boolean).pop()
       });
     }
-  }, [consent.analytics_storage, gaConfigured, gaMeasurementId, isProduction, pathname, searchParams]);
+  }, [consent.analytics_storage, gaMeasurementId, isProduction, pathname, searchParams]);
 
   useEffect(() => {
     if (consent.analytics_storage !== "granted") return;
