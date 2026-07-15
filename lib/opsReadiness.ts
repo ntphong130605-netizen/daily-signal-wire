@@ -196,7 +196,20 @@ export async function getProductionReadiness(): Promise<ProductionReadinessRepor
     envItem("NEXT_PUBLIC_ADSENSE_CLIENT_ID", "Configured", "Waiting for AdSense client ID"),
     envItem("ADSENSE_PUBLISHER_ID", "Configured", "Waiting for ads.txt publisher ID"),
     envItem("NEXT_PUBLIC_GA_MEASUREMENT_ID", "Configured", "Waiting for GA4 measurement ID"),
-    envItem("NEXT_PUBLIC_GSC_VERIFICATION", "Configured", "Waiting for Search Console verification"),
+    {
+      key: "Search Console verification",
+      configured: Boolean(
+        process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+          process.env.GOOGLE_SITE_VERIFICATION ||
+          process.env.GOOGLE_SITE_VERIFICATION_FILE
+      ),
+      message:
+        process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+        process.env.GOOGLE_SITE_VERIFICATION ||
+        process.env.GOOGLE_SITE_VERIFICATION_FILE
+          ? "Configured"
+          : "Waiting for Search Console verification"
+    },
     envItem("GOOGLE_SERVICE_ACCOUNT_EMAIL", "Configured", "Waiting for Google service account"),
     envItem("GOOGLE_PRIVATE_KEY", "Configured", "Waiting for Google private key"),
     envItem("FACEBOOK_PAGE_ACCESS_TOKEN"),
@@ -387,12 +400,16 @@ export async function getProductionReadiness(): Promise<ProductionReadinessRepor
     area: "Google",
     label: "Search Console status",
     status:
-      configured("NEXT_PUBLIC_GSC_VERIFICATION") || configured("GOOGLE_SITE_VERIFICATION")
+      configured("NEXT_PUBLIC_GSC_VERIFICATION") ||
+      configured("GOOGLE_SITE_VERIFICATION") ||
+      configured("GOOGLE_SITE_VERIFICATION_FILE")
         ? "operational"
         : "waiting",
     message:
-      configured("NEXT_PUBLIC_GSC_VERIFICATION") || configured("GOOGLE_SITE_VERIFICATION")
-        ? "Search Console verification meta is configured."
+      configured("NEXT_PUBLIC_GSC_VERIFICATION") ||
+      configured("GOOGLE_SITE_VERIFICATION") ||
+      configured("GOOGLE_SITE_VERIFICATION_FILE")
+        ? "Search Console verification proof is configured."
         : "Waiting for Search Console verification token.",
     maxScore: 5,
     href: "/admin/analytics"

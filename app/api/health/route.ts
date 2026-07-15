@@ -28,7 +28,9 @@ export async function GET() {
     consentModeReady: true,
     gaConfigured: Boolean(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID),
     gscVerificationConfigured: Boolean(
-      process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION
+      process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+        process.env.GOOGLE_SITE_VERIFICATION ||
+        process.env.GOOGLE_SITE_VERIFICATION_FILE
     ),
     googleIndexingConfigured: googleIndexingReadiness().configured,
     socialDistributionConfigured: socialCredentialReadiness.some((platform) => platform.configured),

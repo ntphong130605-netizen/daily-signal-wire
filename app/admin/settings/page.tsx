@@ -57,7 +57,11 @@ export default async function AdminSettingsPage() {
     ],
     [
       "Google Search Console",
-      flag(process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION)
+      flag(
+        process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+          process.env.GOOGLE_SITE_VERIFICATION ||
+          process.env.GOOGLE_SITE_VERIFICATION_FILE
+      )
     ],
     ["GTM", flag(process.env.NEXT_PUBLIC_GTM_ID)],
     ["Microsoft Clarity", flag(process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID)],

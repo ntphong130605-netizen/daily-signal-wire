@@ -78,7 +78,10 @@ export default async function AdminAnalyticsPage() {
   const since = daysAgo(30);
   const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "";
   const gscVerification =
-    process.env.NEXT_PUBLIC_GSC_VERIFICATION || process.env.GOOGLE_SITE_VERIFICATION || "";
+    process.env.NEXT_PUBLIC_GSC_VERIFICATION ||
+    process.env.GOOGLE_SITE_VERIFICATION ||
+    process.env.GOOGLE_SITE_VERIFICATION_FILE ||
+    "";
   const sitemapUrls = [
     absoluteUrl("/sitemap.xml"),
     absoluteUrl("/news-sitemap.xml"),
@@ -308,7 +311,7 @@ export default async function AdminAnalyticsPage() {
     count: row._count._all
   }));
   const indexingStatus = gscVerification
-    ? "Ready for Search Console verification"
+    ? "Search Console verification proof configured"
     : "Add NEXT_PUBLIC_GSC_VERIFICATION";
 
   return (
