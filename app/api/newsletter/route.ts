@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { databaseUnavailableResponse, isDatabaseConfigured, prisma } from "@/lib/prisma";
 import { rateLimit, requestKey } from "@/lib/rateLimit";
@@ -27,8 +28,12 @@ export async function POST(request: Request) {
     const { email } = NewsletterSchema.parse(await request.json());
     await prisma.newsletterSubscriber.upsert({
       where: { email: email.toLowerCase() },
-      update: { status: "active" },
-      create: { email: email.toLowerCase() }
+      update: {
+        status: "active",
+        unsubscribedAt: null,
+        unsubscribeToken: randomUUID()
+      },
+      create: { email: email.toLowerCase(), unsubscribeToken: randomUUID() }
     });
     return Response.json({ ok: true });
   } catch (error) {

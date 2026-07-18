@@ -5,12 +5,13 @@ import { recordSocialClick } from "@/lib/socialDistribution";
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const variantKey = new URL(request.url).searchParams.get("variant");
   const job = await safeDbQuery("social_click_lookup_failed", null, () =>
-    recordSocialClick(id)
+    recordSocialClick(id, variantKey)
   );
   if (!job) return Response.redirect(absoluteUrl("/"), 302);
   const destination =

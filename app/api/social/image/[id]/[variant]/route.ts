@@ -8,7 +8,11 @@ export const dynamic = "force-dynamic";
 const sizes = {
   square: { width: 1200, height: 1200 },
   vertical: { width: 1080, height: 1920 },
-  og: { width: 1600, height: 900 }
+  og: { width: 1600, height: 900 },
+  facebook: { width: 1200, height: 630 },
+  twitter: { width: 1600, height: 900 },
+  linkedin: { width: 1200, height: 627 },
+  pinterest: { width: 1000, height: 1500 }
 } as const;
 
 async function fetchImageBytes(url: string) {
@@ -53,7 +57,7 @@ export async function GET(
 
   const category = socialPost.article.category?.name || socialPost.article.trend?.category || "Latest";
   const image = normalizeEditorialImageUrl(
-    socialPost.openGraphImage ||
+    socialPost.sourceImage ||
       socialPost.article.openGraphImage ||
       socialPost.article.featuredImageUrl ||
       socialPost.article.featuredImage ||

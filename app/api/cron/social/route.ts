@@ -1,6 +1,6 @@
 import { logError } from "@/lib/logger";
 import { databaseUnavailableResponse, isDatabaseConfigured } from "@/lib/prisma";
-import { processSocialQueue } from "@/lib/socialDistribution";
+import { processSocialQueue, refreshSocialMetrics } from "@/lib/socialDistribution";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +13,11 @@ export async function GET(request: Request) {
   if (!isDatabaseConfigured()) return databaseUnavailableResponse();
 
   try {
-    const summary = await processSocialQueue();
-    return Response.json({ ok: true, ...summary });
+    const [queue, metrics] = await Promise.all([
+      processSocialQueue(),
+      refreshSocialMetrics()
+    ]);
+    return Response.json({ ok: true, queue, metrics });
   } catch (error) {
     logError("social_cron_failed", error);
     return Response.json({ error: "Social distribution cron failed" }, { status: 500 });

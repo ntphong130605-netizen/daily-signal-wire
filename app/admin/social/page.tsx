@@ -148,7 +148,7 @@ export default async function AdminSocialPage() {
           </div>
           <div>
             <p className="eyebrow">CTR</p>
-            <h2>{analytics.ctr}%</h2>
+            <h2>{analytics.ctr === null ? "—" : `${analytics.ctr}%`}</h2>
             <p>Calculated when impression data is available.</p>
           </div>
           <div>

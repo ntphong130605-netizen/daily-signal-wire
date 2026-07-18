@@ -459,7 +459,7 @@ The planner builds schedules from real saved inputs:
 
 It supports drag-and-drop rescheduling, priority, status and timezone metadata.
 
-The Distribution Center supports queueing jobs for:
+The production Distribution Center supports queueing jobs for:
 
 - Facebook
 - X
@@ -471,14 +471,16 @@ The Distribution Center supports queueing jobs for:
 - Email newsletter
 
 External networks require official API/OAuth credentials. If credentials are
-missing, jobs are marked `blocked` and the app never fakes a successful social
-post. RSS distribution becomes live through `/rss.xml` when the article is
-published.
+missing, jobs are marked `waiting_credentials` with `Credential Missing` in
+Admin and the app never fakes a successful social post. RSS distribution
+becomes live through `/rss.xml` when the article is published.
 
-The Social Queue at `/admin/social` is created automatically when an article is
-published. It generates platform-specific copy, hashtags, UTM tracking links,
-OpenGraph/square/vertical image URLs, click-tracking redirect URLs and retry
-logs for:
+The queue at `/admin/distribution` is created automatically when an article is
+published. The legacy `/admin/social` view remains available. The engine
+generates platform-specific copy, five factual headline styles, five CTA
+versions, ten hashtags, professional/casual/emoji variants, UTM tracking links,
+platform image crops, click-tracking URLs, A/B variants and durable action logs
+for:
 
 - Facebook Page
 - X (Twitter)
@@ -493,6 +495,25 @@ Missing credentials never crash the site. Jobs remain in
 `waiting_credentials` until the relevant official platform credentials are
 added. RSS jobs are marked live through `/rss.xml`.
 
+Queue states include `preparing`, `queued`, `scheduled`, `publishing`,
+`published`, `retry`, `failed`, `paused`, `cancelled`,
+`waiting_credentials` and `waiting_audience`. Editors can publish immediately,
+schedule in a named timezone, choose priority, configure daily/weekly/monthly
+recurrence, pause/resume the whole queue or a single job, select an A/B copy
+variant and retry failures with exponential backoff.
+
+The publish workflow attempts configured immediate platform deliveries after
+the article is live. Future schedules and retries are processed by:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://daily-signal-wire.vercel.app/api/cron/social
+```
+
+On Vercel Hobby, the existing daily publish cron also processes the social
+queue. For minute-level schedules, call `/api/cron/social` from a trusted
+external scheduler or use a Vercel plan that supports a more frequent cron.
+
 Protected distribution cron endpoint:
 
 ```bash
@@ -505,11 +526,13 @@ Optional distribution environment variables:
 ```env
 FACEBOOK_PAGE_ACCESS_TOKEN=
 FACEBOOK_PAGE_ID=
+FACEBOOK_GRAPH_API_VERSION=
 X_API_KEY=
 X_ACCESS_TOKEN=
 LINKEDIN_ACCESS_TOKEN=
 LINKEDIN_ORGANIZATION_URN=
 LINKEDIN_COMPANY_ID=
+LINKEDIN_API_VERSION=202605
 PINTEREST_ACCESS_TOKEN=
 PINTEREST_BOARD_ID=
 THREADS_ACCESS_TOKEN=

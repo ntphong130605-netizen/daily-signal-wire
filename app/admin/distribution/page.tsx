@@ -1,15 +1,19 @@
 import Link from "next/link";
+import { CopyTextButton } from "@/components/AdminGrowthActions";
 import {
-  CopyTextButton,
-  DistributionCreateForm,
-  DistributionJobButton
-} from "@/components/AdminGrowthActions";
-import {
-  channelConfigured,
-  distributionPlatforms,
-  ensureDistributionChannels
-} from "@/lib/growth";
+  SocialPostActionButton,
+  SocialQueueControlButton,
+  SocialQueueCreateForm,
+  SocialVariantSelect
+} from "@/components/AdminSocialActions";
+import { parseJsonArray } from "@/lib/json";
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import {
+  socialAnalyticsSummary,
+  socialPlatforms,
+  socialQueuePaused,
+  socialReadiness
+} from "@/lib/socialDistribution";
 
 export const dynamic = "force-dynamic";
 
@@ -18,165 +22,254 @@ function formatDate(value: Date | null) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
+    year: "numeric",
     hour: "numeric",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZoneName: "short"
   }).format(value);
 }
 
+function statusClass(status: string) {
+  if (status === "published") return "excellent";
+  if (["queued", "scheduled", "publishing", "preparing"].includes(status)) return "good";
+  if (["waiting_credentials", "waiting_audience", "paused", "retry"].includes(status)) return "warn";
+  return "bad";
+}
+
 export default async function AdminDistributionPage() {
-  const data = await safeDbQuery(
-    "admin_distribution_query_failed",
-    {
-      posts: [] as { id: string; title: string; slug: string }[],
-      jobs: [] as {
-        id: string;
-        platform: string;
-        mode: string;
-        status: string;
-        scheduledAt: Date | null;
-        publishedAt: Date | null;
-        retryCount: number;
-        lastError: string | null;
-        message: string | null;
-        post: { title: string; slug: string; status: string } | null;
-      }[],
-      channels: [] as {
-        platform: string;
-        label: string;
-        enabled: boolean;
-        status: string;
-        configStatus: string;
-      }[]
-    },
-    async () => {
-      await ensureDistributionChannels();
-      const [posts, jobs, channels] = await Promise.all([
-        prisma.post.findMany({
-          where: { status: { in: ["published", "approved", "scheduled"] } },
-          orderBy: { updatedAt: "desc" },
-          select: { id: true, title: true, slug: true },
-          take: 80
-        }),
-        prisma.distributionPublish.findMany({
-          include: { post: { select: { title: true, slug: true, status: true } } },
-          orderBy: { updatedAt: "desc" },
-          take: 80
-        }),
-        prisma.distributionChannel.findMany({ orderBy: { platform: "asc" } })
-      ]);
-      return { posts, jobs, channels };
-    }
-  );
-  const channelRows =
-    data.channels.length > 0
-      ? data.channels
-      : distributionPlatforms.map((item) => ({
-          platform: item.platform,
-          label: item.label,
-          enabled: channelConfigured(item.platform),
-          status: channelConfigured(item.platform) ? "ready" : "not_configured",
-          configStatus: channelConfigured(item.platform)
-            ? "configured"
-            : "missing_credentials"
-        }));
+  const data = await safeDbQuery("admin_viral_distribution_query_failed", null, async () => {
+    const [posts, socialPosts, paused] = await Promise.all([
+      prisma.post.findMany({
+        where: { status: "published" },
+        orderBy: { publishedAt: "desc" },
+        select: { id: true, title: true, slug: true },
+        take: 120
+      }),
+      prisma.socialPost.findMany({
+        include: {
+          article: { select: { title: true, slug: true, status: true } },
+          variants: { orderBy: { createdAt: "asc" } },
+          actionLogs: { orderBy: { createdAt: "desc" }, take: 6 }
+        },
+        orderBy: [{ priority: "asc" }, { updatedAt: "desc" }],
+        take: 160
+      }),
+      socialQueuePaused()
+    ]);
+    return { posts, socialPosts, paused };
+  });
+
+  const posts = data?.posts || [];
+  const socialPosts = data?.socialPosts || [];
+  const paused = data?.paused || false;
+  const readiness = socialReadiness();
+  const analytics = socialAnalyticsSummary(socialPosts);
+  const byStatus = socialPosts.reduce<Record<string, number>>((accumulator, job) => {
+    accumulator[job.status] = (accumulator[job.status] || 0) + 1;
+    return accumulator;
+  }, {});
+  const queueCount = (byStatus.queued || 0) + (byStatus.preparing || 0);
+
+  const cards = [
+    ["Queue", queueCount, "Queued and preparing packages"],
+    ["Scheduled", byStatus.scheduled || 0, "Timezone-aware future posts"],
+    ["Publishing", byStatus.publishing || 0, "Connector requests in progress"],
+    ["Published", byStatus.published || 0, "Successful platform deliveries"],
+    ["Failed", byStatus.failed || 0, "Attempts that exhausted retries"],
+    ["Retry Queue", byStatus.retry || 0, "Backoff retries waiting to run"],
+    ["Engagement", analytics.engagement, `${analytics.reach} verified reach`],
+    ["CTR", analytics.ctr === null ? "—" : `${analytics.ctr}%`, "Only shown with real impressions"],
+    ["Clicks", analytics.clicks, "First-party tracked clicks"],
+    ["Shares", analytics.shares, "Platform-reported shares"]
+  ] as const;
 
   return (
     <>
       <header className="admin-header">
         <div>
-          <p className="eyebrow">Traffic Engine</p>
+          <p className="eyebrow">Phase 5 · AI Viral Distribution Engine</p>
           <h1>Distribution Center</h1>
           <p>
-            Queue articles for Facebook, X, LinkedIn, Pinterest, Threads,
-            Bluesky, RSS and newsletters. Missing credentials block external
-            publishing instead of faking success.
+            Prepare, schedule, publish and monitor every approved story across official platform APIs.
+            Missing credentials block delivery and never create fake success records.
           </p>
         </div>
-        <div className="header-badge">{data.jobs.length} jobs</div>
+        <div className="distribution-header-actions">
+          <span className={`header-badge ${paused ? "status-paused" : ""}`}>
+            {paused ? "Queue paused" : "Queue active"}
+          </span>
+          <SocialQueueControlButton paused={paused} />
+        </div>
       </header>
+
       <main className="admin-content growth-dashboard">
+        <section className="growth-metric-grid distribution-metric-grid" aria-label="Distribution metrics">
+          {cards.map(([label, value, note]) => (
+            <div key={label}>
+              <p className="eyebrow">{label}</p>
+              <h2>{value}</h2>
+              <p>{note}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="panel distribution-insight-strip" aria-label="Distribution insights">
+          <div>
+            <span>Best performing platform</span>
+            <strong>{analytics.bestPlatform || "Not enough verified data"}</strong>
+          </div>
+          <div>
+            <span>Best publish hour</span>
+            <strong>
+              {analytics.bestPublishHour ? `${analytics.bestPublishHour}:00 UTC` : "Not enough verified data"}
+            </strong>
+          </div>
+          <div>
+            <span>Waiting for credentials</span>
+            <strong>{byStatus.waiting_credentials || 0}</strong>
+          </div>
+          <div>
+            <span>Waiting for audience</span>
+            <strong>{byStatus.waiting_audience || 0}</strong>
+          </div>
+        </section>
+
         <section className="panel">
           <div className="panel-heading compact">
             <div>
-              <p className="eyebrow">Create</p>
-              <h2>New distribution job</h2>
+              <p className="eyebrow">Automation</p>
+              <h2>Prepare a distribution package</h2>
             </div>
             <Link href="/admin/settings" className="source-pill">
-              Configure env →
+              Configure credentials →
             </Link>
           </div>
-          {data.posts.length === 0 ? (
+          {posts.length === 0 ? (
             <div className="empty-state compact">
-              <h3>No eligible articles</h3>
-              <p>Publish, approve or schedule an article before distributing it.</p>
+              <h3>No published articles</h3>
+              <p>Publishing an approved article automatically creates its platform packages.</p>
             </div>
           ) : (
-            <DistributionCreateForm
-              posts={data.posts}
-              platforms={distributionPlatforms.map((item) => item.platform)}
+            <SocialQueueCreateForm
+              posts={posts}
+              platforms={socialPlatforms.map((platform) => platform.platform)}
             />
           )}
         </section>
 
-        <section className="growth-hub-grid">
-          {channelRows.map((channel) => (
-            <article className="growth-channel-card" key={channel.platform}>
-              <span className={`growth-status-dot ${channel.enabled ? "ok" : "warn"}`} />
+        <section className="growth-hub-grid" aria-label="Platform credentials">
+          {readiness.map((platform) => (
+            <article className="growth-channel-card" key={platform.platform}>
+              <span className={`growth-status-dot ${platform.configured ? "ok" : "warn"}`} />
               <div>
-                <h2>{channel.label}</h2>
-                <p>{channel.enabled ? "Ready for queueing" : "Credentials missing"}</p>
+                <h2>{platform.label}</h2>
+                <p>{platform.configured ? "Ready to publish" : "Credential Missing"}</p>
                 <small>
-                  {channel.status} · {channel.configStatus}
+                  {platform.configured ? "Official connector configured" : platform.missing.join(", ")}
                 </small>
               </div>
             </article>
           ))}
         </section>
 
-        <section className="panel distribution-job-panel">
+        <section className="panel social-queue-panel">
           <div className="panel-heading compact">
             <div>
-              <p className="eyebrow">History</p>
-              <h2>Publish jobs</h2>
+              <p className="eyebrow">Priority queue</p>
+              <h2>Distribution packages</h2>
             </div>
+            <span className="source-pill">{socialPosts.length} jobs</span>
           </div>
-          {data.jobs.length === 0 ? (
+          {socialPosts.length === 0 ? (
             <div className="empty-state">
-              <h3>No distribution history</h3>
-              <p>Create a job to track publish attempts, retries and blocked channels.</p>
+              <h3>No distribution jobs</h3>
+              <p>The first published article will create real queue entries for every platform.</p>
             </div>
           ) : (
-            <div className="growth-table">
-              <div className="growth-table-head distribution">
+            <div className="growth-table social-table distribution-v2-table">
+              <div className="growth-table-head social">
                 <span>Article</span>
                 <span>Platform</span>
                 <span>Status</span>
-                <span>Schedule</span>
-                <span>Actions</span>
+                <span>Performance</span>
+                <span>Preview / Actions</span>
               </div>
-              {data.jobs.map((job) => (
-                <article className="growth-table-row distribution" key={job.id}>
-                  <div>
-                    <strong>{job.post?.title || "Post removed"}</strong>
-                    <small>{job.mode} · retries {job.retryCount}</small>
-                    {job.lastError && <small className="growth-error">{job.lastError}</small>}
-                  </div>
-                  <span>{job.platform}</span>
-                  <span className={`growth-status-pill status-${job.status}`}>
-                    {job.status}
-                  </span>
-                  <span>
-                    {formatDate(job.scheduledAt)}
-                    {job.publishedAt ? ` · sent ${formatDate(job.publishedAt)}` : ""}
-                  </span>
-                  <div className="growth-row-actions">
-                    {job.message && <CopyTextButton text={job.message} label="Copy post" />}
-                    <DistributionJobButton id={job.id} action="retry" label="Retry" />
-                    <DistributionJobButton id={job.id} action="mark_sent" label="Mark sent" />
-                    <DistributionJobButton id={job.id} action="mark_failed" label="Mark failed" />
-                  </div>
-                </article>
-              ))}
+              {socialPosts.map((job) => {
+                const hashtags = parseJsonArray<string>(job.hashtags);
+                return (
+                  <article className="growth-table-row social" key={job.id}>
+                    <div>
+                      <strong>{job.article?.title || "Article removed"}</strong>
+                      <small>
+                        Priority {job.priority} · {job.timezone} · {job.recurrence}
+                      </small>
+                      <small>
+                        Scheduled: {formatDate(job.scheduledAt)} · attempts {job.retryCount}/{job.maxRetries}
+                      </small>
+                      {job.errorMessage && <small className="growth-error">{job.errorMessage}</small>}
+                    </div>
+                    <span>{job.platform}</span>
+                    <span className={`growth-score mini ${statusClass(job.status)}`}>
+                      {job.status.replace(/_/g, " ")}
+                    </span>
+                    <div className="growth-signal-grid">
+                      <span>{job.clicks} clicks</span>
+                      <span>{job.impressions} impressions</span>
+                      <span>{job.reach} reach</span>
+                      <span>{job.shares} shares</span>
+                    </div>
+                    <div className="social-preview-actions">
+                      <SocialVariantSelect
+                        id={job.id}
+                        value={job.selectedVariantKey}
+                        variants={job.variants.map((variant) => ({
+                          variantKey: variant.variantKey,
+                          label: `${variant.label}${variant.isWinner ? " · winner" : ""}`
+                        }))}
+                      />
+                      <details>
+                        <summary>Preview package</summary>
+                        <p>{job.copy || job.shortSummary || "Copy is still preparing."}</p>
+                        {hashtags.length > 0 && <small>{hashtags.join(" ")}</small>}
+                        {job.facebookImage && <a href={job.facebookImage}>Facebook crop</a>}
+                        {job.twitterImage && <a href={job.twitterImage}>X crop</a>}
+                        {job.linkedinImage && <a href={job.linkedinImage}>LinkedIn crop</a>}
+                        {job.pinterestImage && <a href={job.pinterestImage}>Pinterest crop</a>}
+                        {job.variants.map((variant) => (
+                          <small key={variant.id}>
+                            {variant.label}: {variant.clicks} clicks
+                            {variant.impressions > 0
+                              ? ` · ${((variant.clicks / variant.impressions) * 100).toFixed(2)}% CTR`
+                              : ""}
+                          </small>
+                        ))}
+                        {job.actionLogs.map((log) => (
+                          <small key={log.id}>
+                            {log.action}: {log.message}
+                          </small>
+                        ))}
+                      </details>
+                      <div className="growth-row-actions">
+                        {job.copy && <CopyTextButton text={job.copy} label="Copy" />}
+                        {!['published', 'cancelled'].includes(job.status) && (
+                          <SocialPostActionButton id={job.id} action="publish_now" label="Publish Now" />
+                        )}
+                        {job.status === "paused" ? (
+                          <SocialPostActionButton id={job.id} action="resume" label="Resume" />
+                        ) : !['published', 'cancelled'].includes(job.status) ? (
+                          <SocialPostActionButton id={job.id} action="pause" label="Pause" />
+                        ) : null}
+                        {['failed', 'retry', 'waiting_credentials', 'waiting_audience'].includes(job.status) && (
+                          <SocialPostActionButton id={job.id} action="retry" label="Retry" />
+                        )}
+                        {!['published', 'cancelled'].includes(job.status) && (
+                          <SocialPostActionButton id={job.id} action="cancel" label="Cancel" />
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>

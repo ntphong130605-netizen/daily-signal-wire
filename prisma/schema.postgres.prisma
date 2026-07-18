@@ -197,99 +197,99 @@ model StoryTag {
 }
 
 model Post {
-  id                   String           @id @default(cuid())
-  trendId              String?          @unique
-  trend                Trend?           @relation(fields: [trendId], references: [id], onDelete: SetNull)
-  researchCandidateId  String?
-  sourceStoryId        String?
-  sourceStory          FeedStory?       @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
-  categoryId           String?
-  category             Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  title                String
-  slug                 String           @unique
-  subtitle             String?
-  excerpt              String
-  summary              String?
-  content              String
-  seoTitle             String
-  seoDescription       String
-  openGraphDescription String?
-  facebookCaption      String
-  authorName           String           @default("Daily Signal Wire Desk")
-  readingTimeMinutes   Int?
-  keyTakeaways         String           @default("[]")
-  timeline             String           @default("[]")
-  relatedTopics        String           @default("[]")
-  internalLinkSuggestions String        @default("[]")
-  draftVersion         Int              @default(1)
-  journalistTone       String           @default("Neutral")
-  generationMetadata   String           @default("{}")
-  tokenUsage           String           @default("{}")
-  generationTimeMs     Int?
-  promptVersion        String?
-  tags                 String           @default("[]")
-  faq                  String           @default("[]")
-  imagePrompt          String?
-  imageModel           String?
-  imageGeneratedAt     DateTime?
-  imageStatus          String           @default("idle")
-  imageError           String?
-  imageUrl             String?
-  featuredImageUrl     String?
-  featuredImage        String?
-  thumbnailImage       String?
-  openGraphImage       String?
-  twitterImage         String?
-  imageStorage         String           @default("url")
-  featuredImageData    String?
-  thumbnailImageData   String?
-  imageAlt             String?
-  imageCaption         String?
-  imageDisclosure      String?
-  imageSourceType      String           @default("placeholder")
-  imageLicense         String?
-  imageCredit          String?
-  generatedImages      GeneratedImage[]
-  revisions            PostRevision[]
-  factCheckReports     FactCheckReport[]
-  aiGenerated          Boolean          @default(false)
-  factCheckNotes       String           @default("[]")
-  sourceUrls           String           @default("[]")
-  factCheckStatus      String           @default("Needs Review")
-  trustScore           Int?
-  evidenceScore        Int?
-  sourceDiversityScore Int?
-  freshnessScore       Int?
-  confidenceLevel      String?
-  factCheckSummary     String?
-  factCheckEvidence    String           @default("[]")
-  factCheckWarnings    String           @default("[]")
-  riskyParagraphs      String           @default("[]")
-  verificationMetadata String           @default("{}")
-  verifiedAt           DateTime?
-  status               String           @default("draft")
-  scheduledAt          DateTime?
-  publishAt            DateTime?
-  timezone             String?
-  approvalStatus       String           @default("pending")
-  approvedAt           DateTime?
-  approvedBy           String?
-  publishingStartedAt  DateTime?
-  publishError         String?
-  schedulerMetadata    String           @default("{}")
-  rejectedAt           DateTime?
-  rejectionReason      String?
-  publishedAt          DateTime?
-  statusEvents         PostStatusEvent[]
-  approvalEvents       PostApprovalEvent[]
-  notifications        EditorialNotification[]
-  contentPlanItems     ContentPlanItem[]
-  distributionPublishes DistributionPublish[]
-  socialPosts          SocialPost[]
-  seoAudits            SeoAudit[]
-  discoverAudits       DiscoverAudit[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  id                      String                  @id @default(cuid())
+  trendId                 String?                 @unique
+  trend                   Trend?                  @relation(fields: [trendId], references: [id], onDelete: SetNull)
+  researchCandidateId     String?
+  sourceStoryId           String?
+  sourceStory             FeedStory?              @relation(fields: [sourceStoryId], references: [id], onDelete: SetNull)
+  categoryId              String?
+  category                Category?               @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  title                   String
+  slug                    String                  @unique
+  subtitle                String?
+  excerpt                 String
+  summary                 String?
+  content                 String
+  seoTitle                String
+  seoDescription          String
+  openGraphDescription    String?
+  facebookCaption         String
+  authorName              String                  @default("Daily Signal Wire Desk")
+  readingTimeMinutes      Int?
+  keyTakeaways            String                  @default("[]")
+  timeline                String                  @default("[]")
+  relatedTopics           String                  @default("[]")
+  internalLinkSuggestions String                  @default("[]")
+  draftVersion            Int                     @default(1)
+  journalistTone          String                  @default("Neutral")
+  generationMetadata      String                  @default("{}")
+  tokenUsage              String                  @default("{}")
+  generationTimeMs        Int?
+  promptVersion           String?
+  tags                    String                  @default("[]")
+  faq                     String                  @default("[]")
+  imagePrompt             String?
+  imageModel              String?
+  imageGeneratedAt        DateTime?
+  imageStatus             String                  @default("idle")
+  imageError              String?
+  imageUrl                String?
+  featuredImageUrl        String?
+  featuredImage           String?
+  thumbnailImage          String?
+  openGraphImage          String?
+  twitterImage            String?
+  imageStorage            String                  @default("url")
+  featuredImageData       String?
+  thumbnailImageData      String?
+  imageAlt                String?
+  imageCaption            String?
+  imageDisclosure         String?
+  imageSourceType         String                  @default("placeholder")
+  imageLicense            String?
+  imageCredit             String?
+  generatedImages         GeneratedImage[]
+  revisions               PostRevision[]
+  factCheckReports        FactCheckReport[]
+  aiGenerated             Boolean                 @default(false)
+  factCheckNotes          String                  @default("[]")
+  sourceUrls              String                  @default("[]")
+  factCheckStatus         String                  @default("Needs Review")
+  trustScore              Int?
+  evidenceScore           Int?
+  sourceDiversityScore    Int?
+  freshnessScore          Int?
+  confidenceLevel         String?
+  factCheckSummary        String?
+  factCheckEvidence       String                  @default("[]")
+  factCheckWarnings       String                  @default("[]")
+  riskyParagraphs         String                  @default("[]")
+  verificationMetadata    String                  @default("{}")
+  verifiedAt              DateTime?
+  status                  String                  @default("draft")
+  scheduledAt             DateTime?
+  publishAt               DateTime?
+  timezone                String?
+  approvalStatus          String                  @default("pending")
+  approvedAt              DateTime?
+  approvedBy              String?
+  publishingStartedAt     DateTime?
+  publishError            String?
+  schedulerMetadata       String                  @default("{}")
+  rejectedAt              DateTime?
+  rejectionReason         String?
+  publishedAt             DateTime?
+  statusEvents            PostStatusEvent[]
+  approvalEvents          PostApprovalEvent[]
+  notifications           EditorialNotification[]
+  contentPlanItems        ContentPlanItem[]
+  distributionPublishes   DistributionPublish[]
+  socialPosts             SocialPost[]
+  seoAudits               SeoAudit[]
+  discoverAudits          DiscoverAudit[]
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
 
   @@index([status])
   @@index([status, publishedAt])
@@ -365,26 +365,26 @@ model EditorialNotification {
 }
 
 model ContentPlanItem {
-  id             String    @id @default(cuid())
+  id             String   @id @default(cuid())
   postId         String?
-  post           Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  post           Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   topic          String
   slug           String?
-  category       String    @default("US News")
-  sourceType     String    @default("manual")
+  category       String   @default("US News")
+  sourceType     String   @default("manual")
   sourceId       String?
-  status         String    @default("planned")
-  priority       Int       @default(3)
+  status         String   @default("planned")
+  priority       Int      @default(3)
   plannedFor     DateTime
-  timezone       String    @default("UTC")
-  frequency      String    @default("one_time")
+  timezone       String   @default("UTC")
+  frequency      String   @default("one_time")
   angle          String?
-  targetKeywords String    @default("[]")
+  targetKeywords String   @default("[]")
   notes          String?
   owner          String?
-  metadata       String    @default("{}")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  metadata       String   @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([postId])
   @@index([status])
@@ -395,19 +395,19 @@ model ContentPlanItem {
 }
 
 model DistributionChannel {
-  id             String                @id @default(cuid())
-  platform       String                @unique
-  label          String
-  enabled        Boolean               @default(false)
-  mode           String                @default("manual")
-  status         String                @default("not_configured")
-  configStatus   String                @default("missing_credentials")
-  lastCheckedAt  DateTime?
-  notes          String?
-  metadata       String                @default("{}")
-  publishes      DistributionPublish[]
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
+  id            String                @id @default(cuid())
+  platform      String                @unique
+  label         String
+  enabled       Boolean               @default(false)
+  mode          String                @default("manual")
+  status        String                @default("not_configured")
+  configStatus  String                @default("missing_credentials")
+  lastCheckedAt DateTime?
+  notes         String?
+  metadata      String                @default("{}")
+  publishes     DistributionPublish[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
   @@index([enabled])
   @@index([status])
@@ -443,59 +443,124 @@ model DistributionPublish {
 }
 
 model SocialPost {
-  id             String    @id @default(cuid())
-  platform       String
-  articleId      String
-  article        Post      @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  status         String    @default("queued")
-  scheduledAt    DateTime?
-  publishedAt    DateTime?
-  retryCount     Int       @default(0)
-  errorMessage   String?
-  copy           String?
-  hashtags       String    @default("[]")
-  shortSummary   String?
-  callToAction   String?
-  utmUrl         String?
-  trackingUrl    String?
-  openGraphImage String?
-  squareImage    String?
-  verticalImage  String?
-  payload        String    @default("{}")
-  logs           String    @default("[]")
-  externalPostId String?
-  clicks         Int       @default(0)
-  impressions    Int       @default(0)
-  shares         Int       @default(0)
-  likes          Int       @default(0)
-  comments       Int       @default(0)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                 String              @id @default(cuid())
+  platform           String
+  articleId          String
+  article            Post                @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  status             String              @default("queued")
+  priority           Int                 @default(3)
+  timezone           String              @default("UTC")
+  scheduledAt        DateTime?
+  nextAttemptAt      DateTime?
+  lastAttemptAt      DateTime?
+  publishedAt        DateTime?
+  lastPublishedAt    DateTime?
+  retryCount         Int                 @default(0)
+  maxRetries         Int                 @default(3)
+  recurrence         String              @default("none")
+  recurrenceEndsAt   DateTime?
+  occurrenceCount    Int                 @default(0)
+  errorMessage       String?
+  copy               String?
+  selectedVariantKey String              @default("control")
+  hashtags           String              @default("[]")
+  shortSummary       String?
+  callToAction       String?
+  utmUrl             String?
+  trackingUrl        String?
+  sourceImage        String?
+  openGraphImage     String?
+  squareImage        String?
+  verticalImage      String?
+  facebookImage      String?
+  twitterImage       String?
+  linkedinImage      String?
+  pinterestImage     String?
+  payload            String              @default("{}")
+  logs               String              @default("[]")
+  externalPostId     String?
+  clicks             Int                 @default(0)
+  impressions        Int                 @default(0)
+  reach              Int                 @default(0)
+  shares             Int                 @default(0)
+  likes              Int                 @default(0)
+  comments           Int                 @default(0)
+  responseTimeMs     Int?
+  variants           SocialPostVariant[]
+  actionLogs         SocialPostLog[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   @@unique([articleId, platform])
   @@index([articleId])
   @@index([platform])
   @@index([status])
+  @@index([priority, scheduledAt])
+  @@index([nextAttemptAt])
   @@index([scheduledAt])
   @@index([publishedAt])
   @@index([createdAt])
 }
 
+model SocialPostVariant {
+  id           String     @id @default(cuid())
+  socialPostId String
+  socialPost   SocialPost @relation(fields: [socialPostId], references: [id], onDelete: Cascade)
+  variantKey   String
+  label        String
+  headline     String
+  caption      String
+  callToAction String
+  tone         String
+  status       String     @default("active")
+  isWinner     Boolean    @default(false)
+  clicks       Int        @default(0)
+  impressions  Int        @default(0)
+  reach        Int        @default(0)
+  shares       Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([socialPostId, variantKey])
+  @@index([socialPostId])
+  @@index([status])
+  @@index([isWinner])
+}
+
+model SocialPostLog {
+  id             String     @id @default(cuid())
+  socialPostId   String
+  socialPost     SocialPost @relation(fields: [socialPostId], references: [id], onDelete: Cascade)
+  action         String
+  fromStatus     String?
+  toStatus       String
+  message        String
+  attempt        Int        @default(0)
+  responseTimeMs Int?
+  metadata       String     @default("{}")
+  createdAt      DateTime   @default(now())
+
+  @@index([socialPostId])
+  @@index([action])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
 model SeoAudit {
-  id             String   @id @default(cuid())
-  postId         String
-  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  score          Int
-  keyword        String?
-  checks         String   @default("[]")
-  suggestions    String   @default("[]")
-  keywords       String   @default("[]")
-  duplicateRisk  String   @default("low")
-  thinContent    Boolean  @default(false)
-  brokenLinks    String   @default("[]")
-  metadata       String   @default("{}")
-  analyzedAt     DateTime @default(now())
-  createdAt      DateTime @default(now())
+  id            String   @id @default(cuid())
+  postId        String
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score         Int
+  keyword       String?
+  checks        String   @default("[]")
+  suggestions   String   @default("[]")
+  keywords      String   @default("[]")
+  duplicateRisk String   @default("low")
+  thinContent   Boolean  @default(false)
+  brokenLinks   String   @default("[]")
+  metadata      String   @default("{}")
+  analyzedAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   @@index([postId])
   @@index([score])
@@ -504,19 +569,19 @@ model SeoAudit {
 }
 
 model DiscoverAudit {
-  id                  String   @id @default(cuid())
-  postId              String
-  post                Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  score               Int
-  freshnessScore      Int
-  entityScore         Int
-  imageScore          Int
-  largePreviewReady   Boolean  @default(false)
-  headlineVariations  String   @default("[]")
-  suggestions         String   @default("[]")
-  metadata            String   @default("{}")
-  analyzedAt          DateTime @default(now())
-  createdAt           DateTime @default(now())
+  id                 String   @id @default(cuid())
+  postId             String
+  post               Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score              Int
+  freshnessScore     Int
+  entityScore        Int
+  imageScore         Int
+  largePreviewReady  Boolean  @default(false)
+  headlineVariations String   @default("[]")
+  suggestions        String   @default("[]")
+  metadata           String   @default("{}")
+  analyzedAt         DateTime @default(now())
+  createdAt          DateTime @default(now())
 
   @@index([postId])
   @@index([score])
@@ -547,21 +612,21 @@ model RevenueMetric {
 }
 
 model AnalyticsEvent {
-  id          String   @id @default(cuid())
-  eventName   String
-  path        String?
-  articleSlug String?
-  category    String?
-  visitorId   String?
-  sessionId   String?
-  country     String?
-  device      String?
-  source      String?
-  referrer    String?
+  id              String   @id @default(cuid())
+  eventName       String
+  path            String?
+  articleSlug     String?
+  category        String?
+  visitorId       String?
+  sessionId       String?
+  country         String?
+  device          String?
+  source          String?
+  referrer        String?
   durationSeconds Int?
-  scrollDepth Int?
-  metadata    String   @default("{}")
-  createdAt   DateTime @default(now())
+  scrollDepth     Int?
+  metadata        String   @default("{}")
+  createdAt       DateTime @default(now())
 
   @@index([eventName])
   @@index([path])
@@ -680,11 +745,14 @@ model FactCheckReport {
 }
 
 model NewsletterSubscriber {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String    @id @default(cuid())
+  email            String    @unique
+  status           String    @default("active")
+  unsubscribeToken String?   @unique
+  unsubscribedAt   DateTime?
+  lastSentAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 }
 
 model AdSlot {
@@ -705,44 +773,44 @@ model AdSlot {
 }
 
 model GeneratedImage {
-  id           String   @id @default(cuid())
-  postId       String?
-  post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
-  prompt       String
-  finalPrompt  String?
-  generator    String?
-  model        String?
-  status       String   @default("generated")
-  url          String?
-  featuredUrl  String?
-  thumbnailUrl String?
-  openGraphUrl String?
-  twitterUrl   String?
-  webpUrl      String?
-  avifUrl      String?
-  width        Int?
-  height       Int?
-  format       String?
-  alt          String?
-  title        String?
-  description  String?
-  caption      String?
-  disclosure   String?
-  sourceType   String   @default("ai")
-  illustrative Boolean  @default(true)
-  storage      String?
-  category     String?
-  metadata     String   @default("{}")
-  validationNotes String @default("[]")
+  id                String   @id @default(cuid())
+  postId            String?
+  post              Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  prompt            String
+  finalPrompt       String?
+  generator         String?
+  model             String?
+  status            String   @default("generated")
+  url               String?
+  featuredUrl       String?
+  thumbnailUrl      String?
+  openGraphUrl      String?
+  twitterUrl        String?
+  webpUrl           String?
+  avifUrl           String?
+  width             Int?
+  height            Int?
+  format            String?
+  alt               String?
+  title             String?
+  description       String?
+  caption           String?
+  disclosure        String?
+  sourceType        String   @default("ai")
+  illustrative      Boolean  @default(true)
+  storage           String?
+  category          String?
+  metadata          String   @default("{}")
+  validationNotes   String   @default("[]")
   generationCostUsd Float?
   generationTimeMs  Int?
-  promptVersion String?
-  promptTemplate String?
-  license      String?
-  credit       String?
-  error        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  promptVersion     String?
+  promptTemplate    String?
+  license           String?
+  credit            String?
+  error             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([postId])
   @@index([status])
