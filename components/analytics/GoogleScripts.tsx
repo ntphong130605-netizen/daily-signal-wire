@@ -55,6 +55,11 @@ export default function GoogleScripts({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const adsAllowedOnRoute =
+    pathname === "/" ||
+    pathname === "/search" ||
+    pathname.startsWith("/news/") ||
+    pathname.startsWith("/category/");
   const [consent, setConsent] = useState<ConsentState>(deniedConsent);
   const consentRef = useRef<ConsentState>(deniedConsent);
   const gaConfiguredRef = useRef(false);
@@ -174,6 +179,7 @@ export default function GoogleScripts({
 
   useEffect(() => {
     if (!isProduction) return;
+    if (!adsAllowedOnRoute) return;
     if (!adsenseClientId || consent.ad_storage !== "granted") return;
 
     function markAdsenseReady() {
@@ -211,7 +217,7 @@ export default function GoogleScripts({
       { once: true }
     );
     document.head.appendChild(script);
-  }, [adsenseClientId, consent.ad_storage, isProduction]);
+  }, [adsAllowedOnRoute, adsenseClientId, consent.ad_storage, isProduction]);
 
   const analyticsAllowed =
     isProduction && Boolean(gaMeasurementId) && consent.analytics_storage === "granted";
