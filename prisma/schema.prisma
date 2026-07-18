@@ -748,11 +748,13 @@ model NewsletterSubscriber {
   id               String    @id @default(cuid())
   email            String    @unique
   status           String    @default("active")
-  unsubscribeToken String?   @unique
+  unsubscribeToken String?
   unsubscribedAt   DateTime?
   lastSentAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
+  @@index([unsubscribeToken])
 }
 
 model AdSlot {

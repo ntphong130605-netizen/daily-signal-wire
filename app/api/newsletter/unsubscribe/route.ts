@@ -22,12 +22,12 @@ export async function GET(request: Request) {
   const parsed = TokenSchema.safeParse(token);
   if (!parsed.success) return page("This unsubscribe link is invalid or incomplete.", false);
   const subscriber = await safeDbQuery("newsletter_unsubscribe_failed", null, () =>
-    prisma.newsletterSubscriber.update({
+    prisma.newsletterSubscriber.updateMany({
       where: { unsubscribeToken: parsed.data },
       data: { status: "unsubscribed", unsubscribedAt: new Date() }
     })
   );
-  return subscriber
+  return subscriber?.count
     ? page("You will no longer receive Daily Signal Wire newsletter emails.", true)
     : page("This unsubscribe link is no longer available.", false);
 }

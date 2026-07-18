@@ -65,4 +65,4 @@ ALTER TABLE "NewsletterSubscriber" ADD COLUMN "unsubscribeToken" TEXT;
 ALTER TABLE "NewsletterSubscriber" ADD COLUMN "unsubscribedAt" DATETIME;
 ALTER TABLE "NewsletterSubscriber" ADD COLUMN "lastSentAt" DATETIME;
 UPDATE "NewsletterSubscriber" SET "unsubscribeToken" = "id" WHERE "unsubscribeToken" IS NULL;
-CREATE UNIQUE INDEX "NewsletterSubscriber_unsubscribeToken_key" ON "NewsletterSubscriber"("unsubscribeToken");
+CREATE INDEX "NewsletterSubscriber_unsubscribeToken_idx" ON "NewsletterSubscriber"("unsubscribeToken");
