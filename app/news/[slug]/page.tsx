@@ -5,13 +5,16 @@ import AdSlot from "@/components/ads/AdSlot";
 import ArticleBody, { extractArticleHeadings } from "@/components/ArticleBody";
 import ArticleCard, { type ReaderPost } from "@/components/ArticleCard";
 import ArticleComments from "@/components/ArticleComments";
-import ArticleImageFrame from "@/components/ArticleImageFrame";
 import ArticleNewsletterSignup from "@/components/ArticleNewsletterSignup";
 import ArticleRecommendations from "@/components/ArticleRecommendations";
 import ArticleShareTools from "@/components/ArticleShareTools";
 import ArticleToc from "@/components/ArticleToc";
 import ReadingProgressBar from "@/components/ReadingProgressBar";
 import ReaderShell from "@/components/ReaderShell";
+import {
+  ExperimentArticleImage,
+  ExperimentHeadline
+} from "@/components/experiments/ExperimentRuntime";
 import { isAdmin } from "@/lib/auth";
 import {
   authorByName,
@@ -31,6 +34,7 @@ import {
   videoEmbedUrl
 } from "@/lib/newsSeo";
 import { prisma, safeDbQuery } from "@/lib/prisma";
+import { activeRevenueExperiments, affiliateOffersForArticle } from "@/lib/revenue";
 import { absoluteUrl, siteName } from "@/lib/site";
 import { slugify } from "@/lib/slug";
 
@@ -365,6 +369,20 @@ export default async function NewsArticlePage({
               ? "Source reviewed"
               : "Editorial review";
 
+  const affiliateOffers = previewAllowed
+    ? []
+    : await safeDbQuery("article_affiliate_query_failed", [], () =>
+        affiliateOffersForArticle({ category: categoryLabel, content: post.content })
+      );
+  const revenueExperiments = previewAllowed
+    ? []
+    : await safeDbQuery("article_revenue_experiments_query_failed", [], () =>
+        activeRevenueExperiments({ articleSlug: post.slug, category: categoryLabel })
+      );
+  const headlineExperiment = revenueExperiments.find((item) => item.type === "headline");
+  const imageExperiment = revenueExperiments.find((item) => item.type === "image");
+  const ctaExperiment = revenueExperiments.find((item) => item.type === "cta");
+
   const relatedCategoryFilters = [
     ...(post.category?.name ? [{ category: { name: post.category.name } }] : []),
     ...(post.trend?.category ? [{ trend: { category: post.trend.category } }] : [])
@@ -669,7 +687,7 @@ export default async function NewsArticlePage({
                   </Link>
                   <span>{sourceLabel}</span>
                 </div>
-                <h1>{post.title}</h1>
+                <ExperimentHeadline experiment={headlineExperiment} fallback={post.title} />
                 {(post.subtitle || post.excerpt) && (
                   <p className="article-subheadline">{post.subtitle || post.excerpt}</p>
                 )}
@@ -715,7 +733,8 @@ export default async function NewsArticlePage({
                 <ArticleShareTools title={post.title} slug={post.slug} />
               </div>
 
-              <ArticleImageFrame
+              <ExperimentArticleImage
+                experiment={imageExperiment}
                 src={coverImage}
                 alt={post.imageAlt || post.title}
                 caption={post.imageCaption}
@@ -822,7 +841,13 @@ export default async function NewsArticlePage({
               </section>
             )}
 
-            <ArticleBody content={post.content} />
+            <ArticleBody
+              content={post.content}
+              affiliateOffers={affiliateOffers}
+              articleSlug={post.slug}
+              category={categoryLabel}
+              ctaExperiment={ctaExperiment}
+            />
 
             {articleTimeline.length > 0 && (
               <section className="article-timeline premium-article-card" aria-labelledby="article-timeline-heading">
@@ -867,7 +892,7 @@ export default async function NewsArticlePage({
 
             <ArticleNewsletterSignup />
 
-            <AdSlot position="bottom" />
+            <AdSlot position="article-end" />
 
             {(previousPost || nextPost) && (
               <nav className="article-prev-next" aria-label="Previous and next stories">

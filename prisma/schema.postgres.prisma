@@ -758,17 +758,22 @@ model NewsletterSubscriber {
 }
 
 model AdSlot {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  label     String
-  placement String
-  enabled   Boolean  @default(true)
-  clientId  String?
-  slotId    String?
-  format    String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  key              String   @unique
+  label            String
+  placement        String
+  routeScope       String   @default("all")
+  enabled          Boolean  @default(true)
+  lazy             Boolean  @default(true)
+  sticky           Boolean  @default(false)
+  minHeightDesktop Int      @default(280)
+  minHeightMobile  Int      @default(250)
+  clientId         String?
+  slotId           String?
+  format           String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([placement])
   @@index([enabled])
@@ -934,4 +939,216 @@ model ResearchRun {
 
   @@index([status])
   @@index([startedAt])
+}
+
+model AdPerformanceMetric {
+  id                  String   @id @default(cuid())
+  date                DateTime
+  source              String   @default("adsense_import")
+  slotKey             String?
+  position            String?
+  articleSlug         String?
+  category            String?
+  country             String?
+  device              String?
+  trafficSource       String?
+  impressions         Int      @default(0)
+  viewableImpressions Int      @default(0)
+  clicks              Int      @default(0)
+  pageViews           Int      @default(0)
+  estimatedRevenue    Float    @default(0)
+  currency            String   @default("USD")
+  metadata            String   @default("{}")
+  importedAt          DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([date])
+  @@index([source])
+  @@index([slotKey])
+  @@index([position])
+  @@index([articleSlug])
+  @@index([category])
+  @@index([country])
+  @@index([device])
+}
+
+model AffiliateProgram {
+  id         String          @id @default(cuid())
+  name       String
+  network    String
+  status     String          @default("active")
+  websiteUrl String?
+  disclosure String          @default("Daily Signal Wire may earn a commission from qualifying purchases.")
+  metadata   String          @default("{}")
+  links      AffiliateLink[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([network])
+  @@index([status])
+}
+
+model AffiliateLink {
+  id             String                @id @default(cuid())
+  programId      String
+  program        AffiliateProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
+  label          String
+  destinationUrl String
+  trackingUrl    String
+  category       String?
+  keywords       String                @default("[]")
+  imageUrl       String?
+  priceText      String?
+  callToAction   String                @default("Learn more")
+  disclosure     String?
+  status         String                @default("active")
+  clicks         Int                   @default(0)
+  conversions    Int                   @default(0)
+  revenue        Float                 @default(0)
+  currency       String                @default("USD")
+  clickEvents    AffiliateClick[]
+  conversionData AffiliateConversion[]
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([programId])
+  @@index([category])
+  @@index([status])
+  @@index([clicks])
+  @@index([revenue])
+}
+
+model AffiliateClick {
+  id          String        @id @default(cuid())
+  linkId      String
+  link        AffiliateLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  articleSlug String?
+  category    String?
+  visitorId   String?
+  sessionId   String?
+  country     String?
+  device      String?
+  source      String?
+  referrer    String?
+  metadata    String        @default("{}")
+  createdAt   DateTime      @default(now())
+
+  @@index([linkId])
+  @@index([articleSlug])
+  @@index([category])
+  @@index([country])
+  @@index([createdAt])
+}
+
+model AffiliateConversion {
+  id             String        @id @default(cuid())
+  linkId         String
+  link           AffiliateLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  network        String
+  orderReference String?
+  amount         Float?
+  commission     Float
+  currency       String        @default("USD")
+  occurredAt     DateTime
+  source         String        @default("api_import")
+  metadata       String        @default("{}")
+  createdAt      DateTime      @default(now())
+
+  @@index([linkId])
+  @@index([network])
+  @@index([occurredAt])
+}
+
+model RevenueExperiment {
+  id                String                     @id @default(cuid())
+  key               String                     @unique
+  name              String
+  type              String
+  status            String                     @default("draft")
+  targetArticleSlug String?
+  targetCategory    String?
+  startsAt          DateTime?
+  endsAt            DateTime?
+  winnerVariantId   String?
+  metadata          String                     @default("{}")
+  variants          RevenueExperimentVariant[]
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([targetArticleSlug])
+  @@index([targetCategory])
+}
+
+model RevenueExperimentVariant {
+  id           String            @id @default(cuid())
+  experimentId String
+  experiment   RevenueExperiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  key          String
+  label        String
+  value        String
+  weight       Int               @default(50)
+  impressions  Int               @default(0)
+  clicks       Int               @default(0)
+  conversions  Int               @default(0)
+  revenue      Float             @default(0)
+  isWinner     Boolean           @default(false)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([experimentId, key])
+  @@index([experimentId])
+  @@index([isWinner])
+}
+
+model HeatmapEvent {
+  id              String   @id @default(cuid())
+  eventType       String
+  path            String
+  articleSlug     String?
+  elementKey      String?
+  xPercent        Float?
+  yPercent        Float?
+  scrollDepth     Int?
+  durationSeconds Int?
+  exitPosition    Int?
+  adPosition      String?
+  visitorId       String?
+  sessionId       String?
+  country         String?
+  device          String?
+  source          String?
+  metadata        String   @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([eventType])
+  @@index([path])
+  @@index([articleSlug])
+  @@index([elementKey])
+  @@index([adPosition])
+  @@index([createdAt])
+}
+
+model NewsletterMetric {
+  id              String   @id @default(cuid())
+  date            DateTime
+  campaignId      String
+  source          String   @default("resend_import")
+  sends           Int      @default(0)
+  delivered       Int      @default(0)
+  opens           Int      @default(0)
+  clicks          Int      @default(0)
+  affiliateClicks Int      @default(0)
+  revenue         Float    @default(0)
+  currency        String   @default("USD")
+  metadata        String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([date, campaignId, source])
+  @@index([date])
+  @@index([campaignId])
+  @@index([source])
 }

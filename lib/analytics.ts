@@ -170,4 +170,28 @@ export function trackArticleShare(params: AnalyticsParams = {}) {
   trackCustom("article_share", params);
 }
 
+export function trackAdImpression(params: AnalyticsParams = {}) {
+  trackCustom("ad_impression", params);
+}
+
+export function trackAdClick(params: AnalyticsParams = {}) {
+  trackCustom("ad_click", params);
+}
+
+export function trackAffiliateClick(params: AnalyticsParams = {}) {
+  trackCustom("affiliate_click", params);
+}
+
+export function trackNewsletterOpen(params: AnalyticsParams = {}) {
+  trackCustom("newsletter_open", params);
+}
+
+export function trackNewsletterClick(params: AnalyticsParams = {}) {
+  trackCustom("newsletter_click", params);
+}
+
+export function trackArticleRevenue(params: AnalyticsParams = {}) {
+  trackCustom("article_revenue", params);
+}
+
 export const trackEvent = trackCustom;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import ReaderShell from "@/components/ReaderShell";
 import SearchExperience from "@/components/SearchExperience";
+import AdSlot from "@/components/ads/AdSlot";
 import { filtersFromRecord, runSearch } from "@/lib/searchServer";
 import { absoluteUrl, siteDescription, siteName } from "@/lib/site";
 
@@ -109,8 +110,8 @@ export default async function SearchPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(searchJsonLd) }}
       />
+      <AdSlot position="search" className="search-page-ad" />
       <SearchExperience initialResponse={response} initialFilters={filters} />
     </ReaderShell>
   );
 }
-

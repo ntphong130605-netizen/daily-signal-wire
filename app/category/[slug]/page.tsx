@@ -349,7 +349,7 @@ export default async function CategoryPage({
           <span aria-current="page">{categoryTitle}</span>
         </div>
 
-        <AdSlot position="top" className="category-ad category-ad-hero" />
+        <AdSlot position="category" className="category-ad category-ad-hero" />
 
         {featuredPost ? (
           <section className="category-hero-premium" aria-labelledby="category-hero-title">

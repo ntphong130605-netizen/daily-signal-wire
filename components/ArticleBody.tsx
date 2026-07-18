@@ -1,4 +1,6 @@
 import AdSlot from "@/components/ads/AdSlot";
+import AffiliateBlock, { type AffiliateOffer } from "@/components/AffiliateBlock";
+import type { RevenueExperimentPayload } from "@/lib/revenue";
 import { slugify } from "@/lib/slug";
 
 export type ArticleHeading = {
@@ -227,12 +229,25 @@ function InlineText({ text }: { text: string }) {
   return <>{text.replace(/\*\*/g, "")}</>;
 }
 
-export default function ArticleBody({ content }: { content: string }) {
+export default function ArticleBody({
+  content,
+  affiliateOffers = [],
+  articleSlug = "",
+  category = "",
+  ctaExperiment
+}: {
+  content: string;
+  affiliateOffers?: AffiliateOffer[];
+  articleSlug?: string;
+  category?: string;
+  ctaExperiment?: RevenueExperimentPayload | null;
+}) {
   const blocks = parseMarkdown(content);
   const paragraphIndexes = blocks
     .map((block, index) => (block.type === "paragraph" ? index : -1))
     .filter((index) => index >= 0);
   const afterFirstParagraphIndex = paragraphIndexes[0] ?? -1;
+  const affiliateParagraphIndex = paragraphIndexes[1] ?? -1;
   const middleParagraphIndex =
     paragraphIndexes.length >= 6
       ? paragraphIndexes[Math.floor(paragraphIndexes.length / 2)]
@@ -322,7 +337,15 @@ export default function ArticleBody({ content }: { content: string }) {
             <AdSlot position="in-article" className="article-inline-ad article-inline-ad-first" />
           )}
           {index === middleParagraphIndex && middleParagraphIndex !== afterFirstParagraphIndex && (
-            <AdSlot position="in-article" className="article-inline-ad article-inline-ad-mid" />
+            <AdSlot position="between-paragraphs" className="article-inline-ad article-inline-ad-mid" />
+          )}
+          {index === affiliateParagraphIndex && affiliateOffers.length > 0 && (
+            <AffiliateBlock
+              offers={affiliateOffers}
+              articleSlug={articleSlug}
+              category={category}
+              ctaExperiment={ctaExperiment}
+            />
           )}
         </div>
       ))}

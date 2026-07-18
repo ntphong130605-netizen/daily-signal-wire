@@ -223,7 +223,7 @@ export default function NewsReaderLayout({
         <span>{feedCount} monitored sources</span>
         <span>{draftCount} drafts in review</span>
       </section>
-      <AdSlot position="top" className="news-home-top-ad" />
+      <AdSlot position="homepage" className="news-home-top-ad" />
 
       <main className="news-home-shell">
         {featuredPost ? (

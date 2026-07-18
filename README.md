@@ -799,6 +799,40 @@ Notes:
 - Each ad slot is the numeric ID from a specific AdSense ad unit.
 - The app still supports legacy `NEXT_PUBLIC_ADSENSE_CLIENT` and
   `NEXT_PUBLIC_ADSENSE_SLOT_MIDDLE` so older production deploys do not break.
+
+## Revenue Intelligence
+
+The monetization control plane is available at:
+
+- `/admin/ads` — responsive AdSense placement registry, lazy-loading and reserved-height controls.
+- `/admin/revenue` — official AdSense, newsletter and affiliate report imports; no projected or fabricated earnings.
+- `/admin/affiliate` — Amazon Associates, Impact, CJ, ShareASale, Awin and custom programs with required disclosures and tracked redirects.
+- `/admin/ab-testing` — deterministic headline, CTA, image and ad-position experiments.
+- `/admin/heatmap` — consent-aware click targets, scroll depth, session time, exit position and ad visibility.
+
+AdSense supports both `NEXT_PUBLIC_ADSENSE_CLIENT_ID` and the legacy
+`NEXT_PUBLIC_ADSENSE_CLIENT`. Configure individual public ad unit IDs with the
+`NEXT_PUBLIC_ADSENSE_SLOT_*` variables in `.env.example`. The ad script loads
+once, after consent, and ad containers reserve space before loading to reduce
+layout shift. Do not click your own ads or use the heatmap to infer AdSense
+clicks; official clicks, CPC, RPM and revenue must be imported from Google
+AdSense reporting.
+
+Affiliate credentials stay server-side:
+
+```dotenv
+AMAZON_TAG=
+IMPACT_API_KEY=
+CJ_API_KEY=
+SHAREASALE_API_TOKEN=
+AWIN_API_KEY=
+CUSTOM_AFFILIATE_URL=
+```
+
+An affiliate block is rendered only when an active link matches the article
+category or configured keywords. The outbound redirect records a first-party
+click and adds `rel="sponsored nofollow noreferrer"`; conversions and
+commissions are recorded only from official network/API report imports.
 - After adding or changing Vercel environment variables, redeploy the project.
 
 Check ads.txt:

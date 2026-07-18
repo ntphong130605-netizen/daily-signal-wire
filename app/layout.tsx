@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import GoogleScripts from "@/components/analytics/GoogleScripts";
+import RevenueTelemetry from "@/components/analytics/RevenueTelemetry";
 import CookieConsent from "@/components/consent/CookieConsent";
 import { adsenseClientId } from "@/lib/ads";
 import { organizationJsonLd, webSiteJsonLd } from "@/lib/eeat";
@@ -90,6 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         {children}
         <CookieConsent />
+        <RevenueTelemetry />
         <Suspense fallback={null}>
           <GoogleScripts
             adsenseClientId={adsenseClient}
