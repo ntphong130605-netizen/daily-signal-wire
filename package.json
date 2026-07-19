@@ -8,6 +8,7 @@
     "build:vercel": "prisma db push --schema prisma/schema.postgres.prisma && prisma generate --schema prisma/schema.postgres.prisma && next build",
     "images:backfill": "tsx scripts/backfillPublishedImages.ts",
     "images:validate-pipeline": "tsx scripts/validateImagePipeline.ts",
+    "test-batch:production": "tsx scripts/runOneTimeProductionTest.ts",
     "test": "tsx scripts/validateResearchEngine.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
