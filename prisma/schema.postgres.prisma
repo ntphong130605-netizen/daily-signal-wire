@@ -941,6 +941,73 @@ model ResearchRun {
   @@index([startedAt])
 }
 
+model ProductionTestBatch {
+  id                     String               @id @default(cuid())
+  targetDate             String
+  timezone               String               @default("America/New_York")
+  status                 String               @default("selecting")
+  maxArticles            Int                  @default(10)
+  articleGenerationLimit Int                  @default(10)
+  imageGenerationLimit   Int                  @default(10)
+  imageRetryLimit        Int                  @default(2)
+  articleGenerationsUsed Int                  @default(0)
+  imageGenerationsUsed   Int                  @default(0)
+  estimatedAiCostUsd     Float?
+  researchRunId          String?
+  sourceSummary          String               @default("{}")
+  errorSummary           String?
+  approvedAt             DateTime?
+  cancelledAt            DateTime?
+  completedAt            DateTime?
+  items                  ProductionTestItem[]
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([targetDate])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ProductionTestItem {
+  id                     String              @id @default(cuid())
+  batchId                String
+  batch                  ProductionTestBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  researchCandidateId    String
+  postId                 String?
+  position               Int
+  topic                  String
+  category               String
+  trendScore             Float
+  sourceCount            Int
+  sourceDomains          String              @default("[]")
+  writingStatus          String              @default("queued")
+  factCheckStatus        String              @default("pending")
+  trustScore             Int?
+  imageStatus            String              @default("pending")
+  approvalStatus         String              @default("pending")
+  validationStatus       String              @default("pending")
+  validationErrors       String              @default("[]")
+  plannedPublishAt       DateTime
+  scheduledAt            DateTime?
+  publishedUrl           String?
+  articleGenerationCount Int                 @default(0)
+  imageAttemptCount      Int                 @default(0)
+  estimatedAiCostUsd     Float?
+  lastError              String?
+  processedAt            DateTime?
+  approvedAt             DateTime?
+  rejectedAt             DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@unique([batchId, researchCandidateId])
+  @@unique([batchId, position])
+  @@index([batchId, approvalStatus])
+  @@index([batchId, writingStatus])
+  @@index([postId])
+  @@index([plannedPublishAt])
+}
+
 model AdPerformanceMetric {
   id                  String   @id @default(cuid())
   date                DateTime

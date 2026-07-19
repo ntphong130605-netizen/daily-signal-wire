@@ -121,6 +121,12 @@ export type JournalistGenerationResult = {
   generationTimeMs: number;
 };
 
+export type JournalistGenerationOptions = {
+  minWords?: number;
+  maxWords?: number;
+  maxAttempts?: number;
+};
+
 function client() {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY is not configured.");
@@ -139,7 +145,8 @@ function composeContent(article: JournalistArticle) {
   return `${article.lead.trim()}\n\n${article.body.trim()}`.trim();
 }
 
-const baseInstructions = `
+function baseInstructions(minWords: number, maxWords: number) {
+  return `
 You are the AI Journalist for Daily Signal Wire, a source-first US newsroom.
 Write professional English news copy inspired by Reuters, AP, Bloomberg, BBC and CNN.
 Be concise, natural, factual and calm. Do not use clickbait.
@@ -149,12 +156,13 @@ Do not include direct quotes unless the exact quote is supplied in the source pa
 Mark uncertain or developing claims with "according to available reports".
 If sources disagree, explicitly preserve uncertainty instead of choosing a side.
 The draft is for editor review only and must not imply final publication.
-The body must be 500-900 words including the lead, use markdown H2/H3 section headings, and avoid an H1.
+The body must be ${minWords}-${maxWords} words including the lead, use markdown H2/H3 section headings, and avoid an H1.
 Include a conclusion section.
 Hero image prompt must be realistic editorial news photography style, landscape 16:9, no text, no watermark, no logo, no border.
 For real-world events, public figures, disasters, elections, crime, war, health or ongoing news, the image prompt must request a staged/generic editorial image and must not fake a documentary scene.
 Return JSON only.
 `;
+}
 
 function toneInstruction(tone: JournalistTone) {
   if (tone === "Business") {
@@ -183,17 +191,21 @@ function normalizeArticle(article: JournalistArticle): JournalistArticle {
 
 export async function generateJournalistArticle(
   input: JournalistInput,
-  tone: JournalistTone = "Neutral"
+  tone: JournalistTone = "Neutral",
+  options: JournalistGenerationOptions = {}
 ): Promise<JournalistGenerationResult> {
   const model = process.env.AI_MODEL || "gpt-5.5";
+  const minWords = Math.max(500, Math.min(1200, options.minWords || 500));
+  const maxWords = Math.max(minWords, Math.min(1400, options.maxWords || 900));
+  const maxAttempts = Math.max(1, Math.min(2, options.maxAttempts || 2));
   const allowedUrls = new Set(input.sourceUrls);
   let correction = "";
   const startedAt = Date.now();
 
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const response = await client().responses.parse({
       model,
-      instructions: `${baseInstructions}\n${toneInstruction(tone)}`,
+      instructions: `${baseInstructions(minWords, maxWords)}\n${toneInstruction(tone)}`,
       input: JSON.stringify({
         task: "Transform this research brief into a complete newsroom draft article.",
         promptVersion: AI_JOURNALIST_PROMPT_VERSION,
@@ -235,7 +247,9 @@ export async function generateJournalistArticle(
       content,
       seoTitle: article.seoTitle,
       seoDescription: article.metaDescription,
-      tags: article.tags
+      tags: article.tags,
+      minWords,
+      maxWords
     });
 
     if (!invalidUrl && quality.passed) {
@@ -279,7 +293,7 @@ export async function rewriteJournalistSection({
   const startedAt = Date.now();
   const response = await client().responses.parse({
     model,
-    instructions: `${baseInstructions}
+    instructions: `${baseInstructions(500, 900)}
 ${toneInstruction(tone)}
 Rewrite only the requested section: ${section}.
 Do not rewrite unrelated sections. Do not add unsupported facts.

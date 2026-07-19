@@ -13,7 +13,8 @@ import {
   JournalistToneSchema,
   type JournalistGenerationResult,
   type JournalistSection,
-  type JournalistTone
+  type JournalistTone,
+  type JournalistGenerationOptions
 } from "@/lib/aiJournalist";
 
 type StoredInternalLink = {
@@ -351,7 +352,8 @@ export async function generateJournalistDraftFromTrend(
 
 export async function generateJournalistDraftFromResearch(
   researchCandidateId: string,
-  toneInput: JournalistTone = "Neutral"
+  toneInput: JournalistTone = "Neutral",
+  generationOptions: JournalistGenerationOptions = {}
 ) {
   const tone = JournalistToneSchema.parse(toneInput);
   const candidate = await prisma.researchCandidate.findUnique({
@@ -410,7 +412,8 @@ export async function generateJournalistDraftFromResearch(
         : undefined,
       internalLinks
     },
-    tone
+    tone,
+    generationOptions
   );
 
   const existing = await prisma.post.findFirst({

@@ -26,6 +26,7 @@ type PublishablePost = {
   trend?: { category?: string | null } | null;
   tags?: string | null;
   faq?: string | null;
+  generationMetadata?: string | null;
 };
 
 function wordCount(content: string) {
@@ -77,8 +78,17 @@ export function validatePostForPublishing(
   }
 
   const words = wordCount(post.content);
-  if (words < 500 || words > 900) {
-    return "AI news articles must be between 500 and 900 words before publishing.";
+  let oneTimeProductionTest = false;
+  try {
+    const metadata = JSON.parse(post.generationMetadata || "{}") as Record<string, unknown>;
+    oneTimeProductionTest = metadata.oneTimeProductionTest === true;
+  } catch {
+    oneTimeProductionTest = false;
+  }
+  const minWords = oneTimeProductionTest ? 800 : 500;
+  const maxWords = oneTimeProductionTest ? 1200 : 900;
+  if (words < minWords || words > maxWords) {
+    return `AI news articles must be between ${minWords} and ${maxWords} words before publishing.`;
   }
   if (tags.length < 3) return "At least three tags are required before publishing.";
   if (faq.length < 3) return "At least three FAQ entries are required before publishing.";

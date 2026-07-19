@@ -7243,6 +7243,222 @@ html[data-theme="light"],
 }
 
 /* Revenue intelligence */
+
+/* One-time production test batch */
+.test-batch-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.test-batch-toolbar button,
+.test-batch-row-actions button,
+.test-batch-row-actions a {
+  min-height: 40px;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.test-batch-toolbar .primary-action {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.test-batch-toolbar .danger-action {
+  color: #a52828;
+}
+
+.test-batch-toolbar button:disabled,
+.test-batch-row-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.test-batch-toolbar p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+}
+
+.test-batch-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.test-batch-stats > div {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.test-batch-stats > div span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.test-batch-stats > div strong {
+  overflow-wrap: anywhere;
+  font-size: 1.25rem;
+}
+
+.test-batch-summary {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 2fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.test-batch-summary dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.test-batch-summary dl div {
+  padding: 0.85rem;
+  border-radius: 8px;
+  background: #f6fafb;
+}
+
+.test-batch-summary dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.test-batch-summary dd {
+  margin: 0.25rem 0 0;
+  font-weight: 800;
+}
+
+.test-batch-list {
+  display: grid;
+}
+
+.test-batch-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.test-batch-item:first-child {
+  border-top: 0;
+}
+
+.test-batch-item h3 {
+  margin: 0.55rem 0;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.test-batch-item p {
+  margin: 0.35rem 0;
+  color: var(--muted);
+}
+
+.test-batch-pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.test-batch-pipeline span {
+  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f6;
+  color: #38545a;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.test-batch-item details {
+  margin-top: 0.65rem;
+  color: #8b3b20;
+}
+
+.test-batch-item details li {
+  margin-top: 0.35rem;
+}
+
+.test-batch-row-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.test-batch-row-actions a {
+  text-align: center;
+  text-decoration: none;
+}
+
+.test-batch-row-actions small {
+  color: #a52828;
+}
+
+.post-status-eligible {
+  background: #dff6e9;
+  color: #17623a;
+}
+
+.post-status-needs_review {
+  background: #fff2cc;
+  color: #744f00;
+}
+
+@media (max-width: 960px) {
+  .test-batch-stats,
+  .test-batch-summary dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .test-batch-summary,
+  .test-batch-item {
+    grid-template-columns: 1fr;
+  }
+
+  .test-batch-row-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .test-batch-toolbar,
+  .test-batch-toolbar button,
+  .test-batch-stats,
+  .test-batch-summary dl,
+  .test-batch-row-actions {
+    width: 100%;
+  }
+
+  .test-batch-stats,
+  .test-batch-summary dl,
+  .test-batch-row-actions {
+    grid-template-columns: 1fr;
+  }
+}
 .monetization-notice,
 .monetization-policy-note {
   border-left: 4px solid var(--primary);

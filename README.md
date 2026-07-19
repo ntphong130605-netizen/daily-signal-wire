@@ -994,6 +994,29 @@ Public policy pages:
 
 ## Useful commands
 
+## One-time production test batch
+
+The protected `/admin/test-batch` page can run one controlled batch for the next
+editorial day in `America/New_York`. It refreshes real research sources, selects
+up to ten new US topics that pass the score, source-diversity, risk and category
+limits, then runs the existing Writer, Fact Checker and Image Studio services.
+
+The workflow stops at `Pending Review`. Nothing is approved, scheduled or
+published until an administrator explicitly uses **Approve** or **Approve All
+Eligible Test Articles**. Approved items use the ten one-time slots stored on
+the batch with recurrence set to `none`; no new recurring cron is created.
+
+Optional cost-estimation settings:
+
+```env
+AI_INPUT_COST_PER_MILLION_USD=
+AI_OUTPUT_COST_PER_MILLION_USD=
+IMAGE_GENERATION_COST_USD=
+```
+
+Leave these blank when current provider prices have not been entered. The admin
+page then displays `Not configured` instead of inventing a cost.
+
 ```bash
 npm install
 npx prisma generate
