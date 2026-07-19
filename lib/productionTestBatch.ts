@@ -322,41 +322,53 @@ export async function createOneTimeProductionTestBatch() {
     include: { items: { orderBy: { position: "asc" } } },
     orderBy: { createdAt: "desc" }
   });
-  if (existing) return { batch: existing, reused: true, research: null };
+  if (existing && existing.items.length > 0) {
+    return { batch: existing, reused: true, research: null };
+  }
 
   const research = await runResearchEngine();
   const selected = await selectCandidatesForBatch(await eligibleCandidates());
-  const batch = await prisma.productionTestBatch.create({
-    data: {
+  const batchData = {
+    targetDate,
+    timezone: TEST_BATCH_TIMEZONE,
+    status: selected.length ? "ready" : "empty",
+    maxArticles: MAX_ARTICLES,
+    articleGenerationLimit: ARTICLE_GENERATION_LIMIT,
+    imageGenerationLimit: IMAGE_GENERATION_LIMIT,
+    imageRetryLimit: IMAGE_RETRY_LIMIT,
+    researchRunId: research.runId,
+    sourceSummary: json(research.sourceStatuses || {}),
+    errorSummary: selected.length ? null : "No new research candidates passed every safety filter."
+  };
+  const itemData = selected.map((candidate, position) => ({
+    researchCandidateId: candidate.id,
+    position,
+    topic: candidate.topic,
+    category: candidate.bucket,
+    trendScore: candidate.trendScore,
+    sourceCount: candidate.domains.length,
+    sourceDomains: json(candidate.domains),
+    plannedPublishAt: zonedDateTimeToUtc(
       targetDate,
-      timezone: TEST_BATCH_TIMEZONE,
-      status: selected.length ? "ready" : "empty",
-      maxArticles: MAX_ARTICLES,
-      articleGenerationLimit: ARTICLE_GENERATION_LIMIT,
-      imageGenerationLimit: IMAGE_GENERATION_LIMIT,
-      imageRetryLimit: IMAGE_RETRY_LIMIT,
-      researchRunId: research.runId,
-      sourceSummary: json(research.sourceStatuses || {}),
-      errorSummary: selected.length ? null : "No new research candidates passed every safety filter.",
-      items: {
-        create: selected.map((candidate, position) => ({
-          researchCandidateId: candidate.id,
-          position,
-          topic: candidate.topic,
-          category: candidate.bucket,
-          trendScore: candidate.trendScore,
-          sourceCount: candidate.domains.length,
-          sourceDomains: json(candidate.domains),
-          plannedPublishAt: zonedDateTimeToUtc(
-            targetDate,
-            TEST_BATCH_SLOTS[position],
-            TEST_BATCH_TIMEZONE
-          )
-        }))
-      }
-    },
-    include: { items: { orderBy: { position: "asc" } } }
-  });
+      TEST_BATCH_SLOTS[position],
+      TEST_BATCH_TIMEZONE
+    )
+  }));
+  const batch = existing
+    ? await prisma.productionTestBatch.update({
+        where: { id: existing.id },
+        data: {
+          ...batchData,
+          completedAt: null,
+          cancelledAt: null,
+          items: { create: itemData }
+        },
+        include: { items: { orderBy: { position: "asc" } } }
+      })
+    : await prisma.productionTestBatch.create({
+        data: { ...batchData, items: { create: itemData } },
+        include: { items: { orderBy: { position: "asc" } } }
+      });
   logInfo("production_test_batch_created", {
     batchId: batch.id,
     targetDate,
@@ -371,10 +383,11 @@ async function finishBatchIfReady(batchId: string) {
     where: { batchId, writingStatus: { in: ["queued", "generating"] } }
   });
   if (remaining > 0) return;
+  const total = await prisma.productionTestItem.count({ where: { batchId } });
   await refreshBatchCost(batchId);
   await prisma.productionTestBatch.update({
     where: { id: batchId },
-    data: { status: "pending_review", completedAt: new Date() }
+    data: { status: total ? "pending_review" : "empty", completedAt: new Date() }
   });
 }
 

@@ -22,11 +22,13 @@ async function mutate(url: string, body?: Record<string, unknown>) {
 export function TestBatchToolbar({
   batchId,
   canProcess,
-  eligibleCount
+  eligibleCount,
+  needsSelection
 }: {
   batchId?: string;
   canProcess: boolean;
   eligibleCount: number;
+  needsSelection: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -37,7 +39,7 @@ export function TestBatchToolbar({
     setMessage("Running the controlled research pass…");
     try {
       let id = batchId;
-      if (!id) {
+      if (!id || needsSelection) {
         const created = await mutate("/api/admin/test-batch");
         id = created.batchId;
         setMessage(`${created.selected || 0} eligible topics selected. Processing drafts…`);
@@ -90,8 +92,8 @@ export function TestBatchToolbar({
 
   return (
     <div className="test-batch-toolbar">
-      <button className="primary-action" disabled={busy || (!canProcess && Boolean(batchId))} onClick={startOrContinue}>
-        {busy ? "Working…" : batchId ? "Continue Test Batch" : "Run One-Time Test"}
+      <button className="primary-action" disabled={busy || (!canProcess && Boolean(batchId) && !needsSelection)} onClick={startOrContinue}>
+        {busy ? "Working…" : needsSelection ? "Retry Safe Selection" : batchId ? "Continue Test Batch" : "Run One-Time Test"}
       </button>
       <button disabled={busy || eligibleCount === 0} onClick={approveAll}>
         Approve All Eligible Test Articles

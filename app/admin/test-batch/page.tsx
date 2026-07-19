@@ -48,7 +48,12 @@ export default async function AdminTestBatchPage() {
           </div>
         </div>
 
-        <TestBatchToolbar batchId={batch?.id} canProcess={canProcess} eligibleCount={eligible} />
+        <TestBatchToolbar
+          batchId={batch?.id}
+          canProcess={canProcess}
+          eligibleCount={eligible}
+          needsSelection={Boolean(batch && items.length === 0)}
+        />
 
         {batch ? (
           <>

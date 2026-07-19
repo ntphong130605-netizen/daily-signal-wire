@@ -86,41 +86,69 @@ export const googleTrendsAdapter: ResearchSourceAdapter = {
         const data = parser.parse(xml);
         const items = asArray(data?.rss?.channel?.item).slice(0, 30) as Record<string, unknown>[];
         return items
-          .map((item) => {
+          .flatMap((item) => {
             const keyword = cleanResearchText(item.title, 140);
             const newsItems = asArray(item["ht:news_item"] as Record<string, unknown>[]);
             const relatedQueries = newsItems
               .map((news) => cleanResearchText(news["ht:news_item_title"], 140))
               .filter(Boolean);
-            const firstNews = newsItems[0] || {};
-            const sourceUrl =
-              cleanResearchText(firstNews["ht:news_item_url"], 400) ||
+            const approxTraffic = cleanResearchText(item["ht:approx_traffic"], 60);
+            const publishedAt = cleanResearchText(item.pubDate, 80) || new Date().toISOString();
+            const trendUrl =
               cleanResearchText(item.link, 400) ||
               `https://trends.google.com/trends/explore?geo=US&q=${encodeURIComponent(keyword)}`;
-            return {
-              source: "google_trends" as const,
-              externalId: `google-trends:${slugify(keyword)}`,
-              keyword,
-              headline: keyword,
-              summary:
-                cleanResearchText(firstNews["ht:news_item_snippet"], 500) ||
-                `Google Trends reports rising search interest for ${keyword}.`,
-              sourceUrl,
-              publisher: "Google Trends",
-              categoryHint: classifyCategory(keyword),
-              region: config.region,
-              language: config.language,
-              publishedAt: cleanResearchText(item.pubDate, 80) || new Date().toISOString(),
-              popularitySignals: {
-                approxTraffic: cleanResearchText(item["ht:approx_traffic"], 60),
-                newsItemCount: newsItems.length
-              },
-              relatedQueries,
-              rawMetadata: {
-                approxTraffic: cleanResearchText(item["ht:approx_traffic"], 60),
-                newsItemCount: newsItems.length
+            const realNewsItems = newsItems
+              .map((news, index) => {
+                const sourceUrl = cleanResearchText(news["ht:news_item_url"], 500);
+                if (!sourceUrl) return null;
+                const headline = cleanResearchText(news["ht:news_item_title"], 220) || keyword;
+                const publisher =
+                  cleanResearchText(news["ht:news_item_source"], 120) || "Google Trends source";
+                return {
+                  source: "google_trends" as const,
+                  externalId: `google-trends:${slugify(keyword)}:${index + 1}`,
+                  keyword,
+                  headline,
+                  summary:
+                    cleanResearchText(news["ht:news_item_snippet"], 500) ||
+                    `Google Trends reports rising search interest for ${keyword}.`,
+                  sourceUrl,
+                  publisher,
+                  categoryHint: classifyCategory(`${keyword} ${headline}`),
+                  region: config.region,
+                  language: config.language,
+                  publishedAt,
+                  popularitySignals: { approxTraffic, newsItemCount: newsItems.length },
+                  relatedQueries,
+                  rawMetadata: {
+                    approxTraffic,
+                    newsItemCount: newsItems.length,
+                    trendUrl,
+                    trendKeyword: keyword
+                  }
+                };
+              })
+              .filter((value): value is NonNullable<typeof value> => Boolean(value));
+
+            if (realNewsItems.length) return realNewsItems;
+            return [
+              {
+                source: "google_trends" as const,
+                externalId: `google-trends:${slugify(keyword)}:trend`,
+                keyword,
+                headline: keyword,
+                summary: `Google Trends reports rising search interest for ${keyword}.`,
+                sourceUrl: trendUrl,
+                publisher: "Google Trends",
+                categoryHint: classifyCategory(keyword),
+                region: config.region,
+                language: config.language,
+                publishedAt,
+                popularitySignals: { approxTraffic, newsItemCount: 0 },
+                relatedQueries,
+                rawMetadata: { approxTraffic, newsItemCount: 0, trendUrl, trendKeyword: keyword }
               }
-            };
+            ];
           })
           .filter((item) => item.keyword);
       },
