@@ -58,7 +58,7 @@ export default async function AdminTestBatchPage() {
         {batch ? (
           <>
             <section className="admin-post-stats test-batch-stats">
-              <div><span>Batch ID</span><strong>{batch.id.slice(-10)}</strong></div>
+              <div><span>Batch ID</span><strong>{batch.id}</strong></div>
               <div><span>Target date</span><strong>{batch.targetDate}</strong></div>
               <div><span>Selected</span><strong>{items.length}/10</strong></div>
               <div><span>Drafted</span><strong>{complete}</strong></div>

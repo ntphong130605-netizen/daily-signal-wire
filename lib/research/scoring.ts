@@ -31,7 +31,9 @@ function popularitySignalScore(sources: NormalizedResearchSignal[]) {
   let score = 0;
   for (const source of sources) {
     const signals = source.popularitySignals || {};
-    score = Math.max(score, Math.min(100, parseApproxTraffic(signals.approxTraffic) / 2_000));
+    const traffic = parseApproxTraffic(signals.approxTraffic);
+    const trafficScore = traffic > 0 ? Math.min(100, 25 + Math.log10(traffic) * 23) : 0;
+    score = Math.max(score, trafficScore);
     score = Math.max(score, Math.min(100, Number(signals.redditScore || 0) / 300));
     score = Math.max(score, Math.min(100, Number(signals.youtubeViews || 0) / 20_000));
     score = Math.max(score, Math.min(100, Number(signals.internalCount || 0) * 15));

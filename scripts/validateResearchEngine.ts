@@ -84,6 +84,37 @@ assert.equal(clusters.length, 1);
 assert.equal(clusters[0]?.sources.length, 2);
 assert.ok(clusters[0]?.scores.trendScore);
 
+const trendSignals = [
+  ["https://nytimes.com/sports/open-golf", "The New York Times"],
+  ["https://sports.yahoo.com/open-golf", "Yahoo Sports"],
+  ["https://cbssports.com/golf/open", "CBS Sports"]
+].map(([sourceUrl, publisher], index) =>
+  normalizeResearchSignal({
+    source: "google_trends",
+    externalId: `open-golf-${index}`,
+    keyword: "the open tee times",
+    headline: "The Open golf tee times and tournament schedule",
+    summary: "Coverage of the current professional golf tournament schedule.",
+    sourceUrl,
+    publisher,
+    categoryHint: "Sports",
+    region: "US",
+    language: "en-US",
+    publishedAt: new Date().toISOString(),
+    popularitySignals: { approxTraffic: "1,000+", newsItemCount: 3 },
+    relatedQueries: [],
+    rawMetadata: {}
+  })
+);
+assert.ok(trendSignals.every(Boolean));
+const trendClusters = __researchTest.mergeSignalsIntoClusters(
+  trendSignals.filter((signal): signal is NonNullable<typeof signal> => Boolean(signal)),
+  { ...config, minTrendScore: 65 }
+);
+assert.equal(trendClusters[0]?.category, "Sports");
+assert.ok((trendClusters[0]?.scores.trendScore || 0) >= 75);
+assert.equal(trendClusters[0]?.recommendedAction, "generate_draft");
+
 assert.equal(redditAdapter.isEnabled(config), false);
 assert.equal(youtubeAdapter.isEnabled(config), false);
 

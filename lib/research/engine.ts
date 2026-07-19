@@ -6,6 +6,7 @@ import { researchAdapters, researchSourceReadiness } from "@/lib/research/adapte
 import { buildResearchBrief } from "@/lib/research/brief";
 import {
   clusterKeyFor,
+  classifyCategory,
   normalizeKeyword,
   normalizeResearchSignal,
   titleSimilarity
@@ -62,7 +63,11 @@ function buildCluster(sources: NormalizedResearchSignal[], config: ResearchConfi
     })
     .slice(0, config.maxSourcesPerCandidate);
   const topic = selectTopic(sorted);
-  const category = sorted[0]?.category || "US News";
+  const category = classifyCategory(
+    sorted
+      .map((source) => `${source.keyword} ${source.headline} ${source.summary || ""}`)
+      .join(" ")
+  );
   const normalizedTopic = normalizeKeyword(topic);
   const riskFromText = classifyRisk(`${topic} ${sorted.map((source) => source.summary).join(" ")}`);
   const riskLevel = riskFromText.riskLevel === "blocked" ? "blocked" : strongestRisk(sorted);
